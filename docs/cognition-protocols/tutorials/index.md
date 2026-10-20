@@ -20,7 +20,7 @@ skill to the lead agent and the receiver skill to the five specialists. No frame
 is rewritten and no transport is replaced, and the baseline remains runnable as the
 control arm.
 
-[:octicons-arrow-right-24: The two insertion options](../index.md#deployment-of-the-skills)
+[:octicons-arrow-right-24: Installation](../installation.md)
 
 ## Demos
 
@@ -85,4 +85,4 @@ the opening proposals to the committed outcome.
 
 - [ACCORD](../accord/index.md) — phases, guarantees and measured results
 - [CONCORD](../concord/index.md) — phases, guarantees and measured results
-- [Cognition Protocols](../index.md#insertion) — insertion, packaging and transport bindings
+- [Installation](../installation.md) — insertion, packaging and transport bindings
