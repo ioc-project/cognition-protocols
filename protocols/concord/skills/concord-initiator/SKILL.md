@@ -18,7 +18,7 @@ license: Apache-2.0
 metadata:
   author: Cisco Systems, Inc.
   copyright: "Copyright 2026 Cisco Systems, Inc. and its affiliates"
-  version: "0.1.0" # x-release-please-version
+  version: "1.0.0" # x-release-please-version
 ---
 
 # CONCORD — Initiator Skill
