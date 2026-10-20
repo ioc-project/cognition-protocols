@@ -27,7 +27,7 @@ within a **cost bound** declared at the start.
     ACCORD establishes shared intent before work begins. CONCORD reconciles
     divergent-but-correct specialist outputs into a verifiable decision.
 
-    [:octicons-arrow-right-24: Cognition Protocols](cognition-protocols/index.md)
+    [:octicons-arrow-right-24: Cognition Protocols](protocols/index.md)
 
 -   :material-chart-bar:{ .lg .middle } **Evaluation**
 
@@ -45,7 +45,7 @@ within a **cost bound** declared at the start.
     Recorded end-to-end demos across SRE triage, e-commerce, and multi-agent
     coding teams — with and without each protocol.
 
-    [:octicons-arrow-right-24: Tutorials and Demos](cognition-protocols/tutorials/index.md)
+    [:octicons-arrow-right-24: Tutorials and Demos](protocols/tutorials/index.md)
 
 -   :material-github:{ .lg .middle } **Get Involved**
 
@@ -64,6 +64,6 @@ within a **cost bound** declared at the start.
   — the silent-failure problem that motivates L9: why coordination failures
   are invisible, persistent, and not fixed by stronger models.
 
-- **[Agreeing on Purpose, Deciding Under Conflict](cognition-protocols/blogs/accord-concord-extended.pdf)**
+- **[Agreeing on Purpose, Deciding Under Conflict](protocols/blogs/accord-concord-extended.pdf)**
   — the extended paper (PDF, 26 pages) covering the protocol designs,
   guarantees, and full evaluation results.

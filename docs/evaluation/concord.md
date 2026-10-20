@@ -98,6 +98,6 @@ floor.
 **Agreeing on Purpose, Deciding Under Conflict: Two Protocols for the Agent
 Cognitive Layer** — L9 + MAS-Lab T3s, Outshift by Cisco, October 2026.
 
-- [Extended version (PDF, 26 pages)](../cognition-protocols/blogs/accord-concord-extended.pdf) — the
+- [Extended version (PDF, 26 pages)](../protocols/blogs/accord-concord-extended.pdf) — the
   full study: motivation, both protocols, the evaluation methodology, the use
   cases, and the results reported here.
