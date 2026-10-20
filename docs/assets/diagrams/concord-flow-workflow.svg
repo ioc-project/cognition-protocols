@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900" font-family="Inter, &apos;Helvetica Neue&apos;, Helvetica, Arial, sans-serif"><rect x="0" y="0" width="100%" height="100%" fill="#000000"/>
+
+  <defs>
+    <marker id="aNavy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#A3C3ED"/>
+    </marker>
+    <marker id="aCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#17BFFF"/>
+    </marker>
+    <marker id="aOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#FFA91F"/>
+    </marker>
+    <marker id="aGrey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#657585"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="900" fill="#000000"/>
+
+  <!-- ============ TITLE ============ -->
+  <text x="50" y="46" font-size="25" font-weight="600" fill="#A3C3ED">L9-CONCORD — configuration B: the predefined MAS workflow</text>
+  <text x="50" y="72" font-size="14" fill="#7F8FA4">Agents 2, 3, 4 talk only to Agent 1; Agent 1 talks to Agent 5. The graph is a star with hub Agent 1 — connected, so a spanning tree exists and scores can be aggregated exactly. No gossip needed.</text>
+  <text x="50" y="94" font-size="13" fill="#657585">Assumptions A1–A5 hold. Agent 3 is shown as the round's bottleneck (lowest satisfaction on the incumbent).</text>
+
+  <!-- ============ TOPOLOGY PANEL ============ -->
+  <rect x="50" y="130" width="510" height="512" rx="10" fill="#05080B" stroke="#1F2A36" stroke-width="1.2"/>
+  <text x="72" y="160" font-size="15" font-weight="600" fill="#A3C3ED">Topology</text>
+  <text x="72" y="181" font-size="12.5" fill="#7F8FA4">Star, depth D = 1. Every path between {2,3,4} and 5 runs through Agent 1.</text>
+
+  <!-- leaf agents -->
+  <g font-size="13" font-weight="600">
+    <rect x="82" y="212" width="84" height="52" rx="7" fill="#000000" stroke="#A3C3ED" stroke-width="1.6"/>
+    <text x="124" y="235" text-anchor="middle" fill="#A3C3ED">Agent 2</text>
+    <text x="124" y="252" text-anchor="middle" font-size="10.5" font-weight="400" fill="#657585">leaf</text>
+
+    <rect x="82" y="302" width="84" height="52" rx="7" fill="#1D1302" stroke="#FFA91F" stroke-width="2"/>
+    <text x="124" y="325" text-anchor="middle" fill="#FFCF75">Agent 3</text>
+    <text x="124" y="342" text-anchor="middle" font-size="10.5" font-weight="400" fill="#E0B057">bottleneck</text>
+
+    <rect x="82" y="392" width="84" height="52" rx="7" fill="#000000" stroke="#A3C3ED" stroke-width="1.6"/>
+    <text x="124" y="415" text-anchor="middle" fill="#A3C3ED">Agent 4</text>
+    <text x="124" y="432" text-anchor="middle" font-size="10.5" font-weight="400" fill="#657585">leaf</text>
+
+    <rect x="428" y="302" width="84" height="52" rx="7" fill="#000000" stroke="#A3C3ED" stroke-width="1.6"/>
+    <text x="470" y="325" text-anchor="middle" fill="#A3C3ED">Agent 5</text>
+    <text x="470" y="342" text-anchor="middle" font-size="10.5" font-weight="400" fill="#657585">leaf</text>
+  </g>
+
+  <!-- hub -->
+  <rect x="248" y="290" width="118" height="76" rx="9" fill="#050D17" stroke="#A3C3ED" stroke-width="2.4"/>
+  <text x="307" y="316" text-anchor="middle" font-size="14" font-weight="600" fill="#A3C3ED">Agent 1</text>
+  <text x="307" y="333" text-anchor="middle" font-size="10.5" fill="#A3C3ED">hub · tree root</text>
+  <text x="307" y="349" text-anchor="middle" font-size="10.5" font-weight="600" fill="#D44D3F">authoritative selector</text>
+
+  <!-- edges: bidirectional -->
+  <g stroke="#17BFFF" stroke-width="1.8">
+    <line x1="166" y1="238" x2="246" y2="302" marker-start="url(#aCyan)" marker-end="url(#aCyan)"/>
+    <line x1="166" y1="328" x2="246" y2="328" marker-start="url(#aCyan)" marker-end="url(#aCyan)"/>
+    <line x1="166" y1="418" x2="246" y2="356" marker-start="url(#aCyan)" marker-end="url(#aCyan)"/>
+    <line x1="368" y1="328" x2="426" y2="328" marker-start="url(#aCyan)" marker-end="url(#aCyan)"/>
+  </g>
+
+  <text x="182" y="376" font-size="10.5" fill="#17BFFF" font-style="italic">↑ score rows</text>
+  <text x="182" y="390" font-size="10.5" fill="#17BFFF" font-style="italic">↓ S, x*</text>
+
+  <!-- SPOF callout -->
+  <rect x="82" y="470" width="430" height="66" rx="8" fill="#150402" stroke="#D44D3F" stroke-width="1.4"/>
+  <text x="100" y="492" font-size="12.5" font-weight="600" fill="#D44D3F">Agent 1 is a single point of failure</text>
+  <text x="100" y="511" font-size="11.5" fill="#D17F73">It is the only aggregator, the only selector and the only relay. If it stalls,</text>
+  <text x="100" y="528" font-size="11.5" fill="#D17F73">no agent can compute x* — the protocol halts, not degrades.</text>
+
+  <rect x="82" y="548" width="430" height="70" rx="8" fill="#000000" stroke="#1F2A36" stroke-width="1.4"/>
+  <text x="100" y="570" font-size="12.5" font-weight="600" fill="#A3C3ED">Coverage check at trigger time (A5)</text>
+  <text x="100" y="589" font-size="11.5" fill="#7F8FA4">The star connects all of A = {1..5}, so the floor τ can be certified for</text>
+  <text x="100" y="606" font-size="11.5" fill="#7F8FA4">every agent. A disconnected workflow could not — see the note below.</text>
+
+  <!-- ============ ROUND FLOW ============ -->
+  <text x="600" y="160" font-size="15" font-weight="600" fill="#A3C3ED">One CONCORD round</text>
+
+  <!-- step 1 -->
+  <rect x="600" y="174" width="750" height="82" rx="8" fill="#000000" stroke="#17BFFF" stroke-width="1.6"/>
+  <circle cx="626" cy="200" r="13" fill="#17BFFF"/>
+  <text x="626" y="205" text-anchor="middle" font-size="13" font-weight="600" fill="#000000">1</text>
+  <text x="650" y="199" font-size="14" font-weight="600" fill="#A3C3ED">SHARE ↑ — convergecast</text>
+  <text x="650" y="220" font-size="12.5" fill="#7F8FA4">Agents 2, 3, 4, 5 each send their satisfaction row to Agent 1.</text>
+  <text x="650" y="239" font-size="12.5" fill="#7F8FA4">Agent 1 assembles the exact 5 × |Pool| matrix S. No averaging, so δ = 0.</text>
+  <rect x="1180" y="188" width="152" height="24" rx="12" fill="#021017" stroke="#17BFFF" stroke-width="1"/>
+  <text x="1256" y="204" text-anchor="middle" font-size="11.5" font-weight="600" fill="#69CDF5">4 msgs · 1 hop</text>
+  <line x1="975" y1="256" x2="975" y2="279" stroke="#657585" stroke-width="1.5" marker-end="url(#aGrey)"/>
+
+  <!-- step 2 -->
+  <rect x="600" y="279" width="750" height="82" rx="8" fill="#000000" stroke="#D44D3F" stroke-width="1.6"/>
+  <circle cx="626" cy="305" r="13" fill="#D44D3F"/>
+  <text x="626" y="310" text-anchor="middle" font-size="13" font-weight="600" fill="#000000">2</text>
+  <text x="650" y="304" font-size="14" font-weight="600" fill="#A3C3ED">SELECT — at the root only</text>
+  <text x="650" y="325" font-size="12.5" fill="#7F8FA4">Agent 1 alone computes Feasible and argmax W. Agents 2–5 cannot: they</text>
+  <text x="650" y="344" font-size="12.5" fill="#7F8FA4">never see each other's rows. Alternative: one L9 quorum round on the x* id.</text>
+  <rect x="1180" y="293" width="152" height="24" rx="12" fill="#150402" stroke="#D44D3F" stroke-width="1"/>
+  <text x="1256" y="309" text-anchor="middle" font-size="11.5" font-weight="600" fill="#D44D3F">centralised</text>
+  <line x1="975" y1="361" x2="975" y2="384" stroke="#657585" stroke-width="1.5" marker-end="url(#aGrey)"/>
+
+  <!-- step 3 -->
+  <rect x="600" y="384" width="750" height="82" rx="8" fill="#000000" stroke="#17BFFF" stroke-width="1.6"/>
+  <circle cx="626" cy="410" r="13" fill="#17BFFF"/>
+  <text x="626" y="415" text-anchor="middle" font-size="13" font-weight="600" fill="#000000">3</text>
+  <text x="650" y="409" font-size="14" font-weight="600" fill="#A3C3ED">SHARE ↓ — broadcast</text>
+  <text x="650" y="430" font-size="12.5" fill="#7F8FA4">Agent 1 pushes (S, x*, best_W) back to 2, 3, 4, 5 so every agent can see</text>
+  <text x="650" y="449" font-size="12.5" fill="#7F8FA4">where it stands and who is blocking. Round-trip latency is 2D = 2 hops.</text>
+  <rect x="1180" y="398" width="152" height="24" rx="12" fill="#021017" stroke="#17BFFF" stroke-width="1"/>
+  <text x="1256" y="414" text-anchor="middle" font-size="11.5" font-weight="600" fill="#69CDF5">4 msgs · 1 hop</text>
+  <line x1="975" y1="466" x2="975" y2="489" stroke="#657585" stroke-width="1.5" marker-end="url(#aGrey)"/>
+
+  <!-- step 4 -->
+  <rect x="600" y="489" width="750" height="82" rx="8" fill="#000000" stroke="#86E9BC" stroke-width="1.6"/>
+  <circle cx="626" cy="515" r="13" fill="#86E9BC"/>
+  <text x="626" y="520" text-anchor="middle" font-size="13" font-weight="600" fill="#000000">4</text>
+  <text x="650" y="514" font-size="14" font-weight="600" fill="#A3C3ED">ACCEPT · STOP / COMMIT</text>
+  <text x="650" y="535" font-size="12.5" fill="#7F8FA4">Accept x_cand iff W ≥ best_W + ε — same monotone test, applied at the root.</text>
+  <text x="650" y="554" font-size="12.5" fill="#7F8FA4">minⱼ S[j][x*] ≥ τ → COMMIT via L9 quorum; t = B → BEST_EFFORT + shortfall.</text>
+  <rect x="1180" y="503" width="152" height="24" rx="12" fill="#09150F" stroke="#86E9BC" stroke-width="1"/>
+  <text x="1256" y="519" text-anchor="middle" font-size="11.5" font-weight="600" fill="#86E9BC">exit or continue</text>
+  <line x1="975" y1="571" x2="975" y2="594" stroke="#657585" stroke-width="1.5" marker-end="url(#aGrey)"/>
+
+  <!-- step 5 -->
+  <rect x="600" y="594" width="750" height="82" rx="8" fill="#1D1302" stroke="#FFA91F" stroke-width="1.6"/>
+  <circle cx="626" cy="620" r="13" fill="#FFA91F"/>
+  <text x="626" y="625" text-anchor="middle" font-size="13" font-weight="600" fill="#000000">5</text>
+  <text x="650" y="619" font-size="14" font-weight="600" fill="#FFCF75">REPAIR — relayed through the hub</text>
+  <text x="650" y="640" font-size="12.5" fill="#DFBF85">Agent 3 sends one new candidate to Agent 1 (1 msg), which relays it to 2, 4, 5</text>
+  <text x="650" y="659" font-size="12.5" fill="#DFBF85">(3 msgs). Two hops before every agent can score it.</text>
+  <rect x="1180" y="608" width="152" height="24" rx="12" fill="#000000" stroke="#FFA91F" stroke-width="1"/>
+  <text x="1256" y="624" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFCF75">4 msgs · 2 hops</text>
+
+  <!-- loop back arrow -->
+  <path d="M600,635 L576,635 L576,215 L600,215" fill="none" stroke="#657585" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#aGrey)"/>
+  <text x="570" y="425" text-anchor="middle" font-size="11" fill="#657585" transform="rotate(-90 570 425)">next round · t ≤ B</text>
+
+  <!-- ============ SUMMARY ============ -->
+  <rect x="50" y="676" width="1300" height="182" rx="10" fill="#05080B" stroke="#1F2A36" stroke-width="1.2"/>
+  <text x="72" y="706" font-size="15" font-weight="600" fill="#A3C3ED">Per-round cost and guarantees — differences from configuration A in bold</text>
+
+  <g>
+    <rect x="72" y="722" width="245" height="66" rx="7" fill="#000000" stroke="#1F2A36"/>
+    <text x="88" y="744" font-size="10.5" fill="#657585">TRANSMISSIONS / ROUND</text>
+    <text x="88" y="768" font-size="16" font-weight="600" fill="#FFA91F">12</text>
+    <text x="118" y="768" font-size="11.5" fill="#7F8FA4">vs 6 — 2× of A</text>
+
+    <rect x="327" y="722" width="245" height="66" rx="7" fill="#000000" stroke="#1F2A36"/>
+    <text x="343" y="744" font-size="10.5" fill="#657585">LATENCY / ROUND</text>
+    <text x="343" y="768" font-size="16" font-weight="600" fill="#FFA91F">4 hops</text>
+    <text x="404" y="768" font-size="11.5" fill="#7F8FA4">vs 2 — 2× of A</text>
+
+    <rect x="582" y="722" width="245" height="66" rx="7" fill="#000000" stroke="#1F2A36"/>
+    <text x="598" y="744" font-size="10.5" fill="#657585">AGGREGATION ERROR</text>
+    <text x="598" y="768" font-size="16" font-weight="600" fill="#86E9BC">δ = 0</text>
+    <text x="650" y="768" font-size="11.5" fill="#7F8FA4">same as A — tree, not gossip</text>
+
+    <rect x="837" y="722" width="245" height="66" rx="7" fill="#000000" stroke="#1F2A36"/>
+    <text x="853" y="744" font-size="10.5" fill="#657585">INCUMBENT AGREEMENT</text>
+    <text x="853" y="768" font-size="16" font-weight="600" fill="#D44D3F">root-authoritative</text>
+
+    <rect x="1092" y="722" width="245" height="66" rx="7" fill="#000000" stroke="#1F2A36"/>
+    <text x="1108" y="744" font-size="10.5" fill="#657585">COVERAGE OF A</text>
+    <text x="1108" y="768" font-size="16" font-weight="600" fill="#86E9BC">5 / 5</text>
+    <text x="1152" y="768" font-size="11.5" fill="#7F8FA4">star is connected</text>
+  </g>
+
+  <text x="72" y="818" font-size="12.5" fill="#7F8FA4">Accepted-move bound ⌈(W_max − W₀)/ε⌉ and hard cap of B rounds are identical to configuration A. This topology costs latency and a distinguished node — not convergence, and not outcome.</text>
+  <text x="72" y="840" font-size="12.5" fill="#7F8FA4">Had the workflow been a pipeline with no back-edge to Agent 1, S could not be assembled at all: CONCORD would have to request channels, or narrow the certificate to the covered subset.</text>
+
+<!-- ioc:dark sans="Helvetica Neue, Helvetica, Arial, sans-serif" --></svg>

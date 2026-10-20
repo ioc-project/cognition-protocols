@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1120" viewBox="0 0 2200 1120" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <rect width="2200" height="1120" fill="#000000"/>
+
+  <text x="1100" y="86" font-size="58" font-weight="700" fill="#17BFFF" text-anchor="middle">Protocol insertion</text>
+  <text x="1100" y="140" font-size="34" fill="#9AA6B2" text-anchor="middle">The application is unmodified. The protocol is distributed as skills; the choice is where they are deployed.</text>
+
+  <!-- ===================== OPTION 1 ===================== -->
+  <rect x="150" y="206" width="900" height="470" rx="18" fill="#07251A" stroke="#3FD6B0" stroke-width="3"/>
+  <text x="600" y="268" font-size="40" font-weight="600" fill="#7FE3C6" text-anchor="middle">Skills in the agents</text>
+  <text x="600" y="312" font-size="27" fill="#6C7A86" text-anchor="middle">each agent carries the skill and selects it on its trigger</text>
+
+  <rect x="206" y="348" width="788" height="92" rx="12" fill="#0A0A0A" stroke="#5A5A5A" stroke-width="2"/>
+  <text x="600" y="382" font-size="28" fill="#D5DCE3" text-anchor="middle">agent</text>
+  <text x="600" y="418" font-size="25" font-style="italic" fill="#7FE3C6" text-anchor="middle">skill decides when to run the protocol</text>
+
+  <text x="206" y="494" font-size="27" fill="#9AA6B2">Holds the whole protocol: envelope,</text>
+  <text x="206" y="530" font-size="27" fill="#9AA6B2">sequencing and merge included.</text>
+  <text x="206" y="586" font-size="27" font-weight="600" fill="#7FE3C6">Has the agent's full context.</text>
+  <text x="206" y="634" font-size="27" font-style="italic" fill="#C98A8A">Not enforceable: invocation is a model decision.</text>
+
+  <!-- ===================== OPTION 2 ===================== -->
+  <rect x="1150" y="206" width="900" height="470" rx="18" fill="#0B2036" stroke="#3FAFFF" stroke-width="3"/>
+  <text x="1600" y="268" font-size="40" font-weight="600" fill="#7DC8EA" text-anchor="middle">Skills in the AgentBridge</text>
+  <text x="1600" y="312" font-size="25" fill="#6C7A86" text-anchor="middle">deployed alongside the agent, executes the protocol on its behalf</text>
+
+  <rect x="1206" y="348" width="380" height="92" rx="12" fill="#0A0A0A" stroke="#5A5A5A" stroke-width="2"/>
+  <text x="1396" y="382" font-size="28" fill="#D5DCE3" text-anchor="middle">agent</text>
+  <text x="1396" y="418" font-size="24" font-style="italic" fill="#9AA6B2" text-anchor="middle">generates payloads</text>
+
+  <rect x="1614" y="348" width="380" height="92" rx="12" fill="#0B2036" stroke="#3FAFFF" stroke-width="2.5"/>
+  <text x="1804" y="382" font-size="28" fill="#7DC8EA" text-anchor="middle">AgentBridge</text>
+  <text x="1804" y="418" font-size="24" font-style="italic" fill="#7DC8EA" text-anchor="middle">holds the machinery</text>
+
+  <path d="M1590 394 L1610 394" stroke="#737373" stroke-width="2.5" marker-end="url(#rt)"/>
+
+  <text x="1206" y="494" font-size="27" fill="#9AA6B2">Envelope, phase order, barriers, merge</text>
+  <text x="1206" y="530" font-size="27" fill="#9AA6B2">and commit are executed by code.</text>
+  <text x="1206" y="586" font-size="27" font-weight="600" fill="#7DC8EA">Deterministic on protocol mechanics.</text>
+  <text x="1206" y="634" font-size="27" font-style="italic" fill="#9AA6B2">No recompilation; the agent is unmodified.</text>
+
+  <text x="1100" y="724" font-size="29" font-style="italic" fill="#9AA6B2" text-anchor="middle">Content generation is model-mediated under either option; the division is by what can be made deterministic.</text>
+
+  <!-- ===================== EXECUTION ===================== -->
+  <text x="150" y="814" font-size="28" font-weight="700" fill="#FFC147" letter-spacing="2">DISTRIBUTED IN BOTH OPTIONS</text>
+
+  <g text-anchor="middle">
+    <rect x="150" y="844" width="600" height="150" rx="14" fill="#0B2036" stroke="#3FAFFF" stroke-width="3"/>
+    <text x="450" y="902" font-size="33" font-weight="600" fill="#7DC8EA">Initiator skill</text>
+    <text x="450" y="948" font-size="26" fill="#6C7A86">opens the protocol, drives the phases</text>
+
+    <rect x="800" y="844" width="600" height="150" rx="14" fill="#0B2036" stroke="#3FAFFF" stroke-width="3"/>
+    <text x="1100" y="902" font-size="33" font-weight="600" fill="#7DC8EA">Receiver skill</text>
+    <text x="1100" y="948" font-size="26" fill="#6C7A86">recognises it, answers in schema</text>
+
+    <rect x="1450" y="844" width="600" height="150" rx="14" fill="#2A2006" stroke="#FFC147" stroke-width="3"/>
+    <text x="1750" y="902" font-size="33" font-weight="600" fill="#FFC147">Helper scripts</text>
+    <text x="1750" y="948" font-size="26" fill="#6C7A86">every merge, score and stop rule</text>
+  </g>
+
+  <text x="1100" y="1062" font-size="30" font-style="italic" fill="#9AA6B2" text-anchor="middle">The deterministic engine executes every step except REPAIR, which is what makes the certificate auditable.</text>
+
+  <defs>
+    <marker id="rt" markerUnits="userSpaceOnUse" markerWidth="20" markerHeight="14" refX="19" refY="7" orient="auto"><path d="M1,1 L19,7 L1,13 Z" fill="#737373"/></marker>
+  </defs>
+</svg>

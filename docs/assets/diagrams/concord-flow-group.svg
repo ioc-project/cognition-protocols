@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900" font-family="Inter, &apos;Helvetica Neue&apos;, Helvetica, Arial, sans-serif"><rect x="0" y="0" width="100%" height="100%" fill="#000000"/>
+
+  <defs>
+    <marker id="aCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#17BFFF"/>
+    </marker>
+    <marker id="aOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#FFA91F"/>
+    </marker>
+    <marker id="aGrey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#657585"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="900" fill="#000000"/>
+
+  <!-- ============ TITLE ============ -->
+  <text x="50" y="46" font-size="25" font-weight="600" fill="#A3C3ED">L9-CONCORD — configuration A: group-based communication</text>
+  <text x="50" y="72" font-size="14" fill="#7F8FA4">5 agents on one SLIM group channel. The predefined 2/3/4 → 1 → 5 workflow is bypassed: every agent is one hop from every other, so the score matrix is exact and common after a single exchange.</text>
+  <text x="50" y="94" font-size="13" fill="#657585">Assumptions A1–A5 hold. Agent 3 is shown as the round's bottleneck (lowest satisfaction on the incumbent).</text>
+
+  <!-- ============ TOPOLOGY PANEL ============ -->
+  <rect x="50" y="130" width="510" height="512" rx="10" fill="#05080B" stroke="#1F2A36" stroke-width="1.2"/>
+  <text x="72" y="160" font-size="15" font-weight="600" fill="#A3C3ED">Topology</text>
+  <text x="72" y="181" font-size="12.5" fill="#7F8FA4">One group: 1 multicast → 4 deliveries, 1 hop.</text>
+
+  <!-- agents row -->
+  <g font-size="13" font-weight="600">
+    <rect x="88" y="222" width="78" height="54" rx="7" fill="#000000" stroke="#A3C3ED" stroke-width="1.6"/>
+    <text x="127" y="246" text-anchor="middle" fill="#A3C3ED">Agent 1</text>
+    <text x="127" y="264" text-anchor="middle" font-size="10.5" font-weight="400" fill="#657585">role r₁</text>
+
+    <rect x="176" y="222" width="78" height="54" rx="7" fill="#000000" stroke="#A3C3ED" stroke-width="1.6"/>
+    <text x="215" y="246" text-anchor="middle" fill="#A3C3ED">Agent 2</text>
+    <text x="215" y="264" text-anchor="middle" font-size="10.5" font-weight="400" fill="#657585">role r₂</text>
+
+    <rect x="264" y="222" width="78" height="54" rx="7" fill="#1D1302" stroke="#FFA91F" stroke-width="2"/>
+    <text x="303" y="246" text-anchor="middle" fill="#FFCF75">Agent 3</text>
+    <text x="303" y="264" text-anchor="middle" font-size="10.5" font-weight="400" fill="#E0B057">bottleneck</text>
+
+    <rect x="352" y="222" width="78" height="54" rx="7" fill="#000000" stroke="#A3C3ED" stroke-width="1.6"/>
+    <text x="391" y="246" text-anchor="middle" fill="#A3C3ED">Agent 4</text>
+    <text x="391" y="264" text-anchor="middle" font-size="10.5" font-weight="400" fill="#657585">role r₄</text>
+
+    <rect x="440" y="222" width="78" height="54" rx="7" fill="#000000" stroke="#A3C3ED" stroke-width="1.6"/>
+    <text x="479" y="246" text-anchor="middle" fill="#A3C3ED">Agent 5</text>
+    <text x="479" y="264" text-anchor="middle" font-size="10.5" font-weight="400" fill="#657585">role r₅</text>
+  </g>
+
+  <!-- connectors down to bus -->
+  <g stroke="#17BFFF" stroke-width="1.6">
+    <line x1="127" y1="276" x2="127" y2="338" marker-end="url(#aCyan)"/>
+    <line x1="215" y1="276" x2="215" y2="338" marker-end="url(#aCyan)"/>
+    <line x1="303" y1="276" x2="303" y2="338" marker-end="url(#aCyan)"/>
+    <line x1="391" y1="276" x2="391" y2="338" marker-end="url(#aCyan)"/>
+    <line x1="479" y1="276" x2="479" y2="338" marker-end="url(#aCyan)"/>
+  </g>
+  <text x="537" y="312" font-size="10.5" fill="#17BFFF" text-anchor="end" font-style="italic">INFORM sᵢ</text>
+
+  <!-- group channel bus -->
+  <rect x="88" y="344" width="430" height="46" rx="9" fill="#021017" stroke="#17BFFF" stroke-width="1.8"/>
+  <text x="303" y="366" text-anchor="middle" font-size="13.5" font-weight="600" fill="#69CDF5">SLIM group channel</text>
+  <text x="303" y="382" text-anchor="middle" font-size="10.5" fill="#69CDF5">A2A messages · group membership = negotiating set A = {1..5}</text>
+
+  <!-- deliveries back up -->
+  <g stroke="#657585" stroke-width="1.3" stroke-dasharray="4 3">
+    <line x1="127" y1="396" x2="127" y2="440"/>
+    <line x1="215" y1="396" x2="215" y2="440"/>
+    <line x1="303" y1="396" x2="303" y2="440"/>
+    <line x1="391" y1="396" x2="391" y2="440"/>
+    <line x1="479" y1="396" x2="479" y2="440"/>
+  </g>
+
+  <rect x="88" y="440" width="430" height="72" rx="8" fill="#000000" stroke="#1F2A36" stroke-width="1.4"/>
+  <text x="303" y="463" text-anchor="middle" font-size="13" font-weight="600" fill="#A3C3ED">Every agent holds the identical, exact S</text>
+  <text x="303" y="482" text-anchor="middle" font-size="11.5" fill="#7F8FA4">S is 5 × |Pool| — no aggregation, no averaging, no staleness</text>
+  <text x="303" y="500" text-anchor="middle" font-size="11.5" fill="#7F8FA4">δ = 0, so ε may be as small as the score resolution</text>
+
+  <rect x="88" y="530" width="430" height="88" rx="8" fill="#000000" stroke="#1F2A36" stroke-width="1.4"/>
+  <text x="106" y="553" font-size="12.5" font-weight="600" fill="#A3C3ED">Consequence for the protocol</text>
+  <text x="106" y="574" font-size="11.5" fill="#7F8FA4">SELECT is a pure function of S. Identical input at every</text>
+  <text x="106" y="591" font-size="11.5" fill="#7F8FA4">agent ⇒ identical incumbent x*, computed independently.</text>
+  <text x="106" y="608" font-size="11.5" font-weight="600" fill="#69CDF5">No agreement step is needed to know what won.</text>
+
+  <!-- ============ ROUND FLOW ============ -->
+  <text x="600" y="160" font-size="15" font-weight="600" fill="#A3C3ED">One CONCORD round</text>
+
+  <!-- step 1 -->
+  <rect x="600" y="174" width="750" height="82" rx="8" fill="#000000" stroke="#17BFFF" stroke-width="1.6"/>
+  <circle cx="626" cy="200" r="13" fill="#17BFFF"/>
+  <text x="626" y="205" text-anchor="middle" font-size="13" font-weight="600" fill="#000000">1</text>
+  <text x="650" y="199" font-size="14" font-weight="600" fill="#A3C3ED">SHARE</text>
+  <text x="650" y="220" font-size="12.5" fill="#7F8FA4">Each agent multicasts its satisfaction row for the new candidate to the group.</text>
+  <text x="650" y="239" font-size="12.5" fill="#7F8FA4">All 5 receive all 5 rows in the same exchange.</text>
+  <rect x="1180" y="188" width="152" height="24" rx="12" fill="#021017" stroke="#17BFFF" stroke-width="1"/>
+  <text x="1256" y="204" text-anchor="middle" font-size="11.5" font-weight="600" fill="#69CDF5">5 msgs · 1 hop</text>
+  <line x1="975" y1="256" x2="975" y2="279" stroke="#657585" stroke-width="1.5" marker-end="url(#aGrey)"/>
+
+  <!-- step 2 -->
+  <rect x="600" y="279" width="750" height="82" rx="8" fill="#000000" stroke="#1F2A36" stroke-width="1.6"/>
+  <circle cx="626" cy="305" r="13" fill="#A3C3ED"/>
+  <text x="626" y="310" text-anchor="middle" font-size="13" font-weight="600" fill="#000000">2</text>
+  <text x="650" y="304" font-size="14" font-weight="600" fill="#A3C3ED">SELECT</text>
+  <text x="650" y="325" font-size="12.5" fill="#7F8FA4">Feasible = { x : minⱼ S[j][x] ≥ τ } ; x_cand = argmax over Feasible of W(S[:,x])</text>
+  <text x="650" y="344" font-size="12.5" fill="#7F8FA4">If Feasible is empty, take argmax of minⱼ S[j][x] — lift the worst-off agent.</text>
+  <rect x="1180" y="293" width="152" height="24" rx="12" fill="#05080B" stroke="#1F2A36" stroke-width="1"/>
+  <text x="1256" y="309" text-anchor="middle" font-size="11.5" font-weight="600" fill="#7F8FA4">0 msgs · local</text>
+  <line x1="975" y1="361" x2="975" y2="384" stroke="#657585" stroke-width="1.5" marker-end="url(#aGrey)"/>
+
+  <!-- step 3 -->
+  <rect x="600" y="384" width="750" height="82" rx="8" fill="#000000" stroke="#1F2A36" stroke-width="1.6"/>
+  <circle cx="626" cy="410" r="13" fill="#A3C3ED"/>
+  <text x="626" y="415" text-anchor="middle" font-size="13" font-weight="600" fill="#000000">3</text>
+  <text x="650" y="409" font-size="14" font-weight="600" fill="#A3C3ED">ACCEPT</text>
+  <text x="650" y="430" font-size="12.5" fill="#7F8FA4">Replace the incumbent only if W(S[:,x_cand]) ≥ best_W + ε.</text>
+  <text x="650" y="449" font-size="12.5" fill="#7F8FA4">best_W is monotone non-decreasing ⇒ at most ⌈(W_max − W₀)/ε⌉ incumbent changes.</text>
+  <rect x="1180" y="398" width="152" height="24" rx="12" fill="#05080B" stroke="#1F2A36" stroke-width="1"/>
+  <text x="1256" y="414" text-anchor="middle" font-size="11.5" font-weight="600" fill="#7F8FA4">0 msgs · local</text>
+  <line x1="975" y1="466" x2="975" y2="489" stroke="#657585" stroke-width="1.5" marker-end="url(#aGrey)"/>
+
+  <!-- step 4 -->
+  <rect x="600" y="489" width="750" height="82" rx="8" fill="#000000" stroke="#86E9BC" stroke-width="1.6"/>
+  <circle cx="626" cy="515" r="13" fill="#86E9BC"/>
+  <text x="626" y="520" text-anchor="middle" font-size="13" font-weight="600" fill="#000000">4</text>
+  <text x="650" y="514" font-size="14" font-weight="600" fill="#A3C3ED">STOP / COMMIT</text>
+  <text x="650" y="535" font-size="12.5" fill="#7F8FA4">minⱼ S[j][x*] ≥ τ  →  COMMIT(x*) via the L9 quorum / threshold-signature primitive.</text>
+  <text x="650" y="554" font-size="12.5" fill="#7F8FA4">t = B  →  BEST_EFFORT: return x* plus the exact per-agent shortfall.</text>
+  <rect x="1180" y="503" width="152" height="24" rx="12" fill="#09150F" stroke="#86E9BC" stroke-width="1"/>
+  <text x="1256" y="519" text-anchor="middle" font-size="11.5" font-weight="600" fill="#86E9BC">exit or continue</text>
+  <line x1="975" y1="571" x2="975" y2="594" stroke="#657585" stroke-width="1.5" marker-end="url(#aGrey)"/>
+
+  <!-- step 5 -->
+  <rect x="600" y="594" width="750" height="82" rx="8" fill="#1D1302" stroke="#FFA91F" stroke-width="1.6"/>
+  <circle cx="626" cy="620" r="13" fill="#FFA91F"/>
+  <text x="626" y="625" text-anchor="middle" font-size="13" font-weight="600" fill="#000000">5</text>
+  <text x="650" y="619" font-size="14" font-weight="600" fill="#FFCF75">REPAIR</text>
+  <text x="650" y="640" font-size="12.5" fill="#DFBF85">b = argminⱼ S[j][x*] = Agent 3. It multicasts ONE new candidate that raises s₃</text>
+  <text x="650" y="659" font-size="12.5" fill="#DFBF85">while keeping every other agent ≥ τ — it can check, because it holds all of S.</text>
+  <rect x="1180" y="608" width="152" height="24" rx="12" fill="#000000" stroke="#FFA91F" stroke-width="1"/>
+  <text x="1256" y="624" text-anchor="middle" font-size="11.5" font-weight="600" fill="#FFCF75">1 msg · 1 hop</text>
+
+  <!-- loop back arrow -->
+  <path d="M600,635 L576,635 L576,215 L600,215" fill="none" stroke="#657585" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#aGrey)"/>
+  <text x="570" y="425" text-anchor="middle" font-size="11" fill="#657585" transform="rotate(-90 570 425)">next round · t ≤ B</text>
+
+  <!-- ============ SUMMARY ============ -->
+  <rect x="50" y="676" width="1300" height="182" rx="10" fill="#05080B" stroke="#1F2A36" stroke-width="1.2"/>
+  <text x="72" y="706" font-size="15" font-weight="600" fill="#A3C3ED">Per-round cost and guarantees</text>
+
+  <g>
+    <rect x="72" y="722" width="245" height="66" rx="7" fill="#000000" stroke="#1F2A36"/>
+    <text x="88" y="744" font-size="10.5" fill="#657585">TRANSMISSIONS / ROUND</text>
+    <text x="88" y="768" font-size="16" font-weight="600" fill="#A3C3ED">6</text>
+    <text x="112" y="768" font-size="11.5" fill="#7F8FA4">(5 score + 1 repair)</text>
+
+    <rect x="327" y="722" width="245" height="66" rx="7" fill="#000000" stroke="#1F2A36"/>
+    <text x="343" y="744" font-size="10.5" fill="#657585">LATENCY / ROUND</text>
+    <text x="343" y="768" font-size="16" font-weight="600" fill="#A3C3ED">2 hops</text>
+    <text x="404" y="768" font-size="11.5" fill="#7F8FA4">(share, repair)</text>
+
+    <rect x="582" y="722" width="245" height="66" rx="7" fill="#000000" stroke="#1F2A36"/>
+    <text x="598" y="744" font-size="10.5" fill="#657585">AGGREGATION ERROR</text>
+    <text x="598" y="768" font-size="16" font-weight="600" fill="#86E9BC">δ = 0</text>
+    <text x="650" y="768" font-size="11.5" fill="#7F8FA4">any ε &gt; 0 is safe</text>
+
+    <rect x="837" y="722" width="245" height="66" rx="7" fill="#000000" stroke="#1F2A36"/>
+    <text x="853" y="744" font-size="10.5" fill="#657585">INCUMBENT AGREEMENT</text>
+    <text x="853" y="768" font-size="16" font-weight="600" fill="#86E9BC">free</text>
+    <text x="898" y="768" font-size="11.5" fill="#7F8FA4">identical S ⇒ identical x*</text>
+
+    <rect x="1092" y="722" width="245" height="66" rx="7" fill="#000000" stroke="#1F2A36"/>
+    <text x="1108" y="744" font-size="10.5" fill="#657585">COVERAGE OF A</text>
+    <text x="1108" y="768" font-size="16" font-weight="600" fill="#86E9BC">5 / 5</text>
+    <text x="1152" y="768" font-size="11.5" fill="#7F8FA4">floor certified for all</text>
+  </g>
+
+  <text x="72" y="818" font-size="12.5" fill="#7F8FA4">Accepted-move bound ⌈(W_max − W₀)/ε⌉ and hard cap of B rounds — identical to configuration B. Topology does not change the number of accepted moves.</text>
+  <text x="72" y="840" font-size="12.5" fill="#7F8FA4">Total run cost: ≤ B rounds, ≤ 5 + B candidates, ≤ 5·(5 + B) satisfaction evaluations. Anytime: x* is valid and returnable at every round.</text>
+
+<!-- ioc:dark sans="Helvetica Neue, Helvetica, Arial, sans-serif" --></svg>

@@ -1,0 +1,97 @@
+<svg viewBox="0 0 920 452" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif"><rect x="0" y="0" width="920" height="452" fill="#000000"/>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9aa3b2"/></marker><marker id="ahx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#e39a46"/></marker></defs>
+<rect width="920" height="452" fill="#0a0a0a"/>
+<text x="32" y="26" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="13.5" fill="#e8eaee" text-anchor="start" font-weight="600">CONCORD &#183; one round, worked</text>
+<text x="32" y="43" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.3" fill="#9aa3b2" text-anchor="start" font-weight="400">Three agents must place one new service. Each is right; their first choices conflict. Bar &#964; = 0.60.</text>
+<rect x="32.0" y="68.0" width="330.0" height="54.0" fill="#121418" stroke="#39404a" stroke-width="1" rx="6"/>
+<text x="45" y="89" font-family="IBM Plex Mono, Menlo, monospace" font-size="13" fill="#39404a" text-anchor="start" font-weight="700">1</text>
+<text x="62" y="89" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="11" fill="#e8eaee" text-anchor="start" font-weight="700" letter-spacing="0.3">INITIALIZE</text>
+<text x="62" y="104" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">two shared anchors rescale every agent&#8217;s private</text>
+<text x="62" y="116" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">scale onto one bar</text>
+<line x1="197.0" y1="123.0" x2="197.0" y2="130.0" stroke="#9aa3b2" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="32.0" y="131.0" width="330.0" height="54.0" fill="#121418" stroke="#39404a" stroke-width="1" rx="6"/>
+<text x="45" y="152" font-family="IBM Plex Mono, Menlo, monospace" font-size="13" fill="#39404a" text-anchor="start" font-weight="700">2</text>
+<text x="62" y="152" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="11" fill="#e8eaee" text-anchor="start" font-weight="700" letter-spacing="0.3">PROPOSE + SCORE</text>
+<text x="62" y="167" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">one proposal per agent; everyone scores every</text>
+<text x="62" y="179" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">proposal</text>
+<line x1="197.0" y1="186.0" x2="197.0" y2="193.0" stroke="#9aa3b2" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="32.0" y="194.0" width="330.0" height="54.0" fill="#2a2112" stroke="#e39a46" stroke-width="1" rx="6"/>
+<text x="45" y="215" font-family="IBM Plex Mono, Menlo, monospace" font-size="13" fill="#e39a46" text-anchor="start" font-weight="700">3</text>
+<text x="62" y="215" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="11" fill="#e8eaee" text-anchor="start" font-weight="700" letter-spacing="0.3">SELECT</text>
+<text x="62" y="230" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">take the option whose worst-off agent is best</text>
+<text x="62" y="242" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">off</text>
+<line x1="197.0" y1="249.0" x2="197.0" y2="256.0" stroke="#9aa3b2" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="32.0" y="257.0" width="330.0" height="54.0" fill="#2a2112" stroke="#e39a46" stroke-width="1" rx="6"/>
+<text x="45" y="278" font-family="IBM Plex Mono, Menlo, monospace" font-size="13" fill="#e39a46" text-anchor="start" font-weight="700">4</text>
+<text x="62" y="278" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="11" fill="#e8eaee" text-anchor="start" font-weight="700" letter-spacing="0.3">REPAIR</text>
+<text x="62" y="293" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">the least-satisfied agent &#8212; and only it &#8212; writes</text>
+<text x="62" y="305" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">the next option</text>
+<line x1="197.0" y1="312.0" x2="197.0" y2="319.0" stroke="#9aa3b2" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="32.0" y="320.0" width="330.0" height="54.0" fill="#121418" stroke="#39404a" stroke-width="1" rx="6"/>
+<text x="45" y="341" font-family="IBM Plex Mono, Menlo, monospace" font-size="13" fill="#39404a" text-anchor="start" font-weight="700">5</text>
+<text x="62" y="341" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="11" fill="#e8eaee" text-anchor="start" font-weight="700" letter-spacing="0.3">STOP</text>
+<text x="62" y="356" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">commit when everyone clears the bar, or report</text>
+<text x="62" y="368" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">who does not</text>
+<path d="M362 297 H372 V147 H363" fill="none" stroke="#e39a46" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#ahx)"/>
+<text x="376" y="214.0" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#e39a46" text-anchor="start" font-weight="600">&#8804; B</text>
+<text x="448" y="60" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#e39a46" text-anchor="start" font-weight="700" letter-spacing="0.5">EVERYONE SCORES EVERY PROPOSAL</text>
+<text x="565.0" y="74" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#9aa3b2" text-anchor="middle" font-weight="400">Private cloud</text>
+<text x="651.0" y="74" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#9aa3b2" text-anchor="middle" font-weight="400">Cheapest</text>
+<text x="651.0" y="85" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#9aa3b2" text-anchor="middle" font-weight="400">region</text>
+<text x="737.0" y="74" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#9aa3b2" text-anchor="middle" font-weight="400">Edge, near</text>
+<text x="737.0" y="85" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#9aa3b2" text-anchor="middle" font-weight="400">users</text>
+<text x="832" y="74" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#e39a46" text-anchor="middle" font-weight="400">repair by</text>
+<text x="832" y="85" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#e39a46" text-anchor="middle" font-weight="600">security</text>
+<text x="448" y="112" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#e8eaee" text-anchor="start" font-weight="400">security</text>
+<rect x="530" y="98" width="70" height="19" fill="#171b21" rx="3"/>
+<text x="565.0" y="112" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#e8eaee" text-anchor="middle" font-weight="400">0.85</text>
+<rect x="616" y="98" width="70" height="19" fill="#2e1616" rx="3"/>
+<text x="651.0" y="112" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#ec6a68" text-anchor="middle" font-weight="600">0.30</text>
+<rect x="702" y="98" width="70" height="19" fill="#2e1616" rx="3"/>
+<text x="737.0" y="112" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#ec6a68" text-anchor="middle" font-weight="600">0.50</text>
+<rect x="796" y="98" width="72" height="19" fill="#102a1c" rx="3"/>
+<text x="832" y="112" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#3cc742" text-anchor="middle" font-weight="600">0.72</text>
+<text x="448" y="136" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#e8eaee" text-anchor="start" font-weight="400">cost</text>
+<rect x="530" y="122" width="70" height="19" fill="#171b21" rx="3"/>
+<text x="565.0" y="136" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#e8eaee" text-anchor="middle" font-weight="400">0.80</text>
+<rect x="616" y="122" width="70" height="19" fill="#171b21" rx="3"/>
+<text x="651.0" y="136" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#e8eaee" text-anchor="middle" font-weight="400">0.85</text>
+<rect x="702" y="122" width="70" height="19" fill="#171b21" rx="3"/>
+<text x="737.0" y="136" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#e8eaee" text-anchor="middle" font-weight="400">0.65</text>
+<rect x="796" y="122" width="72" height="19" fill="#102a1c" rx="3"/>
+<text x="832" y="136" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#3cc742" text-anchor="middle" font-weight="600">0.80</text>
+<text x="448" y="160" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#e8eaee" text-anchor="start" font-weight="400">latency</text>
+<rect x="530" y="146" width="70" height="19" fill="#2e1616" rx="3"/>
+<text x="565.0" y="160" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#ec6a68" text-anchor="middle" font-weight="600">0.30</text>
+<rect x="616" y="146" width="70" height="19" fill="#171b21" rx="3"/>
+<text x="651.0" y="160" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#e8eaee" text-anchor="middle" font-weight="400">0.45</text>
+<rect x="702" y="146" width="70" height="19" fill="#171b21" rx="3"/>
+<text x="737.0" y="160" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#e8eaee" text-anchor="middle" font-weight="400">0.90</text>
+<rect x="796" y="146" width="72" height="19" fill="#102a1c" rx="3"/>
+<text x="832" y="160" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.5" fill="#3cc742" text-anchor="middle" font-weight="600">0.75</text>
+<line x1="448" y1="171" x2="888" y2="171" stroke="#39404a" stroke-width="1"/>
+<text x="448" y="190" font-family="IBM Plex Mono, Menlo, monospace" font-size="9.4" fill="#9aa3b2" text-anchor="start" font-weight="400">worst-off</text>
+<text x="565.0" y="190" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#ec6a68" text-anchor="middle" font-weight="600">0.30</text>
+<text x="651.0" y="190" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#ec6a68" text-anchor="middle" font-weight="600">0.30</text>
+<text x="737.0" y="190" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#ec6a68" text-anchor="middle" font-weight="600">0.50</text>
+<text x="832" y="190" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#3cc742" text-anchor="middle" font-weight="700">0.72</text>
+<rect x="448.0" y="202.0" width="440.0" height="46.0" fill="#121418" stroke="#39404a" stroke-width="1" rx="6"/>
+<text x="460" y="219" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#e39a46" text-anchor="start" font-weight="700">SELECT</text>
+<text x="510" y="219" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.6" fill="#e8eaee" text-anchor="start" font-weight="400">Edge has the best worst case at 0.50 &#8212; still under the bar.</text>
+<text x="460" y="235" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#ec6a68" text-anchor="start" font-weight="700">BOTTLENECK</text>
+<text x="538" y="235" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.6" fill="#e8eaee" text-anchor="start" font-weight="400">security, so security writes the next option.</text>
+<rect x="448.0" y="256.0" width="440.0" height="46.0" fill="#102a1c" stroke="#3cc742" stroke-width="1" rx="6"/>
+<text x="460" y="273" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#3cc742" text-anchor="start" font-weight="700">COMMIT</text>
+<text x="518" y="273" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.6" fill="#e8eaee" text-anchor="start" font-weight="400">&#8220;public cloud on a private network, in the region closest to users&#8221;</text>
+<text x="518" y="289" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.6" fill="#9aa3b2" text-anchor="start" font-weight="400">every agent clears 0.60 &#8212; and the winner was nobody&#8217;s first choice.</text>
+<line x1="32" y1="394" x2="888" y2="394" stroke="#39404a" stroke-width="1"/>
+<text x="32.0" y="414" font-family="IBM Plex Mono, Menlo, monospace" font-size="15" fill="#e39a46" text-anchor="start" font-weight="700">&#964;</text>
+<text x="54.0" y="409" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#e8eaee" text-anchor="start" font-weight="400">satisfaction bar</text>
+<text x="54.0" y="421" font-family="IBM Plex Mono, Menlo, monospace" font-size="8.6" fill="#9aa3b2" text-anchor="start" font-weight="400" letter-spacing="0.4">buys BENEFIT</text>
+<text x="317.3333333333333" y="414" font-family="IBM Plex Mono, Menlo, monospace" font-size="15" fill="#e39a46" text-anchor="start" font-weight="700">&#949;</text>
+<text x="339.3333333333333" y="409" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#e8eaee" text-anchor="start" font-weight="400">acceptance margin</text>
+<text x="339.3333333333333" y="421" font-family="IBM Plex Mono, Menlo, monospace" font-size="8.6" fill="#9aa3b2" text-anchor="start" font-weight="400" letter-spacing="0.4">buys CONVERGENCE</text>
+<text x="602.6666666666666" y="414" font-family="IBM Plex Mono, Menlo, monospace" font-size="15" fill="#e39a46" text-anchor="start" font-weight="700">B</text>
+<text x="624.6666666666666" y="409" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#e8eaee" text-anchor="start" font-weight="400">round budget</text>
+<text x="624.6666666666666" y="421" font-family="IBM Plex Mono, Menlo, monospace" font-size="8.6" fill="#9aa3b2" text-anchor="start" font-weight="400" letter-spacing="0.4">buys COST</text>
+</svg>
