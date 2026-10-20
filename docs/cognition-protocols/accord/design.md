@@ -118,6 +118,20 @@ ACCORD records gaps and conflicts. It does not resolve them.
 | **Decomposition of the work**, where it is not already determined | A further protocol, not currently defined |
 | **Selection** among aligned options | **[CONCORD](../concord/index.md)** |
 
+## Handoff to CONCORD
+
+On `INTENT-LOCKED`, ACCORD hands over the Intent Contract — Roster, Frame, Glossary
+and Verifiable Objective. Those are exactly CONCORD's preconditions: locked shared
+intent and context, grounded terms, the calibration anchors that make satisfaction
+scores comparable, and an agreed acceptance basis for comparing outcomes.
+
+!!! note "Rationale for two protocols rather than one"
+    The two protocols fail in different ways and are measured differently. ACCORD's
+    failure mode is residual ambiguity, reported as missing mass and open flags.
+    CONCORD's failure mode is an unreachable satisfaction floor, reported as a named
+    agent and a numeric shortfall. A combined protocol would not report either
+    clearly.
+
 ## Source
 
 **Agreeing on Purpose, Deciding Under Conflict** — L9 + MAS-Lab T3s, Outshift by

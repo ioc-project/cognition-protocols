@@ -71,14 +71,15 @@ nav:
   - Home: index.md
   - Cognition Protocols:
       - cognition-protocols/index.md
+      - Design Requirements: cognition-protocols/design-requirements.md
+      - Installation: cognition-protocols/installation.md
       - ACCORD:
           - cognition-protocols/accord/index.md
           - Design: cognition-protocols/accord/design.md
-          - Installation: cognition-protocols/accord/installation.md
       - CONCORD:
           - cognition-protocols/concord/index.md
           - Design: cognition-protocols/concord/design.md
-          - Installation: cognition-protocols/concord/installation.md
+          - Configuration: cognition-protocols/concord/configuration.md
           - Specification: cognition-protocols/concord/specification.md
   - Evaluation:
       - evaluation/index.md

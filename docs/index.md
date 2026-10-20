@@ -7,24 +7,16 @@ hide:
 
 # IoC Cognition Protocols
 
-<p class="eyebrow">L9 — the agent cognitive layer</p>
 
-Multi-agent systems fail in ways that more capable models do not fix. Agents produce
-individually correct outputs that contradict each other, route tasks against inaccurate
-capability models, and reach decisions that are never verifiably shared. These are
-**coordination failures**, not capability failures — and they live at a layer that
-current infrastructure does not address.
+Cognition Protocols occupy the agent cognitive layer, **L9**, above the L8 agent
+transports. L8 standardises message envelopes, performatives and interaction patterns.
+It does not define a verifiable shared meaning for the content those messages carry,
+nor primitives for coordination and consensus across a population of agents.
 
-[Agent-to-agent transports](https://google.github.io/A2A/) — **L8** — standardise
-message envelopes, performatives, and interaction patterns. A2A, MCP, and SLIM operate
-at that layer. What they do not define is a verifiable shared meaning for the content
-those messages carry, or primitives for coordination and consensus across a population
-of agents. That is **L9**, the agent cognitive layer — currently unpopulated.
-
-Cognition Protocols are open, measurable specifications that occupy L9. Each one
-satisfies three requirements by construction: the exchange **converges** provably,
-emits a **certified record** of what was achieved, and runs within a **cost bound**
-declared at the start.
+That is the function of L9. Cognition Protocols are open, measurable specifications
+that occupy it. Each one satisfies three requirements by construction: the exchange
+**converges** provably, emits a **certified record** of what was achieved, and runs
+within a **cost bound** declared at the start.
 
 <div class="grid cards" markdown>
 
