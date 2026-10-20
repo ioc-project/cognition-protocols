@@ -29,7 +29,7 @@ emits the locked **Intent Contract** — CONCORD's precondition.
     How to add ACCORD to an existing multi-agent system — skill deployment, transport
     bindings, and configuration.
 
--   **[Evaluation](evaluation.md)**
+-   **[Evaluation](../../evaluation/accord.md)**
 
     ---
 

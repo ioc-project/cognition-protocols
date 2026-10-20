@@ -93,7 +93,7 @@ across four classes of decision.
 **CONCORD meets all four.** **ACCORD meets three** — its contract is constructed and
 used, but goal success is flat against the baseline, which is the one open result.
 
-[:octicons-arrow-right-24: Benchmarks](benchmarks.md) · [:octicons-arrow-right-24: CONCORD Evaluation](concord/evaluation.md)
+[:octicons-arrow-right-24: Evaluation](../evaluation/index.md) · [:octicons-arrow-right-24: CONCORD Evaluation](../evaluation/concord.md)
 
 ## Scope boundary
 

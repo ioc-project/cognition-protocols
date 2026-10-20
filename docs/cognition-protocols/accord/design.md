@@ -106,7 +106,7 @@ gap. The executed action is the correct rollback.
 !!! note "Status of these figures"
     The trace is constructed from the application, fixture and agent cards in use,
     and illustrates the mechanism. The counts are worked estimates; measured results
-    are reported on the [Evaluation page](evaluation.md).
+    are reported on the [Evaluation page](../../evaluation/accord.md).
 
 ## Out of scope
 

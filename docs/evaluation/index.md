@@ -15,7 +15,7 @@ at a price nobody would pay.
     overlays, the use cases and the per-run reporting contract — is set out in full
     in the extended version of the study.
 
-    [:octicons-download-24: Agreeing on Purpose, Deciding Under Conflict — extended version (PDF, 26 pages)](blogs/accord-concord-extended.pdf)
+    [:octicons-download-24: Agreeing on Purpose, Deciding Under Conflict — extended version (PDF, 26 pages)](../cognition-protocols/blogs/accord-concord-extended.pdf)
 
 | Dimension | ACCORD | CONCORD |
 |---|---|---|
@@ -27,7 +27,7 @@ at a price nobody would pay.
 CONCORD meets all four. ACCORD meets three; the benefit dimension is unresolved, in
 that the contract is constructed and used but goal success is flat against the
 baseline. Measuring dimension by dimension is what
-[locates that gap](accord/evaluation.md#benefit) rather than only reporting it, which an outcome-only
+[locates that gap](accord.md#benefit) rather than only reporting it, which an outcome-only
 comparison would not do.
 
 ## What each run reports
@@ -44,18 +44,18 @@ Certified and correct are reported separately wherever a ground truth exists.
 !!! info "ACCORD evaluation"
     The full ACCORD measurement results — convergence, correctness, cost, and benefit
     against a matched baseline — are on the
-    [ACCORD Evaluation page](accord/evaluation.md).
+    [ACCORD Evaluation page](accord.md).
 
 !!! info "CONCORD evaluation"
     The full CONCORD measurement results — compliance and correctness, cost, threshold
     calibration and variation across decision types — are on the
-    [CONCORD Evaluation page](concord/evaluation.md).
+    [CONCORD Evaluation page](concord.md).
 
 ## Source
 
 **Agreeing on Purpose, Deciding Under Conflict: Two Protocols for the Agent
 Cognitive Layer** — L9 + MAS-Lab T3s, Outshift by Cisco, October 2026.
 
-- [Extended version (PDF, 26 pages)](blogs/accord-concord-extended.pdf) — the
+- [Extended version (PDF, 26 pages)](../cognition-protocols/blogs/accord-concord-extended.pdf) — the
   full study: motivation, both protocols, the evaluation methodology, the use
   cases, and the results reported here.

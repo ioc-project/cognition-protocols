@@ -24,4 +24,4 @@ judgement but about **which facts each agent can see**.
     CONCORD certifies that every agent cleared its satisfaction floor; that is a
     different claim from having chosen the right site.
 
-    [:octicons-arrow-right-24: How this is reported](../concord/evaluation.md#compliance-and-correctness)
+    [:octicons-arrow-right-24: How this is reported](../../evaluation/concord.md#compliance-and-correctness)

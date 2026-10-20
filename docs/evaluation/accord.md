@@ -5,7 +5,7 @@
 Three cognitive challenges ACCORD targets, five incidents each, ten replicas per
 cell, against the same 150 scenarios with the protocol disabled.
 
-![ACCORD across the four dimensions](../../assets/diagrams/l9-accord-results-tokens.png)
+![ACCORD across the four dimensions](../assets/diagrams/l9-accord-results-tokens.png)
 
 ## Convergence
 
@@ -91,6 +91,6 @@ rather than in the five phases that construct it.
 **Agreeing on Purpose, Deciding Under Conflict: Two Protocols for the Agent
 Cognitive Layer** — L9 + MAS-Lab T3s, Outshift by Cisco, October 2026.
 
-- [Extended version (PDF, 26 pages)](../blogs/accord-concord-extended.pdf) — the
+- [Extended version (PDF, 26 pages)](../cognition-protocols/blogs/accord-concord-extended.pdf) — the
   full study: motivation, both protocols, the evaluation methodology, the use
   cases, and the results reported here.

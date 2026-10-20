@@ -31,7 +31,7 @@ committed run finished below the satisfaction floor.
     How to add CONCORD to an existing multi-agent system — skill deployment, transport
     bindings, and configuration.
 
--   **[Evaluation](evaluation.md)**
+-   **[Evaluation](../../evaluation/concord.md)**
 
     ---
 

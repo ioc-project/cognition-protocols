@@ -2,7 +2,7 @@
 
 <p class="eyebrow">350 runs across four classes of decision</p>
 
-![CONCORD across compliance, satisfaction and repair activity](../../assets/diagrams/l9-concord-results.png)
+![CONCORD across compliance, satisfaction and repair activity](../assets/diagrams/l9-concord-results.png)
 
 ## Compliance and correctness
 
@@ -75,7 +75,7 @@ had to author an additional candidate.
 | SRE triage | 85.2% |
 | E-commerce promotion | 20% |
 
-![How many rounds each decision took](../../assets/diagrams/l9-repair-by-case.png)
+![How many rounds each decision took](../assets/diagrams/l9-repair-by-case.png)
 
 On the e-commerce promotion, 20% of runs settled in round 1, 70% required one repair
 round and 10% required two. The protocol, floor and engine are identical across
@@ -98,6 +98,6 @@ floor.
 **Agreeing on Purpose, Deciding Under Conflict: Two Protocols for the Agent
 Cognitive Layer** — L9 + MAS-Lab T3s, Outshift by Cisco, October 2026.
 
-- [Extended version (PDF, 26 pages)](../blogs/accord-concord-extended.pdf) — the
+- [Extended version (PDF, 26 pages)](../cognition-protocols/blogs/accord-concord-extended.pdf) — the
   full study: motivation, both protocols, the evaluation methodology, the use
   cases, and the results reported here.
