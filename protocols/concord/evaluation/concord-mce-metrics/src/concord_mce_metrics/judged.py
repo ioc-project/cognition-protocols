@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
 """Outcome Satisfaction and Score Fairness, with an LLM as a judge.
 
 Ported from ``compute_satisfaction_fairness.py``: same gate, same extraction, same

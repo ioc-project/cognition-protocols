@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
 """Run the Concord metrics on MAS Lab ``events.jsonl`` traces.
 
 A development tool: the metrics read the KG's span dicts, so this builds those

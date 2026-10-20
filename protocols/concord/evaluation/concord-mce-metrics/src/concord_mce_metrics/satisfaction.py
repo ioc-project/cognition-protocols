@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
 """Deterministic satisfaction metrics: what the protocol itself recorded about each agent's score.
 
 Ported from ``compute_worst_off.py`` and the self-preference gap of

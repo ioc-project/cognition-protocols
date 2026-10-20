@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
 """Protocol-compliance metrics: did the run follow the CONCORD protocol?
 
 Ported from ``compute_compliance_metrics.py``. Among the sessions that used

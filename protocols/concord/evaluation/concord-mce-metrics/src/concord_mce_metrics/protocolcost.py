@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
 """What the CONCORD protocol costs in tokens, and where it goes.
 
 Ported from ``compute_protocol_cost.py``. There is no run without CONCORD to

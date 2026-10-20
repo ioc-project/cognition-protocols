@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
 # MCE configuration for CONCORD metrics: which plugin metrics run, per scope.
 # Every metric skips a session where CONCORD was not used (no successful `init`), and most skip a run that did not
 # reach COMMIT or BEST_EFFORT; a skipped metric is an error result and is never stored, so it never reads as 0.

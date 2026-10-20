@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
 """A small synthetic CONCORD session, as the KG stores it: tool spans carrying the initiator's calls."""
 
 import json

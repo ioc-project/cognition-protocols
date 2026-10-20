@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
 """How many rounds the protocol took.
 
 Ported from ``compute_rounds.py``. A run goes through one INITIAL round (anchors,

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
 """Read a session's KG spans the way the CONCORD evals read trace events.
 
 MCE hands a session metric ``tool_spans`` / ``llm_spans`` / ``agent_spans``
