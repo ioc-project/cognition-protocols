@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1520 1030" width="1520" height="1030" font-family="Inter, &apos;Helvetica Neue&apos;, Helvetica, Arial, sans-serif"><rect x="0" y="0" width="100%" height="100%" fill="#000000"/>
+
+  <defs>
+    <marker id="aGrey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#858585"/>
+    </marker>
+    <marker id="aCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#17BFFF"/>
+    </marker>
+    <marker id="aOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#FFA91F"/>
+    </marker>
+    <marker id="aRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#D44D3F"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1520" height="1030" fill="#000000"/>
+
+  <!-- ============ TITLE ============ -->
+  <text x="60" y="38" font-size="25" font-weight="600" fill="#A3C3ED">Protocol insertion via AgentBridge</text>
+  <text x="60" y="62" font-size="14" fill="#7F8FA4">Agents are unmodified and speak plain A2A. The bridge sits on the path and owns the deterministic protocol machinery. Instrumentation is pluggable; the SCOPE schema adapter is the ingest contract. SCOPE is detailed separately.</text>
+
+  <!-- ============ MAS BOUNDARY ============ -->
+  <rect x="60" y="80" width="1300" height="540" rx="16" fill="#000204" stroke="#384E65" stroke-width="2" stroke-dasharray="9 6"/>
+  <text x="80" y="106" font-size="14" font-weight="600" fill="#7F8FA4">Multi-Agent System (MAS)</text>
+
+  <!-- ============ AGENT A ============ -->
+  <rect x="140" y="126" width="300" height="176" rx="12" fill="#4083E5"/>
+  <text x="290" y="151" font-size="17" font-weight="600" fill="#000000" text-anchor="middle">Agent A</text>
+  <rect x="160" y="160" width="260" height="88" rx="8" fill="#082130"/>
+  <text x="290" y="179" font-size="12" fill="#A3C3ED" text-anchor="middle">Agent Memory</text>
+  <rect x="180" y="186" width="220" height="38" rx="6" fill="#85690A" stroke="#B59526"/>
+  <text x="290" y="211" font-size="15" font-weight="600" fill="#F7E2A5" text-anchor="middle">L9 State</text>
+  <text x="290" y="241" font-size="9.5" font-style="italic" fill="#8AA6C1" text-anchor="middle">injected by bridge (payload rewrite)</text>
+  <rect x="160" y="256" width="260" height="34" rx="6" fill="#919191"/>
+  <text x="290" y="278" font-size="11.5" fill="#000000" text-anchor="middle">Otel SDK — instrumented</text>
+
+  <!-- ============ AGENT B ============ -->
+  <rect x="580" y="126" width="300" height="176" rx="12" fill="#4083E5"/>
+  <text x="730" y="151" font-size="17" font-weight="600" fill="#000000" text-anchor="middle">Agent B</text>
+  <rect x="600" y="160" width="260" height="88" rx="8" fill="#082130"/>
+  <text x="730" y="179" font-size="12" fill="#A3C3ED" text-anchor="middle">Agent Memory</text>
+  <rect x="620" y="186" width="220" height="38" rx="6" fill="#85690A" stroke="#B59526"/>
+  <text x="730" y="211" font-size="15" font-weight="600" fill="#F7E2A5" text-anchor="middle">L9 State</text>
+  <text x="730" y="241" font-size="9.5" font-style="italic" fill="#8AA6C1" text-anchor="middle">injected by bridge (payload rewrite)</text>
+  <rect x="600" y="256" width="260" height="34" rx="6" fill="#919191"/>
+  <text x="730" y="278" font-size="11.5" fill="#000000" text-anchor="middle">Otel SDK — instrumented</text>
+
+  <!-- ============ AGENT C ============ -->
+  <rect x="1020" y="126" width="300" height="176" rx="12" fill="#4083E5"/>
+  <text x="1170" y="151" font-size="17" font-weight="600" fill="#000000" text-anchor="middle">Agent C</text>
+  <rect x="1040" y="160" width="260" height="88" rx="8" fill="#082130"/>
+  <text x="1170" y="179" font-size="12" fill="#A3C3ED" text-anchor="middle">Agent Memory</text>
+  <rect x="1060" y="186" width="220" height="38" rx="6" fill="#85690A" stroke="#B59526"/>
+  <text x="1170" y="211" font-size="15" font-weight="600" fill="#F7E2A5" text-anchor="middle">L9 State</text>
+  <text x="1170" y="241" font-size="9.5" font-style="italic" fill="#8AA6C1" text-anchor="middle">injected by bridge (payload rewrite)</text>
+  <rect x="1040" y="256" width="260" height="34" rx="6" fill="#919191"/>
+  <text x="1170" y="278" font-size="11.5" fill="#000000" text-anchor="middle">Otel SDK — instrumented</text>
+
+  <!-- ============ AGENT to BRIDGE (plain A2A) ============ -->
+  <line x1="290" y1="302" x2="290" y2="344" stroke="#858585" stroke-width="2.5" marker-start="url(#aGrey)" marker-end="url(#aGrey)"/>
+  <text x="300" y="328" font-size="11" fill="#7F8FA4">plain A2A</text>
+  <line x1="730" y1="302" x2="730" y2="344" stroke="#858585" stroke-width="2.5" marker-start="url(#aGrey)" marker-end="url(#aGrey)"/>
+  <text x="740" y="328" font-size="11" fill="#7F8FA4">plain A2A</text>
+  <line x1="1170" y1="302" x2="1170" y2="344" stroke="#858585" stroke-width="2.5" marker-start="url(#aGrey)" marker-end="url(#aGrey)"/>
+  <text x="1180" y="328" font-size="11" fill="#7F8FA4">plain A2A</text>
+
+  <!-- ============ BRIDGE A ============ -->
+  <rect x="140" y="344" width="300" height="152" rx="12" fill="#574706" stroke="#B59526" stroke-width="2"/>
+  <text x="290" y="368" font-size="16" font-weight="600" fill="#F7E2A5" text-anchor="middle">AgentBridge</text>
+  <rect x="156" y="380" width="268" height="56" rx="7" fill="#DC8D0A"/>
+  <text x="290" y="399" font-size="12.5" font-weight="600" fill="#FFE7B5" text-anchor="middle">Protocol machinery</text>
+  <text x="290" y="416" font-size="9.5" font-style="italic" fill="#FFE7B5" text-anchor="middle">envelope · seq · phase barrier · merge · commit</text>
+  <rect x="156" y="442" width="268" height="44" rx="7" fill="#DC8D0A"/>
+  <text x="290" y="459" font-size="12.5" font-weight="600" fill="#FFE7B5" text-anchor="middle">Card synthesis · payload rewrite</text>
+  <text x="290" y="475" font-size="9.5" font-style="italic" fill="#FFE7B5" text-anchor="middle">L9 extension · Agent Card augmentation</text>
+
+  <!-- ============ BRIDGE B ============ -->
+  <rect x="580" y="344" width="300" height="152" rx="12" fill="#574706" stroke="#B59526" stroke-width="2"/>
+  <text x="730" y="368" font-size="16" font-weight="600" fill="#F7E2A5" text-anchor="middle">AgentBridge</text>
+  <rect x="596" y="380" width="268" height="56" rx="7" fill="#DC8D0A"/>
+  <text x="730" y="399" font-size="12.5" font-weight="600" fill="#FFE7B5" text-anchor="middle">Protocol machinery</text>
+  <text x="730" y="416" font-size="9.5" font-style="italic" fill="#FFE7B5" text-anchor="middle">envelope · seq · phase barrier · merge · commit</text>
+  <rect x="596" y="442" width="268" height="44" rx="7" fill="#DC8D0A"/>
+  <text x="730" y="459" font-size="12.5" font-weight="600" fill="#FFE7B5" text-anchor="middle">Card synthesis · payload rewrite</text>
+  <text x="730" y="475" font-size="9.5" font-style="italic" fill="#FFE7B5" text-anchor="middle">L9 extension · Agent Card augmentation</text>
+
+  <!-- ============ BRIDGE C ============ -->
+  <rect x="1020" y="344" width="300" height="152" rx="12" fill="#574706" stroke="#B59526" stroke-width="2"/>
+  <text x="1170" y="368" font-size="16" font-weight="600" fill="#F7E2A5" text-anchor="middle">AgentBridge</text>
+  <rect x="1036" y="380" width="268" height="56" rx="7" fill="#DC8D0A"/>
+  <text x="1170" y="399" font-size="12.5" font-weight="600" fill="#FFE7B5" text-anchor="middle">Protocol machinery</text>
+  <text x="1170" y="416" font-size="9.5" font-style="italic" fill="#FFE7B5" text-anchor="middle">envelope · seq · phase barrier · merge · commit</text>
+  <rect x="1036" y="442" width="268" height="44" rx="7" fill="#DC8D0A"/>
+  <text x="1170" y="459" font-size="12.5" font-weight="600" fill="#FFE7B5" text-anchor="middle">Card synthesis · payload rewrite</text>
+  <text x="1170" y="475" font-size="9.5" font-style="italic" fill="#FFE7B5" text-anchor="middle">L9 extension · Agent Card augmentation</text>
+
+  <!-- ============ BRIDGE to SLIM CHANNEL ============ -->
+  <line x1="290" y1="496" x2="290" y2="532" stroke="#17BFFF" stroke-width="3" marker-start="url(#aCyan)" marker-end="url(#aCyan)"/>
+  <line x1="730" y1="496" x2="730" y2="532" stroke="#17BFFF" stroke-width="3" marker-start="url(#aCyan)" marker-end="url(#aCyan)"/>
+  <line x1="1170" y1="496" x2="1170" y2="532" stroke="#17BFFF" stroke-width="3" marker-start="url(#aCyan)" marker-end="url(#aCyan)"/>
+
+  <!-- ============ SLIM GROUP CHANNEL ============ -->
+  <rect x="140" y="532" width="1180" height="48" rx="10" fill="#01131B" stroke="#17BFFF" stroke-width="2.5"/>
+  <text x="730" y="552" font-size="14" font-weight="600" fill="#85DDFF" text-anchor="middle">SLIM group channel — L9 | A2A  (multicast, O(N) per phase)</text>
+  <text x="730" y="570" font-size="10" font-style="italic" fill="#85DDFF" text-anchor="middle">announce · problem · frame · term · holding · check · commit · delta</text>
+
+  <!-- ============ INSTRUMENTATION (pluggable) ============ -->
+  <line x1="440" y1="620" x2="440" y2="642" stroke="#858585" stroke-width="3" marker-end="url(#aGrey)"/>
+  <line x1="980" y1="620" x2="980" y2="642" stroke="#858585" stroke-width="3" marker-end="url(#aGrey)"/>
+
+  <rect x="200" y="644" width="480" height="64" rx="10" fill="#4B88E0"/>
+  <text x="440" y="670" font-size="14.5" font-weight="600" fill="#000000" text-anchor="middle">Agntcy Observe</text>
+  <text x="440" y="692" font-size="10.5" fill="#082130" text-anchor="middle">one possible Otel instrumentation</text>
+
+  <rect x="740" y="644" width="480" height="64" rx="10" fill="#040D17" stroke="#4B88E0" stroke-width="2.5" stroke-dasharray="8 5"/>
+  <text x="980" y="670" font-size="14.5" font-weight="600" fill="#A3C3ED" text-anchor="middle">Any other Otel instrumentation</text>
+  <text x="980" y="692" font-size="10.5" fill="#94B2D3" text-anchor="middle">vendor SDK · framework auto-instrumentation · custom</text>
+
+  <line x1="440" y1="708" x2="440" y2="734" stroke="#858585" stroke-width="3" marker-end="url(#aGrey)"/>
+  <line x1="980" y1="708" x2="980" y2="734" stroke="#858585" stroke-width="3" marker-end="url(#aGrey)"/>
+
+  <!-- ============ SCOPE SCHEMA ADAPTER ============ -->
+  <rect x="200" y="736" width="1020" height="52" rx="10" fill="#8FE8E3" stroke="#B0F1ED" stroke-width="2"/>
+  <text x="710" y="759" font-size="15" font-weight="600" fill="#000000" text-anchor="middle">SCOPE schema adapter</text>
+  <text x="710" y="778" font-size="10.5" font-style="italic" fill="#19403C" text-anchor="middle">maps any OTLP source onto the SCOPE schema — the only ingest contract SCOPE depends on</text>
+
+  <line x1="710" y1="788" x2="710" y2="812" stroke="#858585" stroke-width="3" marker-end="url(#aGrey)"/>
+
+  <!-- ============ SCOPE (summary block) ============ -->
+  <rect x="60" y="814" width="1300" height="176" rx="14" fill="#0D0D0D" stroke="#737373" stroke-width="2.5"/>
+  <text x="710" y="843" font-size="17" font-weight="600" fill="#CCCCCC" text-anchor="middle">SCOPE</text>
+
+  <rect x="96" y="856" width="1240" height="60" rx="9" fill="#372A02" stroke="#FFA91F" stroke-width="2.5"/>
+  <text x="716" y="878" font-size="14" font-weight="600" fill="#FFD385" text-anchor="middle">PEs — SCOPE Platform Engines</text>
+  <text x="716" y="900" font-size="11" font-style="italic" fill="#EFBF75" text-anchor="middle">Semantic Analysis · Symbolic eval  (synchronous, gate a phase)   |   Wasted Resources · Root Cause Analysis  (telemetry-driven)</text>
+
+  <rect x="96" y="928" width="1240" height="44" rx="8" fill="#737373"/>
+  <text x="716" y="956" font-size="12.5" font-weight="600" fill="#000000" text-anchor="middle">SCOPE core — Multi-layer Knowledge Graph · Evaluation and Scoring · Datastore (Raw Telemetry)</text>
+
+  <!-- ============ SYNCHRONOUS CALL : BRIDGE to SYNC OPEs ============ -->
+  <path d="M140,450 L32,450 L32,886 L92,886" fill="none" stroke="#FFA91F" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#aOrange)"/>
+  <text x="24" y="680" font-size="10.5" fill="#FFB74C" text-anchor="middle" transform="rotate(-90 24 680)">synchronous call — every bridge</text>
+
+  <!-- ============ FEEDBACK : TRIGGER DRIVES L9 ============ -->
+  <path d="M1336,886 L1450,886 L1450,460 L1326,460" fill="none" stroke="#D44D3F" stroke-width="3" marker-end="url(#aRed)"/>
+  <text x="1468" y="680" font-size="12" font-weight="600" fill="#D44D3F" text-anchor="middle" transform="rotate(-90 1468 680)">trigger L9 — scoped delta / phase re-run</text>
+
+<!-- ioc:dark sans="Helvetica Neue, Helvetica, Arial, sans-serif" --></svg>

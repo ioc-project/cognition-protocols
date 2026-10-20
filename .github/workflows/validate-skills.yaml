@@ -1,0 +1,51 @@
+name: validate-skills
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-dirs: ${{ steps.detect.outputs.changed-dirs }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: List skill directories
+        id: list-skills
+        run: |
+          dirs="$(find . -mindepth 5 -maxdepth 5 -path './protocols/*/skills/*' -name SKILL.md \
+            | xargs -n1 dirname | sed 's#^\./##' | sort | tr '\n' ' ')"
+          echo "dirs=${dirs}" >> "$GITHUB_OUTPUT"
+
+      - name: Detect changed skills
+        id: detect
+        uses: ./.github/actions/detect-changes
+        with:
+          dirs: ${{ steps.list-skills.outputs.dirs }}
+
+  validate:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.changed-dirs != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        skill: ${{ fromJson(needs.detect-changes.outputs.changed-dirs) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install skills-ref
+        run: pip install skills-ref
+
+      - name: Validate ${{ matrix.skill }}
+        run: agentskills validate "${{ matrix.skill }}"
+

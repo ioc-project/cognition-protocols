@@ -1,0 +1,76 @@
+<svg viewBox="0 0 920 336" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif"><rect x="0" y="0" width="920" height="336" fill="#000000"/>
+<rect x="0" y="0" width="920" height="336" fill="#0a0a0a"/>
+<text x="30" y="26" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="13.5" fill="#e8eaee" text-anchor="start" font-weight="600">CONCORD &#183; SRE incident triage &#183; 150 runs (15 scenarios &#215; 10 repetitions), baseline vs protocol-enabled</text>
+<text x="30" y="43" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.5" fill="#9aa3b2" text-anchor="start" font-weight="400">Satisfaction floor &#964; = 0.60. Compliance and correctness hold &#8212; and most decisions settled in round 1, without needing a repair round.</text>
+<text x="30" y="68" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="11.5" fill="#e8eaee" text-anchor="start" font-weight="600">Protocol step completion</text>
+<text x="30" y="82" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.2" fill="#9aa3b2" text-anchor="start" font-weight="400">share of started runs reaching each step</text>
+<text x="96" y="109" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">init</text>
+<rect x="104" y="96" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="104.0" y="96.0" width="150.7" height="17" fill="#3cc742" rx="2"/>
+<text x="261.6666666666667" y="109" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">100%</text>
+<text x="96" y="137" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">anchors</text>
+<rect x="104" y="124" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="104.0" y="124.0" width="150.7" height="17" fill="#3cc742" rx="2"/>
+<text x="261.6666666666667" y="137" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">100%</text>
+<text x="96" y="165" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">seeds</text>
+<rect x="104" y="152" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="104.0" y="152.0" width="150.7" height="17" fill="#3cc742" rx="2"/>
+<text x="261.6666666666667" y="165" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">100%</text>
+<text x="96" y="193" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">scores</text>
+<rect x="104" y="180" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="104.0" y="180.0" width="146.1" height="17" fill="#3cc742" rx="2"/>
+<text x="261.6666666666667" y="193" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">97%</text>
+<text x="96" y="221" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">repairs</text>
+<rect x="104" y="208" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="104.0" y="208.0" width="137.0" height="17" fill="#e8ab30" rx="2"/>
+<text x="261.6666666666667" y="221" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">90.9%</text>
+<text x="96" y="249" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">completed</text>
+<rect x="104" y="236" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="104.0" y="236.0" width="133.9" height="17" fill="#e8ab30" rx="2"/>
+<text x="261.6666666666667" y="249" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">88.9%</text>
+<text x="326.6666666666667" y="68" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="11.5" fill="#e8eaee" text-anchor="start" font-weight="600">Worst-off agent&#8217;s satisfaction</text>
+<text x="326.6666666666667" y="82" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.2" fill="#9aa3b2" text-anchor="start" font-weight="400">lowest score any agent gave the winner</text>
+<text x="392.6666666666667" y="109" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">&lt;0.6 floor</text>
+<rect x="400.6666666666667" y="96" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="400.7" y="96.0" width="0.6" height="17" fill="#39404a" rx="2"/>
+<text x="558.3333333333334" y="109" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">0%</text>
+<text x="392.6666666666667" y="137" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">0.6&#8211;0.7</text>
+<rect x="400.6666666666667" y="124" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="400.7" y="124.0" width="3.5" height="17" fill="#e8ab30" rx="2"/>
+<text x="558.3333333333334" y="137" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">2.3%</text>
+<text x="392.6666666666667" y="165" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">0.7&#8211;0.8</text>
+<rect x="400.6666666666667" y="152" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="400.7" y="152.0" width="38.1" height="17" fill="#58a2f5" rx="2"/>
+<text x="558.3333333333334" y="165" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">25.3%</text>
+<text x="392.6666666666667" y="193" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">0.8&#8211;0.9</text>
+<rect x="400.6666666666667" y="180" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="400.7" y="180.0" width="39.8" height="17" fill="#58a2f5" rx="2"/>
+<text x="558.3333333333334" y="193" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">26.4%</text>
+<text x="392.6666666666667" y="221" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">0.9&#8211;1.0</text>
+<rect x="400.6666666666667" y="208" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="400.7" y="208.0" width="69.3" height="17" fill="#58a2f5" rx="2"/>
+<text x="558.3333333333334" y="221" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">46%</text>
+<text x="400.6666666666667" y="248" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.5" fill="#9aa3b2" text-anchor="start" font-weight="400">average 0.86 &#183; lowest 0.67 &#183; floor 0.60, never breached</text>
+<text x="623.3333333333334" y="68" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="11.5" fill="#e8eaee" text-anchor="start" font-weight="600">Repair rounds per run</text>
+<text x="623.3333333333334" y="82" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.2" fill="#9aa3b2" text-anchor="start" font-weight="400">how many rounds the decision took</text>
+<text x="689.3333333333334" y="109" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">0</text>
+<rect x="697.3333333333334" y="96" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="697.3" y="96.0" width="128.4" height="17" fill="#58a2f5" rx="2"/>
+<text x="855.0" y="109" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">85.2%</text>
+<text x="689.3333333333334" y="137" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">1</text>
+<rect x="697.3333333333334" y="124" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="697.3" y="124.0" width="10.2" height="17" fill="#33d6a0" rx="2"/>
+<text x="855.0" y="137" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">6.8%</text>
+<text x="689.3333333333334" y="165" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">2</text>
+<rect x="697.3333333333334" y="152" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="697.3" y="152.0" width="10.2" height="17" fill="#33d6a0" rx="2"/>
+<text x="855.0" y="165" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">6.8%</text>
+<text x="689.3333333333334" y="193" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#e8eaee" text-anchor="end" font-weight="400">3</text>
+<rect x="697.3333333333334" y="180" width="150.7" height="17" fill="#121418" rx="2"/>
+<rect x="697.3" y="180.0" width="1.8" height="17" fill="#33d6a0" rx="2"/>
+<text x="855.0" y="193" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.2" fill="#e8eaee" text-anchor="start" font-weight="600">1.2%</text>
+<text x="697.3333333333334" y="220" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.5" fill="#e39a46" text-anchor="start" font-weight="600">85.2% of runs settled in round 1 &#8212;</text>
+<text x="697.3333333333334" y="234" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.5" fill="#9aa3b2" text-anchor="start" font-weight="400">no repair round was needed.</text>
+<line x1="30" y1="302" x2="890" y2="302" stroke="#39404a" stroke-width="1"/>
+<text x="30" y="322" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.2" fill="#9aa3b2" text-anchor="start" font-weight="400">Denominators differ per panel: compliance is scored over runs that started the protocol, satisfaction and repairs over runs that committed.</text>
+</svg>

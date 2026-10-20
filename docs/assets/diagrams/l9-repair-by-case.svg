@@ -1,0 +1,48 @@
+<svg viewBox="0 0 900 342" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif"><rect x="0" y="0" width="900" height="342" fill="#000000"/>
+<rect width="900" height="342" fill="#0a0a0a"/>
+<text x="32" y="26" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="13.5" fill="#e8eaee" text-anchor="start" font-weight="600">How many rounds each decision took</text>
+<text x="32" y="43" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.3" fill="#9aa3b2" text-anchor="start" font-weight="400">Share of committed runs by repair rounds beyond round 1, at a floor of &#964; = 0.60. Round 1 is itself a full</text>
+<text x="32" y="57" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.3" fill="#9aa3b2" text-anchor="start" font-weight="400">negotiation round: every agent proposes, every proposal is scored, the floor is checked across all of them.</text>
+<rect x="218" y="80" width="10" height="10" fill="#58a2f5" rx="2"/>
+<text x="232" y="89" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.2" fill="#9aa3b2" text-anchor="start" font-weight="400">none &#8212; settled in round 1</text>
+<rect x="403.0" y="80" width="10" height="10" fill="#33d6a0" rx="2"/>
+<text x="417.0" y="89" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.2" fill="#9aa3b2" text-anchor="start" font-weight="400">1</text>
+<rect x="443.0" y="80" width="10" height="10" fill="#e39a46" rx="2"/>
+<text x="457.0" y="89" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.2" fill="#9aa3b2" text-anchor="start" font-weight="400">2</text>
+<rect x="483.0" y="80" width="10" height="10" fill="#e8ab30" rx="2"/>
+<text x="497.0" y="89" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.2" fill="#9aa3b2" text-anchor="start" font-weight="400">3</text>
+<text x="206" y="120" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.6" fill="#e8eaee" text-anchor="end" font-weight="600">SRE incident triage</text>
+<text x="206" y="132" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#9aa3b2" text-anchor="end" font-weight="400">150 runs</text>
+<rect x="218.0" y="108" width="426.0" height="26" fill="#58a2f5"/>
+<text x="431.0" y="125" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" font-weight="600">85.2%</text>
+<rect x="644.0" y="108" width="34.0" height="26" fill="#33d6a0"/>
+<text x="661.0" y="125" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" font-weight="600">6.8%</text>
+<rect x="678.0" y="108" width="34.0" height="26" fill="#e39a46"/>
+<text x="695.0" y="125" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" font-weight="600">6.8%</text>
+<rect x="712.0" y="108" width="6.0" height="26" fill="#e8ab30"/>
+<text x="732" y="125" font-family="IBM Plex Mono, Menlo, monospace" font-size="9.6" fill="#9aa3b2" text-anchor="start" font-weight="400">worst-off avg 0.86</text>
+<text x="206" y="166" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.6" fill="#e8eaee" text-anchor="end" font-weight="600">Renewal discount</text>
+<text x="206" y="178" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#9aa3b2" text-anchor="end" font-weight="400">10 runs</text>
+<rect x="218.0" y="154" width="450.0" height="26" fill="#58a2f5"/>
+<text x="443.0" y="171" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" font-weight="600">90%</text>
+<rect x="668.0" y="154" width="50.0" height="26" fill="#33d6a0"/>
+<text x="693.0" y="171" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" font-weight="600">10%</text>
+<text x="732" y="171" font-family="IBM Plex Mono, Menlo, monospace" font-size="9.6" fill="#9aa3b2" text-anchor="start" font-weight="400">worst-off avg 0.73</text>
+<text x="206" y="212" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.6" fill="#e8eaee" text-anchor="end" font-weight="600">E-commerce promo</text>
+<text x="206" y="224" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#9aa3b2" text-anchor="end" font-weight="400">10 runs</text>
+<rect x="218.0" y="200" width="100.0" height="26" fill="#58a2f5"/>
+<text x="268.0" y="217" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" font-weight="600">20%</text>
+<rect x="318.0" y="200" width="350.0" height="26" fill="#33d6a0"/>
+<text x="493.0" y="217" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" font-weight="600">70%</text>
+<rect x="668.0" y="200" width="50.0" height="26" fill="#e39a46"/>
+<text x="693.0" y="217" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" font-weight="600">10%</text>
+<text x="732" y="217" font-family="IBM Plex Mono, Menlo, monospace" font-size="9.6" fill="#9aa3b2" text-anchor="start" font-weight="400">worst-off avg 0.77</text>
+<text x="206" y="258" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.6" fill="#e8eaee" text-anchor="end" font-weight="600">Hidden profile</text>
+<text x="206" y="270" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#9aa3b2" text-anchor="end" font-weight="400">22 runs</text>
+<rect x="218.0" y="246" width="500.0" height="26" fill="#58a2f5"/>
+<text x="468.0" y="263" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle" font-weight="600">100%</text>
+<text x="732" y="263" font-family="IBM Plex Mono, Menlo, monospace" font-size="9.6" fill="#9aa3b2" text-anchor="start" font-weight="400">worst-off avg 0.86</text>
+<line x1="32" y1="294" x2="868" y2="294" stroke="#39404a" stroke-width="1"/>
+<text x="32" y="314" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.8" fill="#e8eaee" text-anchor="start" font-weight="400">On three of the four, round 1 already cleared the floor for every agent, so no repair round was needed.</text>
+<text x="32" y="329" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.8" fill="#e39a46" text-anchor="start" font-weight="400">On the e-commerce promotion 80% of runs went further, with the bottleneck agent authoring an option nobody had brought. Same protocol, same floor, different problem.</text>
+</svg>
