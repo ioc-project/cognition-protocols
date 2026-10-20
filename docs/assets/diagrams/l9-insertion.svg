@@ -1,0 +1,92 @@
+<svg viewBox="0 0 920 432" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6270"/></marker><marker id="ahx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b9762a"/></marker></defs>
+<rect width="920" height="432" fill="#ffffff"/>
+<text x="32" y="26" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="13.5" fill="#181a20" text-anchor="start" font-weight="600">L9 protocol insertion &#183; where detection taps, and what it can see</text>
+<text x="32" y="43" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.3" fill="#5b6270" text-anchor="start" font-weight="400">Nothing here changes the application. The further right you tap, the less you can see &#8212; and the later you can act.</text>
+<text x="32" y="70" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#b9762a" text-anchor="start" font-weight="700" letter-spacing="0.6">PART 1 &#8212; DETECTION</text>
+<text x="180" y="70" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#5b6270" text-anchor="start" font-weight="400">when should a protocol fire?</text>
+<rect x="32.0" y="84.0" width="134.3" height="94.0" fill="#f7f8fa" stroke="#d8dce3" stroke-width="1" rx="6"/>
+<text x="42.0" y="101" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#181a20" text-anchor="start" font-weight="700">AgentSkill</text>
+<text x="42.0" y="115" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">the agent self-selects</text>
+<text x="42.0" y="126" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">on the skill&#8217;s own</text>
+<text x="42.0" y="137" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">trigger</text>
+<rect x="42.0" y="158.0" width="67.0" height="14" fill="#0ca30c" rx="3"/><text x="75.5" y="167.8" font-family="IBM Plex Mono, Menlo, monospace" font-size="8.2" fill="#ffffff" text-anchor="middle" font-weight="600">everything</text>
+<line x1="99.2" y1="179.0" x2="99.2" y2="194.0" stroke="#0ca30c" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="176.3" y="84.0" width="134.3" height="94.0" fill="#f7f8fa" stroke="#d8dce3" stroke-width="1" rx="6"/>
+<text x="186.33333333333334" y="101" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#181a20" text-anchor="start" font-weight="700">Framework hook</text>
+<text x="186.33333333333334" y="115" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">fires at a lifecycle</text>
+<text x="186.33333333333334" y="126" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">point, blocks on</text>
+<text x="186.33333333333334" y="137" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">detection</text>
+<rect x="186.3" y="158.0" width="90.6" height="14" fill="#2a78d6" rx="3"/><text x="231.63333333333335" y="167.8" font-family="IBM Plex Mono, Menlo, monospace" font-size="8.2" fill="#ffffff" text-anchor="middle" font-weight="600">tool arguments</text>
+<line x1="243.5" y1="179.0" x2="243.5" y2="194.0" stroke="#2a78d6" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="320.7" y="84.0" width="134.3" height="94.0" fill="#f7f8fa" stroke="#d8dce3" stroke-width="1" rx="6"/>
+<text x="330.6666666666667" y="101" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#181a20" text-anchor="start" font-weight="700">Framework</text>
+<text x="330.6666666666667" y="113" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#181a20" text-anchor="start" font-weight="700">intercept</text>
+<text x="330.6666666666667" y="127" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">patch the send</text>
+<text x="330.6666666666667" y="138" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">function; in-process</text>
+<rect x="330.7" y="158.0" width="96.5" height="14" fill="#2a78d6" rx="3"/><text x="378.9166666666667" y="167.8" font-family="IBM Plex Mono, Menlo, monospace" font-size="8.2" fill="#ffffff" text-anchor="middle" font-weight="600">message + state</text>
+<line x1="387.8" y1="179.0" x2="387.8" y2="194.0" stroke="#2a78d6" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="465.0" y="84.0" width="134.3" height="94.0" fill="#f7f8fa" stroke="#d8dce3" stroke-width="1" rx="6"/>
+<text x="475.0" y="101" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#181a20" text-anchor="start" font-weight="700">CLI wrapper</text>
+<text x="475.0" y="115" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">replace the CLI the</text>
+<text x="475.0" y="126" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">agent calls</text>
+<rect x="475.0" y="158.0" width="55.2" height="14" fill="#c98500" rx="3"/><text x="502.6" y="167.8" font-family="IBM Plex Mono, Menlo, monospace" font-size="8.2" fill="#ffffff" text-anchor="middle" font-weight="600">messages</text>
+<line x1="532.2" y1="179.0" x2="532.2" y2="194.0" stroke="#c98500" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="609.3" y="84.0" width="134.3" height="94.0" fill="#f7f8fa" stroke="#d8dce3" stroke-width="1" rx="6"/>
+<text x="619.3333333333334" y="101" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#181a20" text-anchor="start" font-weight="700">Transport</text>
+<text x="619.3333333333334" y="113" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#181a20" text-anchor="start" font-weight="700">interceptor</text>
+<text x="619.3333333333334" y="127" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">a sidecar or proxy,</text>
+<text x="619.3333333333334" y="138" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="8.8" fill="#5b6270" text-anchor="start" font-weight="400">fully transparent</text>
+<rect x="619.3" y="158.0" width="55.2" height="14" fill="#c98500" rx="3"/><text x="646.9333333333334" y="167.8" font-family="IBM Plex Mono, Menlo, monospace" font-size="8.2" fill="#ffffff" text-anchor="middle" font-weight="600">messages</text>
+<line x1="676.5" y1="179.0" x2="676.5" y2="194.0" stroke="#c98500" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="32.0" y="196.0" width="134.3" height="36.0" fill="#eef1f5" stroke="#d8dce3" stroke-width="1" rx="5"/>
+<text x="99.16666666666667" y="211" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#181a20" text-anchor="middle" font-weight="600">agent</text>
+<text x="99.16666666666667" y="224" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#5b6270" text-anchor="middle" font-weight="400">reasoning</text>
+<line x1="167.3" y1="214.0" x2="175.3" y2="214.0" stroke="#5b6270" stroke-width="1.3" marker-end="url(#ah)"/>
+<rect x="176.3" y="196.0" width="134.3" height="36.0" fill="#eef1f5" stroke="#d8dce3" stroke-width="1" rx="5"/>
+<text x="243.5" y="211" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#181a20" text-anchor="middle" font-weight="600">tool</text>
+<text x="243.5" y="224" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#5b6270" text-anchor="middle" font-weight="400">call</text>
+<line x1="311.7" y1="214.0" x2="319.7" y2="214.0" stroke="#5b6270" stroke-width="1.3" marker-end="url(#ah)"/>
+<rect x="320.7" y="196.0" width="134.3" height="36.0" fill="#eef1f5" stroke="#d8dce3" stroke-width="1" rx="5"/>
+<text x="387.83333333333337" y="211" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#181a20" text-anchor="middle" font-weight="600">framework</text>
+<text x="387.83333333333337" y="224" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#5b6270" text-anchor="middle" font-weight="400">send</text>
+<line x1="456.0" y1="214.0" x2="464.0" y2="214.0" stroke="#5b6270" stroke-width="1.3" marker-end="url(#ah)"/>
+<rect x="465.0" y="196.0" width="134.3" height="36.0" fill="#eef1f5" stroke="#d8dce3" stroke-width="1" rx="5"/>
+<text x="532.1666666666666" y="211" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#181a20" text-anchor="middle" font-weight="600">CLI</text>
+<text x="532.1666666666666" y="224" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#5b6270" text-anchor="middle" font-weight="400">(a2acli)</text>
+<line x1="600.3" y1="214.0" x2="608.3" y2="214.0" stroke="#5b6270" stroke-width="1.3" marker-end="url(#ah)"/>
+<rect x="609.3" y="196.0" width="134.3" height="36.0" fill="#eef1f5" stroke="#d8dce3" stroke-width="1" rx="5"/>
+<text x="676.5" y="211" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#181a20" text-anchor="middle" font-weight="600">transport</text>
+<text x="676.5" y="224" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#5b6270" text-anchor="middle" font-weight="400">layer</text>
+<line x1="744.7" y1="214.0" x2="752.7" y2="214.0" stroke="#5b6270" stroke-width="1.3" marker-end="url(#ah)"/>
+<rect x="753.7" y="196.0" width="134.3" height="36.0" fill="#fdf6ee" stroke="#b9762a" stroke-width="1" rx="5"/>
+<text x="820.8333333333334" y="211" font-family="IBM Plex Mono, Menlo, monospace" font-size="10" fill="#181a20" text-anchor="middle" font-weight="600">peer</text>
+<text x="820.8333333333334" y="224" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#5b6270" text-anchor="middle" font-weight="400">agent</text>
+<line x1="32" y1="246" x2="888" y2="246" stroke="#d8dce3" stroke-width="1"/>
+<text x="66" y="259" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#5b6270" text-anchor="start" font-weight="400">blocks before the message exists</text>
+<text x="888" y="259" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#5b6270" text-anchor="end" font-weight="400">blocks on the wire</text>
+<rect x="32.0" y="272.0" width="856.0" height="54.0" fill="#f7f8fa" stroke="#d8dce3" stroke-width="1" rx="6"/>
+<rect x="44.0" y="282.0" width="120.1" height="16" fill="#9aa0ad" rx="3"/><text x="104.05000000000001" y="293.8" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#ffffff" text-anchor="middle" font-weight="600">Async observability</text>
+<text x="174.10000000000002" y="294" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.8" fill="#181a20" text-anchor="start" font-weight="400">an external platform watches traces across every agent and injects a trigger when it sees a failure</text>
+<text x="44" y="316" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.2" fill="#5b6270" text-anchor="start" font-weight="400">The only option that catches what no single message contains &#8212; cross-agent drift, herding, long-horizon misalignment. It fires after the fact.</text>
+<path d="M367.83333333333337 232 V266" fill="none" stroke="#9aa0ad" stroke-width="1.3" stroke-dasharray="3 3" marker-end="url(#ah)"/>
+<text x="373.83333333333337" y="258" font-family="IBM Plex Mono, Menlo, monospace" font-size="8.6" fill="#9aa0ad" text-anchor="start" font-weight="400">traces</text>
+<path d="M38 299 H16 V214.0 H30" fill="none" stroke="#b9762a" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ahx)"/>
+<text x="14" y="188" font-family="IBM Plex Mono, Menlo, monospace" font-size="8.6" fill="#b9762a" text-anchor="start" font-weight="400">trigger</text>
+<line x1="32" y1="328" x2="888" y2="328" stroke="#d8dce3" stroke-width="1"/>
+<text x="32" y="344" font-family="IBM Plex Mono, Menlo, monospace" font-size="9" fill="#b9762a" text-anchor="start" font-weight="700" letter-spacing="0.6">PART 2 &#8212; EXECUTION</text>
+<text x="180" y="344" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10" fill="#5b6270" text-anchor="start" font-weight="400">how the agents actually conduct the protocol</text>
+<rect x="32.0" y="354.0" width="277.3" height="50.0" fill="#f7f8fa" stroke="#d8dce3" stroke-width="1" rx="6"/>
+<text x="44.0" y="372" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#181a20" text-anchor="start" font-weight="700">initiator skill</text>
+<text x="44.0" y="386" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#5b6270" text-anchor="start" font-weight="400">opens the protocol, drives the phases,</text>
+<text x="44.0" y="397" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#5b6270" text-anchor="start" font-weight="400">relays</text>
+<rect x="321.3" y="354.0" width="277.3" height="50.0" fill="#f7f8fa" stroke="#d8dce3" stroke-width="1" rx="6"/>
+<text x="333.3333333333333" y="372" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#181a20" text-anchor="start" font-weight="700">receiver skill</text>
+<text x="333.3333333333333" y="386" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#5b6270" text-anchor="start" font-weight="400">recognises the protocol and answers in</text>
+<text x="333.3333333333333" y="397" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#5b6270" text-anchor="start" font-weight="400">schema</text>
+<rect x="610.7" y="354.0" width="277.3" height="50.0" fill="#f7f8fa" stroke="#b9762a" stroke-width="1" rx="6"/>
+<text x="622.6666666666666" y="372" font-family="IBM Plex Mono, Menlo, monospace" font-size="10.2" fill="#181a20" text-anchor="start" font-weight="700">helper scripts</text>
+<text x="622.6666666666666" y="386" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#5b6270" text-anchor="start" font-weight="400">every merge, score and stop rule &#8212; the</text>
+<text x="622.6666666666666" y="397" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9" fill="#5b6270" text-anchor="start" font-weight="400">engine decides, not the LLM</text>
+<text x="32" y="422" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="9.2" fill="#5b6270" text-anchor="start" font-weight="400">Guardrails, where you own the communication layer, turn the skill&#8217;s instructions into enforcement: an out-of-order message is rejected with a correction.</text>
+</svg>

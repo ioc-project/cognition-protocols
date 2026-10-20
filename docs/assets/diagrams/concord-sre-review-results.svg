@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 620" width="1400" height="620" font-family="Inter, &apos;Helvetica Neue&apos;, Helvetica, Arial, sans-serif"><rect x="0" y="0" width="100%" height="100%" fill="#000000"/>
+  <rect x="0" y="0" width="1400" height="620" fill="#000000"/>
+  <text x="50" y="42" font-size="22" font-weight="600" fill="#A3C3ED">CONCORD v2 — measured results, 4-agent subsystem scenario</text>
+  <text x="50" y="66" font-size="13" fill="#7F8FA4">Recorded run replayed from tests/concord-subsystems. satisfaction_threshold = 0.70, eps = 0.05, B = 6, W = leximin, N = 4.</text>
+
+  <!-- ============ PANEL A ============ -->
+  <rect x="50" y="90" width="630" height="480" rx="10" fill="#05080B" stroke="#1F2A36" stroke-width="1.2"/>
+  <text x="72" y="118" font-size="15" font-weight="600" fill="#A3C3ED">A · Floor of the incumbent, by round</text>
+  <text x="72" y="138" font-size="11.5" fill="#7F8FA4">The floor is the worst-off agent's score. Leximin raises it monotonically.</text>
+
+  <!-- axes -->
+  <line x1="150" y1="500" x2="640" y2="500" stroke="#657585" stroke-width="1.3"/>
+  <line x1="150" y1="180" x2="150" y2="500" stroke="#657585" stroke-width="1.3"/>
+  <g font-size="10.5" fill="#657585">
+    <text x="142" y="504" text-anchor="end">0.0</text>
+    <text x="142" y="424" text-anchor="end">0.25</text>
+    <text x="142" y="344" text-anchor="end">0.50</text>
+    <text x="142" y="264" text-anchor="end">0.75</text>
+    <text x="142" y="184" text-anchor="end">1.00</text>
+  </g>
+  <g stroke="#0F151D" stroke-width="1">
+    <line x1="150" y1="424" x2="640" y2="424"/><line x1="150" y1="344" x2="640" y2="344"/><line x1="150" y1="264" x2="640" y2="264"/><line x1="150" y1="184" x2="640" y2="184"/>
+  </g>
+
+  <!-- tau line at 0.70 -> y = 500 - 0.70*320 = 276 -->
+  <line x1="150" y1="276" x2="640" y2="276" stroke="#D44D3F" stroke-width="1.8" stroke-dasharray="7 4"/>
+  <text x="636" y="292" text-anchor="end" font-size="11" font-weight="600" fill="#D44D3F">satisfaction threshold 0.70</text>
+
+  <!-- trajectory: t0 0.23 -> y=426.4 ; t1 0.67 -> y=285.6 ; t2 0.75 -> y=260 -->
+  <polyline points="230,426.4 400,285.6 570,260" fill="none" stroke="#17BFFF" stroke-width="3"/>
+  <g fill="#17BFFF">
+    <circle cx="230" cy="426.4" r="7"/><circle cx="400" cy="285.6" r="7"/>
+  </g>
+  <circle cx="570" cy="260" r="9" fill="#86E9BC"/>
+
+  <g font-size="12" font-weight="600" fill="#A3C3ED">
+    <text x="230" y="452" text-anchor="middle">0.23</text>
+    <text x="400" y="311" text-anchor="middle">0.67</text>
+    <text x="570" y="248" text-anchor="middle" fill="#86E9BC">0.75</text>
+  </g>
+  <g font-size="11" fill="#7F8FA4">
+    <text x="230" y="524" text-anchor="middle">t = 0</text>
+    <text x="400" y="524" text-anchor="middle">t = 1</text>
+    <text x="570" y="524" text-anchor="middle">t = 2</text>
+    <text x="230" y="540" text-anchor="middle" font-size="10">seed-dc-west</text>
+    <text x="400" y="540" text-anchor="middle" font-size="10">r1-telemetry</text>
+    <text x="570" y="540" text-anchor="middle" font-size="10" font-weight="600" fill="#86E9BC">r2-network</text>
+    <text x="230" y="554" text-anchor="middle" font-size="10">seeds only</text>
+    <text x="400" y="554" text-anchor="middle" font-size="10">repair by telemetry</text>
+    <text x="570" y="554" text-anchor="middle" font-size="10">repair by network</text>
+  </g>
+
+  <rect x="330" y="160" width="310" height="46" rx="7" fill="#09150F" stroke="#86E9BC" stroke-width="1.2"/>
+  <text x="346" y="178" font-size="11.5" font-weight="600" fill="#86E9BC">SUCCESS at t = 2 — certified</text>
+  <text x="346" y="196" font-size="10.5" fill="#94D3BA">dc-west 0.75 · network 0.75 · telemetry 0.77 · database 0.90</text>
+
+  <!-- ============ PANEL B ============ -->
+  <rect x="710" y="90" width="640" height="480" rx="10" fill="#05080B" stroke="#1F2A36" stroke-width="1.2"/>
+  <text x="732" y="118" font-size="15" font-weight="600" fill="#A3C3ED">B · Worst-off agent's score, by decision strategy</text>
+  <text x="732" y="138" font-size="11.5" fill="#7F8FA4">Same scenario, same agents, same scores. Only the decision rule differs.</text>
+
+  <!-- threshold line: bars start x=940, scale 380px for 1.0 -> 0.70 at x=1206 -->
+  <line x1="1206" y1="165" x2="1206" y2="520" stroke="#D44D3F" stroke-width="1.8" stroke-dasharray="7 4"/>
+  <text x="1212" y="163" font-size="10.5" font-weight="600" fill="#D44D3F">0.70</text>
+
+  <g font-size="11.5" fill="#A3C3ED">
+    <text x="930" y="192" text-anchor="end">owner-decides</text>
+    <rect x="940" y="180" width="87.4" height="18" rx="3" fill="#5F2017"/>
+    <text x="1037" y="194" font-size="11" fill="#D17F73">0.23</text>
+
+    <text x="930" y="240" text-anchor="end">plurality-vote</text>
+    <rect x="940" y="228" width="79.8" height="18" rx="3" fill="#5F2017"/>
+    <text x="1030" y="242" font-size="11" fill="#D17F73">0.21</text>
+
+    <text x="930" y="288" text-anchor="end">best-average</text>
+    <rect x="940" y="276" width="79.8" height="18" rx="3" fill="#5F2017"/>
+    <text x="1030" y="290" font-size="11" fill="#D17F73">0.21</text>
+
+    <text x="930" y="336" text-anchor="end">unanimity-only</text>
+    <text x="946" y="340" font-size="11" font-style="italic" fill="#D17F73">deadlock — nothing ships</text>
+
+    <text x="930" y="384" text-anchor="end">llm-picks</text>
+    <rect x="940" y="372" width="87.4" height="18" rx="3" fill="#5F2017"/>
+    <text x="1037" y="386" font-size="11" fill="#D17F73">0.23</text>
+
+    <text x="930" y="432" text-anchor="end">llm-writes-one</text>
+    <rect x="940" y="420" width="262.2" height="18" rx="3" fill="#5F2017"/>
+    <text x="1212" y="434" font-size="11" fill="#D17F73">0.69</text>
+
+    <text x="930" y="480" text-anchor="end" font-weight="600">CONCORD</text>
+    <rect x="940" y="468" width="285" height="18" rx="3" fill="#86E9BC"/>
+    <text x="1234" y="482" font-size="11" font-weight="600" fill="#86E9BC">0.75</text>
+  </g>
+
+  <rect x="732" y="504" width="596" height="52" rx="7" fill="#000000" stroke="#1F2A36" stroke-width="1.2"/>
+  <text x="748" y="524" font-size="11.5" fill="#7F8FA4">Both bottom rows produce a plan no agent proposed. Only CONCORD then asks the</text>
+  <text x="748" y="542" font-size="11.5" font-weight="600" fill="#A3C3ED">four agents whether it landed — that measurement loop is the protocol.</text>
+<!-- ioc:dark sans="Helvetica Neue, Helvetica, Arial, sans-serif" --></svg>
