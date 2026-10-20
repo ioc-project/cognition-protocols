@@ -15,7 +15,7 @@ at a price nobody would pay.
     overlays, the use cases and the per-run reporting contract — is set out in full
     in the extended version of the study.
 
-    [:octicons-download-24: Agreeing on Purpose, Deciding Under Conflict — extended version (PDF, 26 pages)](../cognition-protocols/blogs/accord-concord-extended.pdf)
+    [:octicons-download-24: Agreeing on Purpose, Deciding Under Conflict — extended version (PDF, 26 pages)](../protocols/blogs/accord-concord-extended.pdf)
 
 | Dimension | ACCORD | CONCORD |
 |---|---|---|
@@ -56,6 +56,6 @@ Certified and correct are reported separately wherever a ground truth exists.
 **Agreeing on Purpose, Deciding Under Conflict: Two Protocols for the Agent
 Cognitive Layer** — L9 + MAS-Lab T3s, Outshift by Cisco, October 2026.
 
-- [Extended version (PDF, 26 pages)](../cognition-protocols/blogs/accord-concord-extended.pdf) — the
+- [Extended version (PDF, 26 pages)](../protocols/blogs/accord-concord-extended.pdf) — the
   full study: motivation, both protocols, the evaluation methodology, the use
   cases, and the results reported here.
