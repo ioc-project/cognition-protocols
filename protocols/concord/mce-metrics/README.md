@@ -10,16 +10,13 @@ rounds did it take, how satisfied were the agents, and what did it cost in token
 
 ## Where the data comes from
 
-The metrics are computed from a recorded run of CONCORD, in three steps:
+The metrics are computed from the trace of a multi-agent system (MAS) to which CONCORD was added. The trace used here
+is an `events.jsonl` file, the format in which [MAS-Lab](https://github.com/outshift-open/mas-lab) writes the trace of
+a run. It holds one JSON line per event, such as the start and the end of each tool call and each LLM call.
 
-```
-MAS-Lab run  ->  events.jsonl  ->  knowledge graph (KG)  ->  these metrics
-```
-
-1. A [MAS-Lab](https://github.com/outshift-open/mas-lab) run executes the agents. MAS-Lab writes a log of the run,
-   `events.jsonl`: one JSON line per event, such as the start and the end of each tool call and each LLM call.
-2. MCE loads that log into a knowledge graph (KG), where each call becomes a *span*.
-3. The metrics read the tool and LLM spans of one session and return one value per metric for that session.
+From the `events.jsonl`, the session trace is ingested into the knowledge graph (KG), where the calls are stored as
+`LLMCall` and `ToolCall` nodes. MCE then reads every tool and LLM call of a session and returns each metric computed
+for that session.
 
 ## What it measures
 
@@ -36,8 +33,7 @@ Each metric's description is in its class (`src/concord_mce_metrics/`), and each
 
 ## Install and test
 
-Requires Python 3.13 and [uv](https://docs.astral.sh/uv/). `oxp-mce-core` is fetched from GitHub over SSH
-(see `[tool.uv.sources]` in `pyproject.toml`), so you need access to the `outshift-open` repository.
+Requires Python 3.13 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --extra dev
@@ -56,8 +52,9 @@ cached result would be stored on the Session and could be served stale after a r
 
 ### On traces, without a KG
 
-`concord-mce-trace` builds the span dicts in memory from a [MAS-Lab](https://github.com/outshift-open/mas-lab) `events.jsonl` (its tool and LLM call events) and
-runs the same metric classes the worker runs. It is a development tool for trying the metrics on a trace.
+`concord-mce-trace` builds the calls in memory from a [MAS-Lab](https://github.com/outshift-open/mas-lab)
+`events.jsonl` (its tool and LLM call events) and runs the same metric classes the worker runs. It is a development
+tool for trying the metrics on a trace.
 
 ```bash
 # deterministic metrics only
