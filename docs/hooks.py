@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def on_pre_build(config, **kwargs):
-    spec_dir = Path("docs/cognition-protocols/concord/spec")
+    spec_dir = Path("docs/protocols/concord/spec")
     script = spec_dir / "generate_respec.py"
     source = spec_dir / "CONCORD-SPEC.md"
     output = spec_dir / "CONCORD-SPEC.html"
