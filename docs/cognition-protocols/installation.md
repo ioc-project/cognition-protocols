@@ -14,6 +14,48 @@ and the scripts that implement the deterministic portion of the protocol. Instal
 initiator on any agent that may trigger the protocol and the receiver on every agent
 that may be asked to take part. An agent can carry both.
 
+### Claude Code marketplace
+
+For Claude Code, the recommended install path is the plugin marketplace. One command
+registers this repository as a marketplace, and one more installs each protocol.
+
+**Install both skills (both roles):**
+
+```bash
+claude plugin marketplace add ioc-project/ioc-cognition-protocols
+claude plugin install concord@ioc-cognition-protocols
+claude plugin install accord@ioc-cognition-protocols
+```
+
+Each protocol plugin contains two skills — `concord-initiator` and `concord-receiver`
+(or `accord-initiator` and `accord-receiver`). Their activation conditions are precise:
+the initiator skill only activates when the agent is orchestrating a protocol run;
+the receiver skill only when the agent receives a protocol message. An agent carrying
+both will activate the right skill automatically based on which messages it receives.
+
+**Install for a single role:**
+
+The plugin marketplace does not support per-skill enable/disable (Claude Code's
+`skillOverrides` setting applies only to `.claude/skills/` directory skills, not to
+plugin skills). If an agent plays only one role and you want to reduce context cost,
+install only the needed skill via the skills directory instead:
+
+```bash
+git clone https://github.com/ioc-project/ioc-cognition-protocols.git
+
+# Orchestrator only — receives no protocol messages, only initiates:
+cp -r ioc-cognition-protocols/protocols/concord/skills/concord-initiator ~/.claude/skills/
+
+# Participant only — receives and responds to protocol messages:
+cp -r ioc-cognition-protocols/protocols/concord/skills/concord-receiver ~/.claude/skills/
+```
+
+Use a symlink instead of `cp` to stay current with updates:
+
+```bash
+ln -s "$(pwd)/ioc-cognition-protocols/protocols/concord/skills/concord-initiator" ~/.claude/skills/concord-initiator
+```
+
 ### Getting the skills
 
 All skills ship from [`ioc-core-l9-skills`](https://github.com/cisco-eti/ioc-core-l9-skills):
