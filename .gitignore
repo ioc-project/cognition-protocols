@@ -1,0 +1,12 @@
+# Local docs toolchain and build output
+.venv/
+site/
+# Generated from source — do not commit
+docs/cognition-protocols/concord/spec/CONCORD-SPEC.html
+
+# Python cache
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
