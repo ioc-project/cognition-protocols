@@ -38,23 +38,10 @@ both will activate the right skill automatically based on which messages it rece
 The plugin marketplace does not support per-skill enable/disable (Claude Code's
 `skillOverrides` setting applies only to `.claude/skills/` directory skills, not to
 plugin skills). If an agent plays only one role and you want to reduce context cost,
-install only the needed skill via the skills directory instead:
-
-```bash
-git clone https://github.com/ioc-project/ioc-cognition-protocols.git
-
-# Orchestrator only — receives no protocol messages, only initiates:
-cp -r ioc-cognition-protocols/protocols/concord/skills/concord-initiator ~/.claude/skills/
-
-# Participant only — receives and responds to protocol messages:
-cp -r ioc-cognition-protocols/protocols/concord/skills/concord-receiver ~/.claude/skills/
-```
-
-Use a symlink instead of `cp` to stay current with updates:
-
-```bash
-ln -s "$(pwd)/ioc-cognition-protocols/protocols/concord/skills/concord-initiator" ~/.claude/skills/concord-initiator
-```
+clone this repository and install only the skill you need via the skills directory —
+see [Getting the skills](#getting-the-skills) and [Installing a skill](#installing-a-skill) below for the steps.
+Skill paths within this repository follow the pattern
+`protocols/<protocol>/skills/<skill-name>/`.
 
 ### Getting the skills
 
