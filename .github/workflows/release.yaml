@@ -46,3 +46,71 @@ jobs:
           tag="${name}-v${version}"
           zip -r "${name}.zip" "${{ matrix.path }}"
           gh release upload "$tag" "${name}.zip" --clobber
+
+  update-ai-catalog:
+    needs: [release-please, publish-release-assets]
+    if: ${{ needs.release-please.outputs.paths_released != '[]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Add released skills to ai-catalog.json
+        env:
+          PATHS_RELEASED: ${{ needs.release-please.outputs.paths_released }}
+          REPO: ${{ github.repository }}
+        run: |
+          catalog="docs/ai-catalog.json"
+          for path in $(echo "$PATHS_RELEASED" | jq -r '.[]'); do
+            name="$(basename "$path")"
+            version="$(jq -r --arg p "$path" '.[$p]' .github/release-manifest.json)"
+            tag="${name}-v${version}"
+            asset_url="https://github.com/${REPO}/releases/download/${tag}/${name}.zip"
+            identifier="urn:ioc-project:ioc-cognition-protocols:skill:${name}"
+            description="$(python3 - "${path}/SKILL.md" <<'PYEOF'
+import sys, re
+content = open(sys.argv[1]).read()
+fm = re.split(r'^---\s*$', content, maxsplit=2, flags=re.MULTILINE)
+import yaml
+data = yaml.safe_load(fm[1])
+print(str(data.get('description', '')).strip())
+PYEOF
+)"
+            now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+            entry="$(jq -n \
+              --arg id "$identifier" \
+              --arg name "$name" \
+              --arg version "$version" \
+              --arg desc "$description" \
+              --arg url "$asset_url" \
+              --arg tag "$tag" \
+              --arg now "$now" \
+              '{
+                identifier: $id,
+                displayName: $name,
+                version: $version,
+                type: "application/agent-skill+zip",
+                description: $desc,
+                tags: ["skill", "claude-code"],
+                url: $url,
+                updatedAt: $now,
+                publisher: {
+                  identifier: "urn:ioc-project",
+                  displayName: "IoC Project"
+                }
+              }')"
+
+            # Append entry (keeping any existing entries for other versions)
+            jq --argjson entry "$entry" '.entries += [$entry]' "$catalog" > catalog.tmp
+            mv catalog.tmp "$catalog"
+          done
+
+      - name: Commit catalog update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/ai-catalog.json
+          git diff --cached --quiet || git commit -s -m "chore: update ai-catalog.json for released skills"
+          git push
