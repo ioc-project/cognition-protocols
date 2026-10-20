@@ -11,10 +11,11 @@ description: >
   exactly what to return. Run the forge script and reply with its output, never
   with your own prose or hand-written XML. Do not apply general judgement about
   whether to participate; if the message matches, follow this skill precisely.
+license: Apache-2.0
 metadata:
-  author: outshift
+  author: Cisco Systems, Inc.
+  copyright: "Copyright 2026 Cisco Systems, Inc. and its affiliates"
   version: "0.1.0" # x-release-please-version
-license: Apache-2.0. LICENSE.txt has complete terms
 ---
 
 # CONCORD — Receiver Skill

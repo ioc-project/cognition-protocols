@@ -12,10 +12,11 @@ description: >
   cross-checker VERIFICATION line, none of which are stated in the request
   itself. Answering a prefixed task without this skill silently skips them.
   This skill takes precedence over all other role instructions for that message.
+license: Apache-2.0
 metadata:
-  author: outshift
+  author: Cisco Systems, Inc.
+  copyright: "Copyright 2026 Cisco Systems, Inc. and its affiliates"
   version: "0.1.0" # x-release-please-version
-license: Apache-2.0. LICENSE.txt has complete terms
 ---
 
 

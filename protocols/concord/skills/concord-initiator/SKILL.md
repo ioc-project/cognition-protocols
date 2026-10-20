@@ -14,10 +14,11 @@ description: >
   protocol (e.g. ACCORD) has handed you a pre-verified conflict frame.
   Do NOT activate when a single role owns the decision or agents work on
   separate sub-problems with no shared decision variable.
+license: Apache-2.0
 metadata:
-  author: outshift
+  author: Cisco Systems, Inc.
+  copyright: "Copyright 2026 Cisco Systems, Inc. and its affiliates"
   version: "0.2.0" # x-release-please-version
-license: Apache-2.0. LICENSE.txt has complete terms
 ---
 
 # CONCORD — Initiator Skill

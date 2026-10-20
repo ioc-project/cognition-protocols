@@ -15,10 +15,11 @@ description: >
   before any action is taken. Skip only when a single specialist handles the
   task end-to-end, when a LOCKED_INTENT_CONTRACT for this task already exists,
   or for read-only lookups with no action downstream.
+license: Apache-2.0
 metadata:
-  author: outshift
+  author: Cisco Systems, Inc.
+  copyright: "Copyright 2026 Cisco Systems, Inc. and its affiliates"
   version: "0.1.0" # x-release-please-version
-license: Apache-2.0. LICENSE.txt has complete terms
 ---
 
 
