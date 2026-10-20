@@ -21,8 +21,12 @@ ai-catalog search accord
 
 ### Install a skill
 
+Skills are distributed as zip archives containing a `SKILL.md` and supporting scripts. Pull and unzip into a temporary directory, then move the skill folder into `~/.claude/skills/`:
+
 ```bash
-ai-catalog pull <identifier> -o ~/.claude/skills/
+ai-catalog pull <identifier> -o /tmp/skill-download/
+unzip /tmp/skill-download/<skill-name>.zip -d /tmp/skill-download/
+mv /tmp/skill-download/<skill-name> ~/.claude/skills/
 ```
 
 ### Adding a new release as a catalog entry
