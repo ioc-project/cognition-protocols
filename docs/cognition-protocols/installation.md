@@ -14,50 +14,62 @@ and the scripts that implement the deterministic portion of the protocol. Instal
 initiator on any agent that may trigger the protocol and the receiver on every agent
 that may be asked to take part. An agent can carry both.
 
-### Claude Code marketplace
-
-For Claude Code, the recommended install path is the plugin marketplace. One command
-registers this repository as a marketplace, and one more installs each protocol.
-
-**Install both skills (both roles):**
-
-```bash
-claude plugin marketplace add ioc-project/ioc-cognition-protocols
-claude plugin install concord@ioc-cognition-protocols
-claude plugin install accord@ioc-cognition-protocols
-```
-
-Each protocol plugin contains two skills — `concord-initiator` and `concord-receiver`
-(or `accord-initiator` and `accord-receiver`). Their activation conditions are precise:
-the initiator skill only activates when the agent is orchestrating a protocol run;
-the receiver skill only when the agent receives a protocol message. An agent carrying
-both will activate the right skill automatically based on which messages it receives.
-
-**Install for a single role:**
-
-The plugin marketplace does not support per-skill enable/disable (Claude Code's
-`skillOverrides` setting applies only to `.claude/skills/` directory skills, not to
-plugin skills). If an agent plays only one role and you want to reduce context cost,
-clone this repository and install only the skill you need via the skills directory —
-see [Getting the skills](#getting-the-skills) and [Installing a skill](#installing-a-skill) below for the steps.
-Skill paths within this repository follow the pattern
-`protocols/<protocol>/skills/<skill-name>/`.
-
 ### Getting the skills
 
-All skills ship from [`ioc-core-l9-skills`](https://github.com/cisco-eti/ioc-core-l9-skills):
+=== "Claude Code marketplace"
 
-```bash
-git clone git@github.com:cisco-eti/ioc-core-l9-skills.git
-cd ioc-core-l9-skills
-```
+    For Claude Code, the recommended install path is the plugin marketplace. One command
+    registers this repository as a marketplace, and one more installs each protocol.
 
-Or download individual skill zips from the
-[GitHub releases page](https://github.com/cisco-eti/ioc-core-l9-skills/releases).
+    **Install both skills (both roles):**
+
+    ```bash
+    claude plugin marketplace add ioc-project/ioc-cognition-protocols
+    claude plugin install concord@ioc-cognition-protocols
+    claude plugin install accord@ioc-cognition-protocols
+    ```
+
+    Each protocol plugin contains two skills — `concord-initiator` and `concord-receiver`
+    (or `accord-initiator` and `accord-receiver`). Their activation conditions are precise:
+    the initiator skill only activates when the agent is orchestrating a protocol run;
+    the receiver skill only when the agent receives a protocol message. An agent carrying
+    both will activate the right skill automatically based on which messages it receives.
+
+    **Install for a single role:**
+
+    The plugin marketplace does not support per-skill enable/disable (Claude Code's
+    `skillOverrides` setting applies only to `.claude/skills/` directory skills, not to
+    plugin skills). If an agent plays only one role and you want to reduce context cost,
+    install only the skill you need via the skills directory — see [Installing a skill](#installing-a-skill) below.
+
+=== "AI Catalog"
+
+    Skills are published to an [AI Catalog](https://ioc-project.github.io/ioc-cognition-protocols/ai-catalog.json) and can be installed with the [`ai-catalog` CLI](https://github.com/agntcy/ai-catalog).
+
+    Register the catalog once:
+
+    ```bash
+    ai-catalog catalog add ioc-protocols https://ioc-project.github.io/ioc-cognition-protocols/ai-catalog.json
+    ```
+
+    Then pull and install a skill. Skills are distributed as zip archives, so unzip after pulling:
+
+    ```bash
+    ai-catalog pull urn:ioc-project:concord-initiator -o /tmp/skill-download/
+    unzip /tmp/skill-download/concord-initiator.zip -d /tmp/skill-download/
+    mv /tmp/skill-download/concord-initiator ~/.claude/skills/
+    ```
+
+    Repeat for each skill you need (`concord-receiver`, `accord-initiator`, `accord-receiver`).
+
+=== "GitHub releases"
+
+    Download individual skill zips from the
+    [GitHub releases page](https://github.com/ioc-project/ioc-cognition-protocols/releases), then unzip and copy the skill folder into the harness's skills directory.
 
 ### Installing a skill
 
-Copy (or symlink) each skill into the harness's skills directory.
+Copy (or symlink) each skill folder into the harness's skills directory.
 
 | Harness | User-wide | Project only |
 |---|---|---|
