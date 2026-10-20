@@ -45,19 +45,34 @@ Skill paths within this repository follow the pattern
 
 ### Getting the skills
 
-All skills ship from [`ioc-core-l9-skills`](https://github.com/cisco-eti/ioc-core-l9-skills):
+#### Via the AI Catalog (recommended)
+
+Skills are published to an [AI Catalog](https://ioc-project.github.io/ioc-cognition-protocols/ai-catalog.json) and can be installed with the [`ai-catalog` CLI](https://github.com/agntcy/ai-catalog).
+
+Register the catalog once:
 
 ```bash
-git clone git@github.com:cisco-eti/ioc-core-l9-skills.git
-cd ioc-core-l9-skills
+ai-catalog catalog add ioc-protocols https://ioc-project.github.io/ioc-cognition-protocols/ai-catalog.json
 ```
 
-Or download individual skill zips from the
-[GitHub releases page](https://github.com/cisco-eti/ioc-core-l9-skills/releases).
+Then pull and install a skill. Skills are distributed as zip archives, so unzip after pulling:
+
+```bash
+ai-catalog pull urn:ioc-project:concord-initiator -o /tmp/skill-download/
+unzip /tmp/skill-download/concord-initiator.zip -d /tmp/skill-download/
+mv /tmp/skill-download/concord-initiator ~/.claude/skills/
+```
+
+Repeat for each skill you need (`concord-receiver`, `accord-initiator`, `accord-receiver`).
+
+#### Via GitHub releases
+
+Download individual skill zips from the
+[GitHub releases page](https://github.com/ioc-project/ioc-cognition-protocols/releases), then unzip and copy the skill folder into the harness's skills directory.
 
 ### Installing a skill
 
-Copy (or symlink) each skill into the harness's skills directory.
+Copy (or symlink) each skill folder into the harness's skills directory.
 
 | Harness | User-wide | Project only |
 |---|---|---|
