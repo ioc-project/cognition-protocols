@@ -17,11 +17,8 @@ description: >
 metadata:
   author: outshift
   version: "0.2.0" # x-release-please-version
+license: Apache-2.0. LICENSE.txt has complete terms
 ---
-<!--
-Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
-SPDX-License-Identifier: Apache-2.0
--->
 
 # CONCORD — Initiator Skill
 
