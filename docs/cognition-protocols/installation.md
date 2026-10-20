@@ -14,6 +14,35 @@ and the scripts that implement the deterministic portion of the protocol. Instal
 initiator on any agent that may trigger the protocol and the receiver on every agent
 that may be asked to take part. An agent can carry both.
 
+### Claude Code marketplace
+
+For Claude Code, the recommended install path is the plugin marketplace. One command
+registers this repository as a marketplace, and one more installs each protocol.
+
+**Install both skills (both roles):**
+
+```bash
+claude plugin marketplace add ioc-project/ioc-cognition-protocols
+claude plugin install concord@ioc-cognition-protocols
+claude plugin install accord@ioc-cognition-protocols
+```
+
+Each protocol plugin contains two skills — `concord-initiator` and `concord-receiver`
+(or `accord-initiator` and `accord-receiver`). Their activation conditions are precise:
+the initiator skill only activates when the agent is orchestrating a protocol run;
+the receiver skill only when the agent receives a protocol message. An agent carrying
+both will activate the right skill automatically based on which messages it receives.
+
+**Install for a single role:**
+
+The plugin marketplace does not support per-skill enable/disable (Claude Code's
+`skillOverrides` setting applies only to `.claude/skills/` directory skills, not to
+plugin skills). If an agent plays only one role and you want to reduce context cost,
+clone this repository and install only the skill you need via the skills directory —
+see [Getting the skills](#getting-the-skills) and [Installing a skill](#installing-a-skill) below for the steps.
+Skill paths within this repository follow the pattern
+`protocols/<protocol>/skills/<skill-name>/`.
+
 ### Getting the skills
 
 All skills ship from [`ioc-core-l9-skills`](https://github.com/cisco-eti/ioc-core-l9-skills):

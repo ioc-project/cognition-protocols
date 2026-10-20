@@ -1,0 +1,31 @@
+{
+  "$schema": "https://claude.ai/schemas/plugin-marketplace.json",
+  "name": "ioc-cognition-protocols",
+  "description": "IoC Layer 9 Cognition Protocols — ACCORD and CONCORD multi-agent coordination skills",
+  "owner": {
+    "name": "IoC Project",
+    "url": "https://github.com/ioc-project"
+  },
+  "plugins": [
+    {
+      "name": "concord",
+      "source": "./protocols/concord",
+      "displayName": "CONCORD",
+      "description": "Multi-agent consensus protocol. Converges on a single outcome that clears a satisfaction threshold for every agent in a named set. Includes both initiator (orchestrator) and receiver (participant) skills.",
+      "version": "0.1.0",
+      "author": { "name": "Cisco Systems, Inc." },
+      "license": "Apache-2.0",
+      "tags": ["multi-agent", "consensus", "coordination", "protocol"]
+    },
+    {
+      "name": "accord",
+      "source": "./protocols/accord",
+      "displayName": "ACCORD",
+      "description": "Pre-delegation coordination protocol. Establishes shared scope, consistent terminology, and acceptance checks across specialists before any action is taken. Includes both initiator (orchestrator) and receiver (participant) skills.",
+      "version": "0.1.0",
+      "author": { "name": "Cisco Systems, Inc." },
+      "license": "Apache-2.0",
+      "tags": ["multi-agent", "coordination", "pre-delegation", "protocol"]
+    }
+  ]
+}
