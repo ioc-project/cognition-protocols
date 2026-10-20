@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+#
 """CONCORD — self-driving protocol initiator.
 
 init        → starts the run and outputs the first set of messages to send

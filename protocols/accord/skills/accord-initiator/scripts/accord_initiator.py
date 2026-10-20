@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-#  Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
-#  SPDX-License-Identifier: Apache-2.0
+#
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+#
 """ACCORD merge CLI.
 
 The orchestrator collects specialist replies (raw LLM text or JSON) and pipes

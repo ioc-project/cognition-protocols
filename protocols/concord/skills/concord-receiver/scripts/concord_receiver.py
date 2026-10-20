@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+#
 """CONCORD — receiver-side reply forger.
 
 Each sub-command corresponds to exactly one incoming CONCORD message type and
