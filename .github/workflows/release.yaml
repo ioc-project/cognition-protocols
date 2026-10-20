@@ -1,0 +1,48 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      paths_released: ${{ steps.release.outputs.paths_released }}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          target-branch: main
+          config-file: .github/release-config.json
+          manifest-file: .github/release-manifest.json
+
+  publish-release-assets:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.paths_released != '[]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        path: ${{ fromJson(needs.release-please.outputs.paths_released) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Zip skill and upload to its release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name="$(basename "${{ matrix.path }}")"
+          version="$(jq -r --arg path "${{ matrix.path }}" '.[$path]' .github/release-manifest.json)"
+          tag="${name}-v${version}"
+          zip -r "${name}.zip" "${{ matrix.path }}"
+          gh release upload "$tag" "${name}.zip" --clobber
