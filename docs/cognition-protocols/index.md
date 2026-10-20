@@ -1,3 +1,7 @@
+---
+icon: material/head-cog-outline
+---
+
 # Cognition Protocols
 
 All Cognition Protocols share a common set of [design requirements](design-requirements.md)
