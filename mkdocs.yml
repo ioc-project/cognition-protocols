@@ -69,26 +69,26 @@ extra_javascript:
 
 nav:
   - Home: index.md
-  - Cognition Protocols:
-      - cognition-protocols/index.md
-      - Design Requirements: cognition-protocols/design-requirements.md
-      - Installation: cognition-protocols/installation.md
+  - Protocols:
+      - protocols/index.md
+      - Design Requirements: protocols/design-requirements.md
+      - Installation: protocols/installation.md
       - ACCORD:
-          - cognition-protocols/accord/index.md
-          - Design: cognition-protocols/accord/design.md
+          - protocols/accord/index.md
+          - Design: protocols/accord/design.md
       - CONCORD:
-          - cognition-protocols/concord/index.md
-          - Design: cognition-protocols/concord/design.md
-          - Configuration: cognition-protocols/concord/configuration.md
-          - Specification: cognition-protocols/concord/specification.md
+          - protocols/concord/index.md
+          - Design: protocols/concord/design.md
+          - Configuration: protocols/concord/configuration.md
+          - Specification: protocols/concord/specification.md
   - Evaluation:
       - evaluation/index.md
       - ACCORD: evaluation/accord.md
       - CONCORD: evaluation/concord.md
   - Tutorials and Demos:
-      - cognition-protocols/tutorials/index.md
-      - Coding Architect Team: cognition-protocols/tutorials/coding-architect-team.md
-      - Hiddenbench: cognition-protocols/tutorials/hiddenbench.md
-      - E-Commerce: cognition-protocols/tutorials/e-commerce.md
-      - SRE Triage: cognition-protocols/tutorials/sre-triage.md
-      - Customer renewal discount: cognition-protocols/tutorials/customer-renewal-discount.md
+      - protocols/tutorials/index.md
+      - Coding Architect Team: protocols/tutorials/coding-architect-team.md
+      - Hiddenbench: protocols/tutorials/hiddenbench.md
+      - E-Commerce: protocols/tutorials/e-commerce.md
+      - SRE Triage: protocols/tutorials/sre-triage.md
+      - Customer renewal discount: protocols/tutorials/customer-renewal-discount.md
