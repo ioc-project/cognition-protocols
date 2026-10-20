@@ -14,7 +14,9 @@ and the scripts that implement the deterministic portion of the protocol. Instal
 initiator on any agent that may trigger the protocol and the receiver on every agent
 that may be asked to take part. An agent can carry both.
 
-### Claude Code marketplace
+### Getting the skills
+
+#### Claude Code marketplace
 
 For Claude Code, the recommended install path is the plugin marketplace. One command
 registers this repository as a marketplace, and one more installs each protocol.
@@ -38,14 +40,9 @@ both will activate the right skill automatically based on which messages it rece
 The plugin marketplace does not support per-skill enable/disable (Claude Code's
 `skillOverrides` setting applies only to `.claude/skills/` directory skills, not to
 plugin skills). If an agent plays only one role and you want to reduce context cost,
-clone this repository and install only the skill you need via the skills directory —
-see [Getting the skills](#getting-the-skills) and [Installing a skill](#installing-a-skill) below for the steps.
-Skill paths within this repository follow the pattern
-`protocols/<protocol>/skills/<skill-name>/`.
+install only the skill you need via the skills directory — see [Installing a skill](#installing-a-skill) below.
 
-### Getting the skills
-
-#### Via the AI Catalog (recommended)
+#### Via the AI Catalog
 
 Skills are published to an [AI Catalog](https://ioc-project.github.io/ioc-cognition-protocols/ai-catalog.json) and can be installed with the [`ai-catalog` CLI](https://github.com/agntcy/ai-catalog).
 
