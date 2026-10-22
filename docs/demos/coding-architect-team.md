@@ -16,7 +16,7 @@ Each architect is an individual agent, and the protocol skills are carried by th
 agents themselves.
 
 !!! abstract "Coding Architect Team — one agent per architect"
-    [:octicons-download-24: Watch the recording](https://github.com/cisco-eti/IoC-BHAG/releases/download/demos-2026-10/coding-architect-team-per-agent.mp4)
+    [:octicons-download-24: Watch the recording](https://github.com/ioc-project/cognition-protocols/releases/download/demos-2026-10/coding-architect-team-per-agent.mp4)
     &nbsp;&middot;&nbsp; 720p &middot; 6 min &middot; 81 MB
 
 ## Claude Agent Teams
@@ -25,7 +25,7 @@ The same scenario run under Claude Agent Teams, where the runtime manages the te
 rather than the agents being wired individually.
 
 !!! abstract "Coding Architect Team — Claude Agent Teams"
-    [:octicons-download-24: Watch the recording](https://github.com/cisco-eti/IoC-BHAG/releases/download/demos-2026-10/coding-architect-team-agent-teams.mp4)
+    [:octicons-download-24: Watch the recording](https://github.com/ioc-project/cognition-protocols/releases/download/demos-2026-10/coding-architect-team-agent-teams.mp4)
     &nbsp;&middot;&nbsp; 720p &middot; 21 min &middot; 241 MB
 
 ## What to watch for

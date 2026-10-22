@@ -11,7 +11,7 @@ This is the application the protocol benchmark is built on, and the one the meas
 results report from.
 
 !!! abstract "SRE Triage — converging on a remediation across four subsystem owners"
-    [:octicons-download-24: Watch the recording](https://github.com/cisco-eti/IoC-BHAG/releases/download/demos-2026-10/sre-triage.mp4)
+    [:octicons-download-24: Watch the recording](https://github.com/ioc-project/cognition-protocols/releases/download/demos-2026-10/sre-triage.mp4)
     &nbsp;&middot;&nbsp; 720p &middot; short &middot; 36 MB
 
 ## What to watch for

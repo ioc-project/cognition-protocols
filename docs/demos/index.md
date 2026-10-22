@@ -10,7 +10,7 @@ Recordings of the protocols running on real applications. Each is one decision, 
 the opening proposals to the committed outcome.
 
 !!! note "Where the recordings are hosted"
-    The files are attached to a [repository release](https://github.com/cisco-eti/IoC-BHAG/releases/tag/demos-2026-10)
+    The files are attached to a [repository release](https://github.com/ioc-project/cognition-protocols/releases/tag/demos-2026-10)
     rather than served from this site, because they are too large to publish with it.
     Each demo page links to its own recording; access is the same as for this site.
 

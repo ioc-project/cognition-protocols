@@ -20,7 +20,7 @@ The criteria clash. None of the four is wrong, and no one of them can concede
 without giving up the thing it exists to protect.
 
 !!! abstract "Customer renewal discount"
-    [:octicons-download-24: Watch the recording](https://github.com/cisco-eti/IoC-BHAG/releases/download/demos-2026-10/customer-renewal-discount.mp4)
+    [:octicons-download-24: Watch the recording](https://github.com/ioc-project/cognition-protocols/releases/download/demos-2026-10/customer-renewal-discount.mp4)
     &nbsp;&middot;&nbsp; 720p &middot; 2 min 27 &middot; 57 MB
 
 ## The four runs

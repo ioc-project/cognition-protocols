@@ -11,7 +11,7 @@ other three decisions. The protocol, the floor and the engine are identical acro
 all of them; what differs is the problem.
 
 !!! abstract "E-Commerce — a promotion decided across specialist systems"
-    [:octicons-download-24: Watch the recording](https://github.com/cisco-eti/IoC-BHAG/releases/download/demos-2026-10/e-commerce.mp4)
+    [:octicons-download-24: Watch the recording](https://github.com/ioc-project/cognition-protocols/releases/download/demos-2026-10/e-commerce.mp4)
     &nbsp;&middot;&nbsp; 720p &middot; 8 min &middot; 145 MB
 
 ## What to watch for
