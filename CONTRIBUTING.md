@@ -1,6 +1,6 @@
 # How to Contribute
 
-Thanks for your interest in contributing to `ioc-cognition-protocols`! Here are a few
+Thanks for your interest in contributing to `cognition-protocols`! Here are a few
 general guidelines on contributing and reporting bugs that we ask you to review.
 Following these guidelines helps to communicate that you respect the time of the
 contributors managing and developing this open source project. In return, they
@@ -39,7 +39,7 @@ major version release.
 
 ## Other Ways to Contribute
 
-We welcome anyone that wants to contribute to `ioc-cognition-protocols` to triage and
+We welcome anyone that wants to contribute to `cognition-protocols` to triage and
 reply to open issues to help troubleshoot and fix existing bugs. Here is what
 you can do:
 
@@ -47,9 +47,9 @@ you can do:
   _[Reporting Issues](#reporting-issues)_ section, providing feedback to the
   issue's author on what might be missing.
 - Review existing pull requests, and testing patches against real existing
-  applications that use `ioc-cognition-protocols`.
+  applications that use `cognition-protocols`.
 - Write a test, or add a missing test case to an existing test.
 
-Thanks again for your interest on contributing to `ioc-cognition-protocols`!
+Thanks again for your interest on contributing to `cognition-protocols`!
 
 :heart:
