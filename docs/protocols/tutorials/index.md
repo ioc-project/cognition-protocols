@@ -71,16 +71,6 @@ the opening proposals to the committed outcome.
 
 </div>
 
-## Walkthroughs
-
-| Walkthrough | Status |
-|---|---|
-| Adding the protocol skills to an existing multi-agent system | In preparation |
-| Running ACCORD and inspecting the Intent Contract it locks | In preparation |
-| Running CONCORD and reading the certificate | In preparation |
-| Choosing a satisfaction floor for a workload | In preparation |
-| Reproducing the measured results in MAS-Lab | In preparation |
-
 ## Related
 
 - [ACCORD](../accord/index.md) — phases, guarantees and measured results
