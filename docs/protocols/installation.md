@@ -24,9 +24,9 @@ that may be asked to take part. An agent can carry both.
     **Install both skills (both roles):**
 
     ```bash
-    claude plugin marketplace add ioc-project/ioc-cognition-protocols
-    claude plugin install concord@ioc-cognition-protocols
-    claude plugin install accord@ioc-cognition-protocols
+    claude plugin marketplace add ioc-project/cognition-protocols
+    claude plugin install concord@cognition-protocols
+    claude plugin install accord@cognition-protocols
     ```
 
     Each protocol plugin contains two skills — `concord-initiator` and `concord-receiver`
@@ -44,18 +44,18 @@ that may be asked to take part. An agent can carry both.
 
 === "AI Catalog"
 
-    Skills are published to an [AI Catalog](https://ioc-project.github.io/ioc-cognition-protocols/ai-catalog.json) and can be installed with the [`ai-catalog` CLI](https://github.com/agntcy/ai-catalog).
+    Skills are published to an [AI Catalog](https://ioc-project.github.io/cognition-protocols/ai-catalog.json) and can be installed with the [`ai-catalog` CLI](https://github.com/Agent-Card/ai-catalog-cli).
 
     Register the catalog once:
 
     ```bash
-    ai-catalog catalog add ioc-protocols https://ioc-project.github.io/ioc-cognition-protocols/ai-catalog.json
+    ai-catalog catalog add ioc-protocols https://ioc-project.github.io/cognition-protocols/ai-catalog.json
     ```
 
     Then pull and install a skill. Skills are distributed as zip archives, so unzip after pulling:
 
     ```bash
-    ai-catalog pull urn:ioc-project:concord-initiator -o /tmp/skill-download/
+    ai-catalog pull urn:air:ioc-project:skill:concord-initiator -o /tmp/skill-download/
     unzip /tmp/skill-download/concord-initiator.zip -d /tmp/skill-download/
     mv /tmp/skill-download/concord-initiator ~/.claude/skills/
     ```
@@ -65,7 +65,7 @@ that may be asked to take part. An agent can carry both.
 === "GitHub releases"
 
     Download individual skill zips from the
-    [GitHub releases page](https://github.com/ioc-project/ioc-cognition-protocols/releases), then unzip and copy the skill folder into the harness's skills directory.
+    [GitHub releases page](https://github.com/ioc-project/cognition-protocols/releases), then unzip and copy the skill folder into the harness's skills directory.
 
 ### Installing a skill
 

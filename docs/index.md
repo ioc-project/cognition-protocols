@@ -54,7 +54,7 @@ within a **cost bound** declared at the start.
     Specifications, skill packages, evaluation harness, and demo recordings
     are all open. Issues and contributions welcome.
 
-    [:octicons-arrow-right-24: GitHub](https://github.com/ioc-project/ioc-cognition-protocols)
+    [:octicons-arrow-right-24: GitHub](https://github.com/ioc-project/cognition-protocols)
 
 </div>
 

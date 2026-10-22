@@ -1,12 +1,9 @@
 {
-  "$schema": "https://agntcy.github.io/ai-catalog-spec/schema/ai-catalog.schema.json",
-  "mediaType": "application/ai-catalog+json",
-  "identifier": "urn:ioc-project:ioc-cognition-protocols",
-  "displayName": "IoC Cognition Protocols",
-  "description": "ACCORD and CONCORD — Layer 9 multi-agent coordination skills from the Internet of Cognition Project.",
-  "maintainer": {
-    "name": "IoC Project",
-    "url": "https://github.com/ioc-project"
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "IoC Cognition Protocols",
+    "identifier": "urn:ioc-project:cognition-protocols",
+    "documentationUrl": "https://ioc-project.github.io/cognition-protocols/"
   },
   "entries": []
 }

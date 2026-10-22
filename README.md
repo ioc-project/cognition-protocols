@@ -1,15 +1,15 @@
-# ioc-cognition-protocols
+# cognition-protocols
 
 An umbrella repo for all IoC cognition protocols.
 
 ## AI Catalog
 
-This repo publishes an [`ai-catalog.json`](https://ioc-project.github.io/ioc-cognition-protocols/ai-catalog.json) at the docs site root (`application/ai-catalog+json`). It lists released skills so they are discoverable via the [`ai-catalog` CLI](https://github.com/agntcy/ai-catalog).
+This repo publishes an [`ai-catalog.json`](https://ioc-project.github.io/cognition-protocols/ai-catalog.json) at the docs site root (`application/ai-catalog+json`). It lists released skills so they are discoverable via the [`ai-catalog` CLI](https://github.com/Agent-Card/ai-catalog-cli).
 
 ### Register the catalog
 
 ```bash
-ai-catalog catalog add ioc-protocols https://ioc-project.github.io/ioc-cognition-protocols/ai-catalog.json
+ai-catalog catalog add ioc-protocols https://ioc-project.github.io/cognition-protocols/ai-catalog.json
 ```
 
 ### Search for skills
@@ -35,11 +35,11 @@ When a skill is released (via release-please), add an entry to `docs/ai-catalog.
 
 ```json
 {
-  "identifier": "urn:ioc-project:<skill-name>",
+  "identifier": "urn:air:ioc-project:skill:<skill-name>",
   "displayName": "<Human-readable name>",
   "description": "<One-line description>",
-  "mediaType": "application/agent-skills+md",
-  "url": "https://github.com/ioc-project/ioc-cognition-protocols/releases/download/<skill-name>-v<version>/<skill-name>.zip",
+  "type": "application/agent-skills+zip",
+  "url": "https://github.com/ioc-project/cognition-protocols/releases/download/<skill-name>-v<version>/<skill-name>.zip",
   "tags": ["multi-agent", "protocol"]
 }
 ```

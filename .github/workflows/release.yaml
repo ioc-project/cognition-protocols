@@ -83,7 +83,7 @@ jobs:
 
           for skill_path, version in manifest.items():
               name = Path(skill_path).name
-              identifier = f"urn:ioc-project:ioc-cognition-protocols:skill:{name}"
+              identifier = f"urn:air:ioc-project:skill:{name}"
 
               if (identifier, version) in existing:
                   continue
@@ -102,15 +102,11 @@ jobs:
                   "identifier": identifier,
                   "displayName": name,
                   "version": version,
-                  "type": "application/agent-skill+zip",
+                  "type": "application/agent-skills+zip",
                   "description": description,
                   "tags": ["skill", "claude-code"],
                   "url": asset_url,
-                  "updatedAt": now,
-                  "publisher": {
-                      "identifier": "urn:ioc-project",
-                      "displayName": "IoC Project"
-                  }
+                  "updatedAt": now
               })
               changed = True
               print(f"Added entry: {identifier} {version}")

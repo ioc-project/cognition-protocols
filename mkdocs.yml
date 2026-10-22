@@ -1,8 +1,8 @@
 site_name: IoC Cognition Protocols
 site_description: ACCORD and CONCORD — the L9 Cognition Protocol family for multi-agent systems.
-site_url: https://ioc-project.github.io/ioc-cognition-protocols/
-repo_url: https://github.com/ioc-project/ioc-cognition-protocols
-repo_name: ioc-project/ioc-cognition-protocols
+site_url: https://ioc-project.github.io/cognition-protocols/
+repo_url: https://github.com/ioc-project/cognition-protocols
+repo_name: ioc-project/cognition-protocols
 edit_uri: edit/main/docs/
 copyright: Internet of Cognition Project. Open specification.
 
