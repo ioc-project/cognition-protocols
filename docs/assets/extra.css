@@ -39,6 +39,15 @@
 /* Wider than Material's stock 61rem: several pages are table-heavy. */
 .md-grid { max-width: 72rem; }
 
+/* Parent-breadcrumb link injected by header-breadcrumb.js */
+a.ioc-parent-link {
+  color: inherit;
+  opacity: 0.55;
+  text-decoration: none;
+  transition: opacity 140ms;
+}
+a.ioc-parent-link:hover { opacity: 1; }
+
 /* --------------------------------------------------------------------------
    Dark scheme — the primary presentation, matching the Outshift pages.
    -------------------------------------------------------------------------- */
