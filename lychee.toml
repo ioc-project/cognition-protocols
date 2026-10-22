@@ -1,0 +1,43 @@
+# Lychee link checker configuration
+# https://github.com/lycheeverse/lychee
+
+max_concurrency = 10
+timeout = 10
+max_retries = 3
+method = "get"
+cache = true
+include_verbatim = false
+
+# Accept statuses that CI IPs commonly receive for valid links
+accept = [200, 201, 204, 403, 406, 429, 503]
+
+exclude = [
+    # Local and placeholder URLs
+    'localhost',
+    'http://127\.0\.0\.1',
+    'example\.com',
+    '\.well-known',
+
+    # This repo is internal and the site is deployed after merge, so
+    # self-referencing URLs cannot be resolved from a PR build
+    'https://github\.com/ioc-project/(ioc-)?cognition-protocols',
+    'https://ioc-project\.github\.io/(ioc-)?cognition-protocols',
+
+    # Private repos that CI cannot access
+    'https://github\.com/cisco-eti/',
+
+    # Templated URLs
+    '\{[a-z_]+\}',
+
+    # Sites that block or time out from GitHub Actions IPs
+    'w3\.org',
+
+    # Google Fonts (injected by mkdocs-material)
+    'fonts\.googleapis\.com',
+    'fonts\.gstatic\.com',
+]
+
+# 404.html has root-relative links that need a base URL
+exclude_path = ['(^|/)404\.html$']
+
+user_agent = "lychee/cognition-protocols"

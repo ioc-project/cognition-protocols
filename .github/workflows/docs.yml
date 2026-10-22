@@ -1,4 +1,4 @@
-name: Deploy docs to GitHub Pages
+name: Docs
 
 on:
   push:
@@ -8,20 +8,31 @@ on:
       - 'mkdocs.yml'
       - 'docs/hooks.py'
       - '.github/workflows/docs.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'mkdocs.yml'
+      - 'lychee.toml'
+      - '.github/workflows/docs.yml'
+  schedule:
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -32,6 +43,7 @@ jobs:
           python-version: '3.12'
 
       - name: Configure Pages
+        if: github.event_name != 'pull_request' && github.event_name != 'schedule'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Install MkDocs
@@ -40,14 +52,31 @@ jobs:
       - name: Build docs site
         run: mkdocs build --strict --site-dir _site
 
+      - name: Check links
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          lycheeVersion: v0.24.2
+          args: >-
+            --no-progress
+            --config lychee.toml
+            --root-dir ${{ github.workspace }}/_site
+            _site README.md
+          fail: true
+
       - name: Upload Pages artifact
+        if: github.event_name != 'pull_request' && github.event_name != 'schedule'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
 
   deploy:
+    if: github.event_name != 'pull_request' && github.event_name != 'schedule'
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
