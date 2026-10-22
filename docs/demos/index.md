@@ -2,27 +2,9 @@
 icon: material/play-circle-outline
 ---
 
-# Tutorials and Demos
+# Demos
 
 <p class="eyebrow">Running ACCORD and CONCORD on a multi-agent system</p>
-
-!!! info "In preparation"
-    The guided walkthroughs below are being written.
-
-## What insertion requires
-
-Both protocols are distributed as skills: an initiator skill, a receiver skill and
-the scripts holding the deterministic half of the protocol. Adding them to a system
-under your own control requires no change to the application.
-
-In the measured SRE triage integration, a single overlay file adds the initiator
-skill to the lead agent and the receiver skill to the five specialists. No framework
-is rewritten and no transport is replaced, and the baseline remains runnable as the
-control arm.
-
-[:octicons-arrow-right-24: Installation](../installation.md)
-
-## Demos
 
 Recordings of the protocols running on real applications. Each is one decision, from
 the opening proposals to the committed outcome.
@@ -73,6 +55,6 @@ the opening proposals to the committed outcome.
 
 ## Related
 
-- [ACCORD](../accord/index.md) — phases, guarantees and measured results
-- [CONCORD](../concord/index.md) — phases, guarantees and measured results
-- [Installation](../installation.md) — insertion, packaging and transport bindings
+- [ACCORD](../protocols/accord/index.md) — phases, guarantees and measured results
+- [CONCORD](../protocols/concord/index.md) — phases, guarantees and measured results
+- [Installation](../protocols/installation.md) — insertion, packaging and transport bindings

@@ -58,7 +58,7 @@ credits with a named remedy — and certifies that all four roles accept it.
     CONCORD without ACCORD decides something thinner than the decision the business
     needed. The composition is what produces a signable outcome.
 
-    [:octicons-arrow-right-24: Handoff between the protocols](../accord/design.md#handoff-to-concord)
+    [:octicons-arrow-right-24: Handoff between the protocols](../protocols/accord/design.md#handoff-to-concord)
 
 ## What to watch for
 
@@ -72,4 +72,4 @@ credits with a named remedy — and certifies that all four roles accept it.
 Every step is visible in the shared space the agents work in, so the record of how
 the package was reached is available afterwards rather than reconstructed.
 
-[:octicons-arrow-right-24: Results across the four decisions](../../evaluation/concord.md#compliance-and-correctness)
+[:octicons-arrow-right-24: Results across the four decisions](../evaluation/concord.md#compliance-and-correctness)

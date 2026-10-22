@@ -19,4 +19,4 @@ all of them; what differs is the problem.
 - The bottleneck agent authoring a candidate the group had not put forward.
 - Cost tracking the difficulty of the decision rather than the length of the protocol.
 
-[:octicons-arrow-right-24: Variation across decision types](../../evaluation/concord.md#variation-across-decision-types)
+[:octicons-arrow-right-24: Variation across decision types](../evaluation/concord.md#variation-across-decision-types)
