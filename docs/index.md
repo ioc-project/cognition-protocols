@@ -38,14 +38,14 @@ within a **cost bound** declared at the start.
 
     [:octicons-arrow-right-24: Evaluation overview](evaluation/index.md)
 
--   :material-play-circle:{ .lg .middle } **Tutorials and Demos**
+-   :material-play-circle:{ .lg .middle } **Demos**
 
     ---
 
     Recorded end-to-end demos across SRE triage, e-commerce, and multi-agent
     coding teams — with and without each protocol.
 
-    [:octicons-arrow-right-24: Tutorials and Demos](protocols/tutorials/index.md)
+    [:octicons-arrow-right-24: Demos](demos/index.md)
 
 -   :material-github:{ .lg .middle } **Get Involved**
 

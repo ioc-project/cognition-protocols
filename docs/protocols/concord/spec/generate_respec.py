@@ -26,7 +26,7 @@ HTML_TEMPLATE = """\
       shortName:   "concord",
       title:       "{title}",
       subtitle:    "Version {version}",
-      github:      "https://github.com/cisco-eti/ioc-core-l9-skills",
+      github:      "https://github.com/ioc-project/cognition-protocols",
       editors: [
         {{ name: "Outshift" }}
       ],

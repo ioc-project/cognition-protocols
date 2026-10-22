@@ -20,7 +20,7 @@ The criteria clash. None of the four is wrong, and no one of them can concede
 without giving up the thing it exists to protect.
 
 !!! abstract "Customer renewal discount"
-    [:octicons-download-24: Watch the recording](https://github.com/cisco-eti/IoC-BHAG/releases/download/demos-2026-10/customer-renewal-discount.mp4)
+    [:octicons-download-24: Watch the recording](https://github.com/ioc-project/cognition-protocols/releases/download/demos-2026-10/customer-renewal-discount.mp4)
     &nbsp;&middot;&nbsp; 720p &middot; 2 min 27 &middot; 57 MB
 
 ## The four runs
@@ -58,7 +58,7 @@ credits with a named remedy — and certifies that all four roles accept it.
     CONCORD without ACCORD decides something thinner than the decision the business
     needed. The composition is what produces a signable outcome.
 
-    [:octicons-arrow-right-24: Handoff between the protocols](../accord/design.md#handoff-to-concord)
+    [:octicons-arrow-right-24: Handoff between the protocols](../protocols/accord/design.md#handoff-to-concord)
 
 ## What to watch for
 
@@ -72,4 +72,4 @@ credits with a named remedy — and certifies that all four roles accept it.
 Every step is visible in the shared space the agents work in, so the record of how
 the package was reached is available afterwards rather than reconstructed.
 
-[:octicons-arrow-right-24: Results across the four decisions](../../evaluation/concord.md#compliance-and-correctness)
+[:octicons-arrow-right-24: Results across the four decisions](../evaluation/concord.md#compliance-and-correctness)

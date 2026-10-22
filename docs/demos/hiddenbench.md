@@ -11,7 +11,7 @@ This is the hardest shape CONCORD encounters, because the disagreement is not ab
 judgement but about **which facts each agent can see**.
 
 !!! abstract "Hiddenbench — an evacuation-site decision under distributed information"
-    [:octicons-download-24: Watch the recording](https://github.com/cisco-eti/IoC-BHAG/releases/download/demos-2026-10/hiddenbench.mp4)
+    [:octicons-download-24: Watch the recording](https://github.com/ioc-project/cognition-protocols/releases/download/demos-2026-10/hiddenbench.mp4)
     &nbsp;&middot;&nbsp; 720p &middot; 4 min &middot; 12 MB
 
 ## What to watch for
@@ -24,4 +24,4 @@ judgement but about **which facts each agent can see**.
     CONCORD certifies that every agent cleared its satisfaction floor; that is a
     different claim from having chosen the right site.
 
-    [:octicons-arrow-right-24: How this is reported](../../evaluation/concord.md#compliance-and-correctness)
+    [:octicons-arrow-right-24: How this is reported](../evaluation/concord.md#compliance-and-correctness)
