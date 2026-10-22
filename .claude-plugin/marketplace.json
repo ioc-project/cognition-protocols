@@ -1,6 +1,6 @@
 {
   "$schema": "https://claude.ai/schemas/plugin-marketplace.json",
-  "name": "ioc-cognition-protocols",
+  "name": "cognition-protocols",
   "description": "IoC Layer 9 Cognition Protocols — ACCORD and CONCORD multi-agent coordination skills",
   "owner": {
     "name": "IoC Project",
