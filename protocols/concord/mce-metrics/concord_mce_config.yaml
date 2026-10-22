@@ -1,0 +1,49 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
+# MCE configuration for CONCORD metrics: which plugin metrics run, per scope.
+# Every metric skips a session where CONCORD was not used (no successful `init`), and most skip a run that did not
+# reach COMMIT or BEST_EFFORT; a skipped metric is an error result and is never stored, so it never reads as 0.
+# The MCE's own cache would store each result on the Session, so it is off in both directions
+# (reading it would also serve stale results from before a rerun).
+cache:
+  read: false
+  write: false
+
+engine:
+  max_workers: 4
+  execution_strategy: thread
+
+metrics:
+  Session:
+    # Protocol compliance (compute_compliance_metrics.py)
+    - ConcordReachedEnd
+    - ConcordCommitted
+    - ConcordUsedAllCandidates
+    - ConcordAllSteps
+    # Rounds (compute_rounds.py)
+    - ConcordRounds
+    - ConcordRepairRounds
+    - ConcordRepairsAfterMarkMissing
+    - ConcordBudgetUsed
+    # Satisfaction recorded by the protocol, no LLM (compute_worst_off.py, self-preference gap)
+    - ConcordWorstOffSatisfaction
+    - ConcordMeanSatisfaction
+    - ConcordWorstOffAboveTau
+    - ConcordSelfPreferenceGap
+    # Token cost by phase (compute_protocol_cost.py)
+    - ConcordRunTokens
+    - ConcordTokensBeforeConcord
+    - ConcordTokensAnchors
+    - ConcordTokensSeeds
+    - ConcordTokensScores
+    - ConcordTokensRepair
+    - ConcordTokensAfterCommit
+    - ConcordProtocolTokens
+    - ConcordProtocolShare
+    # LLM-judged (compute_satisfaction_fairness.py), so each session costs judge tokens (MCE records them on the
+    # result). Needs the MCE LLM settings (LLM_BASE_MODEL_URL, LLM_API_KEY, LLM_MODEL_NAME). Comment out to disable.
+    - ConcordOutcomeSatisfied
+    - ConcordSatisfiedAgents
+    - ConcordScoreFair
+    - ConcordUnfairScoreShare

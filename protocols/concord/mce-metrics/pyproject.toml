@@ -1,0 +1,58 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ioc-concord-mce-metrics"
+version = "0.1.0"
+description = "CONCORD compliance, rounds, satisfaction, fairness and token cost as MCE metric plugins."
+requires-python = ">=3.13"
+license = { text = "Apache-2.0" }
+dependencies = ["oxp-mce-core", "openai", "python-dotenv"]
+
+[project.scripts]
+concord-mce-trace = "concord_mce_metrics.trace_cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+# One entry per metric: MCE instantiates each class with no arguments.
+[project.entry-points."metrics_computation_engine.plugins"]
+ConcordReachedEnd = "concord_mce_metrics.compliance:ConcordReachedEnd"
+ConcordCommitted = "concord_mce_metrics.compliance:ConcordCommitted"
+ConcordUsedAllCandidates = "concord_mce_metrics.compliance:ConcordUsedAllCandidates"
+ConcordAllSteps = "concord_mce_metrics.compliance:ConcordAllSteps"
+ConcordRounds = "concord_mce_metrics.rounds:ConcordRounds"
+ConcordRepairRounds = "concord_mce_metrics.rounds:ConcordRepairRounds"
+ConcordRepairsAfterMarkMissing = "concord_mce_metrics.rounds:ConcordRepairsAfterMarkMissing"
+ConcordBudgetUsed = "concord_mce_metrics.rounds:ConcordBudgetUsed"
+ConcordWorstOffSatisfaction = "concord_mce_metrics.satisfaction:ConcordWorstOffSatisfaction"
+ConcordMeanSatisfaction = "concord_mce_metrics.satisfaction:ConcordMeanSatisfaction"
+ConcordWorstOffAboveTau = "concord_mce_metrics.satisfaction:ConcordWorstOffAboveTau"
+ConcordSelfPreferenceGap = "concord_mce_metrics.satisfaction:ConcordSelfPreferenceGap"
+ConcordOutcomeSatisfied = "concord_mce_metrics.judged:ConcordOutcomeSatisfied"
+ConcordSatisfiedAgents = "concord_mce_metrics.judged:ConcordSatisfiedAgents"
+ConcordScoreFair = "concord_mce_metrics.judged:ConcordScoreFair"
+ConcordUnfairScoreShare = "concord_mce_metrics.judged:ConcordUnfairScoreShare"
+ConcordRunTokens = "concord_mce_metrics.protocolcost:ConcordRunTokens"
+ConcordTokensBeforeConcord = "concord_mce_metrics.protocolcost:ConcordTokensBeforeConcord"
+ConcordTokensAnchors = "concord_mce_metrics.protocolcost:ConcordTokensAnchors"
+ConcordTokensSeeds = "concord_mce_metrics.protocolcost:ConcordTokensSeeds"
+ConcordTokensScores = "concord_mce_metrics.protocolcost:ConcordTokensScores"
+ConcordTokensRepair = "concord_mce_metrics.protocolcost:ConcordTokensRepair"
+ConcordTokensAfterCommit = "concord_mce_metrics.protocolcost:ConcordTokensAfterCommit"
+ConcordProtocolTokens = "concord_mce_metrics.protocolcost:ConcordProtocolTokens"
+ConcordProtocolShare = "concord_mce_metrics.protocolcost:ConcordProtocolShare"
+
+[tool.uv.sources]
+# Temporary, until we release the scope pypi packages
+oxp-mce-core = { git = "ssh://git@github.com/outshift-open/observe-and-explain-platform.git", subdirectory = "backend/mce/mce-core", branch = "main" }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/concord_mce_metrics"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
