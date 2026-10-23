@@ -46,11 +46,15 @@ claude plugin install $PROTOCOL@cognition-protocols --scope project
 
 ## 3. Write the role definitions
 
-Download or copy the text of each role from the [Coding Agent Team scenario](index.md#role-descriptions) as:
+Download the three [role definitions](index.md#role-descriptions) from this documentation site into
+`personas/`:
 
-- `personas/microservices.md`
-- `personas/monolith.md`
-- `personas/pragmatist.md`
+```bash
+for role in microservices monolith pragmatist; do
+  curl -fsSL https://ioc-project.github.io/cognition-protocols/tutorials/coding-agent-team/roles/$role.txt \
+    -o personas/$role.md
+done
+```
 
 The initiator needs no file: its rules are in the kickoff message below.
 

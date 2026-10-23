@@ -102,13 +102,15 @@ the receiver skill on the agents that receive its messages.
 
 ## 3. Write the role definitions
 
-Each agent's `CLAUDE.md` holds its [role definition](index.md#role-descriptions). Download or copy the text
-of each role from the [Coding Agent Team scenario](index.md#role-descriptions) as:
+Each agent's `CLAUDE.md` holds its [role definition](index.md#role-descriptions). Download the
+four role files from this documentation site and save each as `CLAUDE.md` in the agent's directory:
 
-- `agents/initiator/CLAUDE.md`
-- `agents/microservices/CLAUDE.md`
-- `agents/monolith/CLAUDE.md`
-- `agents/pragmatist/CLAUDE.md`
+```bash
+for role in initiator microservices monolith pragmatist; do
+  curl -fsSL https://ioc-project.github.io/cognition-protocols/tutorials/coding-agent-team/roles/$role.txt \
+    -o agents/$role/CLAUDE.md
+done
+```
 
 ## 4. Create the AgentBridge profiles
 
