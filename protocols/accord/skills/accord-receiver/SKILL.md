@@ -81,7 +81,11 @@ The orchestrator is building a complete statement of the task from all
 specialists' perspectives. Add what your domain sees that others may not.
 
 You will receive `CURRENT_FRAME` — atoms already in the shared Problem Frame.
-Return only atoms **not already present** in `CURRENT_FRAME`.
+On a revision round you will also receive `YOUR_PREVIOUS_ATOMS`.
+
+Return at most 6 atoms. On a revision round this list replaces your previous
+atoms: keep, rewrite, or delete. Return `"atoms": []` to withdraw every atom
+you previously contributed. Keep a fact only you know.
 
 Return ONLY the following JSON. No preamble, no tools, no code fences.
 
@@ -103,8 +107,6 @@ Return ONLY the following JSON. No preamble, no tools, no code fences.
 - `assumption` — what your domain assumes about the situation
 - `sub_goal` — an intermediate step your domain needs to verify
 - `deliverable` — a specific output your domain will produce
-
-Return `"atoms": []` if CURRENT_FRAME already covers everything your domain knows.
 
 ---
 
