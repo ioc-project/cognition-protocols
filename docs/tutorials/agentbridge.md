@@ -2,8 +2,11 @@
 
 <p class="eyebrow">Agents on separate processes, joined by AgentBridge</p>
 
-[AgentBridge](https://github.com/agntcy/shadi) (`agentbridge` and `shadictl`, from the
-`agntcy/shadi` repository) registers each coding harness instance as a live agent and lets
+<p class="eyebrow">Agents on separate processes, joined by AgentBridge</p>
+
+[AgentBridge](https://github.com/agntcy/shadi) ([`agentbridge`](https://github.com/agntcy/shadi/tree/main/crates/agentbridge_cli)
+and [`shadictl`](https://github.com/agntcy/shadi/tree/main/crates/shadictl), from the
+[`agntcy/shadi`](https://github.com/agntcy/shadi) repository) registers each coding harness instance as a live agent and lets
 one instance send a prompt to another with `agentbridge delegate`. Agents talk
 [A2A](https://a2a-protocol.org), either natively or over a [SLIM](https://github.com/agntcy/slim)
 message bus. It is used purely as process launcher and transport: the protocol is unchanged,
@@ -43,7 +46,8 @@ flowchart LR
 - Claude Code, with `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_AUTH_TOKEN`
   set in the shell that registers the agents. The sandbox that wraps each agent cannot
   read your keychain login.
-- `agentbridge` and `shadictl`, and `slimctl` for the SLIM node (SLIM transport only), on your `PATH`:
+- `agentbridge` and `shadictl` from [`agntcy/shadi`](https://github.com/agntcy/shadi), and
+  `slimctl` for the SLIM node (SLIM transport only), on your `PATH`:
 
     ```bash
     brew tap agntcy/shadi https://github.com/agntcy/shadi.git
