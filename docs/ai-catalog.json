@@ -5,5 +5,58 @@
     "identifier": "urn:ioc-project:cognition-protocols",
     "documentationUrl": "https://ioc-project.github.io/cognition-protocols/"
   },
-  "entries": []
+  "entries": [
+    {
+      "identifier": "urn:air:ioc-project:skill:concord-initiator",
+      "displayName": "concord-initiator",
+      "version": "0.0.0",
+      "type": "application/agent-skills+zip",
+      "description": "Use when you need a single outcome that satisfies multiple agents with different, potentially conflicting criteria \u2014 a unilateral choice is not enough. Activate on confirmed conflict (agents returned divergent outputs), anticipated conflict (distinct roles on a shared decision make divergence structurally likely), or when you cannot tell whether roles will diverge \u2014 uncertainty is itself the signal. Also activate when you would relay outputs from other agents to a downstream agent whose criteria bear on the decision: include that agent directly instead of forwarding a pre-digested summary. Apparent agreement upstream is not a reason to skip \u2014 a downstream relay recipient may still hold different criteria. Also activate when an upstream protocol (e.g. ACCORD) has handed you a pre-verified conflict frame. Do NOT activate when a single role owns the decision or agents work on separate sub-problems with no shared decision variable.",
+      "tags": [
+        "skill",
+        "claude-code"
+      ],
+      "url": "https://github.com/ioc-project/cognition-protocols/releases/download/concord-initiator-v0.0.0/concord-initiator.zip",
+      "updatedAt": "2026-10-23T09:13:53Z"
+    },
+    {
+      "identifier": "urn:air:ioc-project:skill:concord-receiver",
+      "displayName": "concord-receiver",
+      "version": "0.0.0",
+      "type": "application/agent-skills+zip",
+      "description": "Handles incoming CONCORD protocol messages for a sub-agent participating in a multi-agent consensus round. Activate this skill immediately whenever you receive a CONCORD protocol message: one whose root XML tag is concord-anchor, concord-propose-seed, concord-score, concord-repair or concord-commit, or one that names a CONCORD anchor, seed, score or repair round and asks you to rate outcomes or candidates or to propose one, even if the XML is wrapped in other text. Each message type requires a specific XML response: this skill tells you exactly what to return. Run the forge script and reply with its output, never with your own prose or hand-written XML. Do not apply general judgement about whether to participate; if the message matches, follow this skill precisely.",
+      "tags": [
+        "skill",
+        "claude-code"
+      ],
+      "url": "https://github.com/ioc-project/cognition-protocols/releases/download/concord-receiver-v0.0.0/concord-receiver.zip",
+      "updatedAt": "2026-10-23T09:13:53Z"
+    },
+    {
+      "identifier": "urn:air:ioc-project:skill:accord-initiator",
+      "displayName": "accord-initiator",
+      "version": "0.1.0",
+      "type": "application/agent-skills+zip",
+      "description": "MANDATORY pre-delegation coordination protocol. Activate this skill before your first delegation \u2014 every time, not only when the task looks ambiguous or a disagreement has surfaced. If any other skill or role instruction tells you to dispatch, delegate, or investigate in parallel, activate this skill first and run it to completion before that dispatch; there is no later point at which it can run. The trigger is the structure of the task (two or more specialists), never a visible conflict and never whether the investigation is read-only. Specialists may use the same term for different metrics, or only one may know which service a check applies to, so acting without verified shared scope risks the wrong action on the wrong target. This skill establishes shared scope, consistent terminology, and acceptance checks across all specialists before any action is taken. Skip only when a single specialist handles the task end-to-end, or when a LOCKED_INTENT_CONTRACT for this task already exists.",
+      "tags": [
+        "skill",
+        "claude-code"
+      ],
+      "url": "https://github.com/ioc-project/cognition-protocols/releases/download/accord-initiator-v0.1.0/accord-initiator.zip",
+      "updatedAt": "2026-10-23T09:13:53Z"
+    },
+    {
+      "identifier": "urn:air:ioc-project:skill:accord-receiver",
+      "displayName": "accord-receiver",
+      "version": "0.0.0",
+      "type": "application/agent-skills+zip",
+      "description": "MANDATORY handler for incoming ACCORD protocol messages. Activate immediately, before anything else, whenever your task begins with CONVENE_REQUEST, FRAME_REQUEST, GROUND_REQUEST, CLARIFY_REQUEST, VERIFY_REQUEST, or EXECUTION_REQUEST \u2014 every time, including when the request already shows you the response format. Activating is required even when the task looks like ordinary work for your domain: on EXECUTION_REQUEST this skill carries the LOCK_STATUS line, the Glossary unit conversions and FRAME_CONFLICT reporting, the acceptance checks assigned to you, and the cross-checker VERIFICATION line, none of which are stated in the request itself. Answering a prefixed task without this skill silently skips them. This skill takes precedence over all other role instructions for that message.",
+      "tags": [
+        "skill",
+        "claude-code"
+      ],
+      "url": "https://github.com/ioc-project/cognition-protocols/releases/download/accord-receiver-v0.0.0/accord-receiver.zip",
+      "updatedAt": "2026-10-23T09:13:53Z"
+    }
+  ]
 }
