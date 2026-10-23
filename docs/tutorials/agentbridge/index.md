@@ -64,36 +64,8 @@ flowchart LR
 ## 2. Create your agents
 
 A run needs a task, a team of specialists, and a role for each of them, plus the initiator that
-starts the protocol. Each agent has its own directory, and three things in it:
-
-1. **A harness.** Pick one for each agent. The harness is the program AgentBridge launches
-   whenever the agent receives a message.
-2. **The protocol's skills.** The harness discovers skills from its project directory, so
-   install the protocol there, in each agent, as described in
-   [Installing a skill](../../getting-started.md#installing-a-skill). With Claude Code, install
-   the plugin in the agent's directory with project scope:
-
-    ```bash
-    claude plugin marketplace add ioc-project/cognition-protocols
-    cd agents/<agent id> && claude plugin install <protocol>@cognition-protocols --scope project
-    ```
-
-    Each agent gets both the initiator and the receiver skill. Their activation conditions are
-    precise, so the initiator skill only activates on the agent that starts the protocol and the
-    receiver skill on the agents that receive its messages.
-3. **An instruction file.** The harness reads the agent's role from the instruction file of its
-   project directory:
-
-    | Harness | Instruction file |
-    |---|---|
-    | Claude Code | `CLAUDE.md` |
-    | Codex, opencode | `AGENTS.md` |
-    | Others | `AGENTS.md`, or the file the harness documents for project instructions |
-
-    For a specialist, the file is its role: what it cares about, and what it will and will not
-    accept. A specialist without a position has nothing to contribute to a decision. For the
-    initiator, the file only sets working rules, such as where to write its files and to report
-    the protocol's final output verbatim.
+starts the protocol. Each agent has its own directory, and three things in it: a harness, the
+protocol's skills, and an instruction file.
 
 ```text
 agents/
@@ -105,6 +77,41 @@ agents/
 │   └── <skills folder>
 └── ...
 ```
+
+### Pick a harness
+
+Pick one for each agent. The harness is the program AgentBridge launches whenever the agent
+receives a message.
+
+### Install the protocol's skills
+
+The harness discovers skills from its project directory, so install the protocol there, in each
+agent, as described in [Installing a skill](../../getting-started.md#installing-a-skill). With
+Claude Code, install the plugin in the agent's directory with project scope:
+
+```bash
+claude plugin marketplace add ioc-project/cognition-protocols
+cd agents/<agent id> && claude plugin install <protocol>@cognition-protocols --scope project
+```
+
+Each agent gets both the initiator and the receiver skill. Their activation conditions are
+precise, so the initiator skill only activates on the agent that starts the protocol and the
+receiver skill on the agents that receive its messages.
+
+### Define the instruction file
+
+The harness reads the agent's role from the instruction file of its project directory:
+
+| Harness | Instruction file |
+|---|---|
+| Claude Code | `CLAUDE.md` |
+| Codex, opencode | `AGENTS.md` |
+| Others | `AGENTS.md`, or the file the harness documents for project instructions |
+
+For a specialist, the file is its role: what it cares about, and what it will and will not
+accept. A specialist without a position has nothing to contribute to a decision. For the
+initiator, the file only sets working rules, such as where to write its files and to report the
+protocol's final output verbatim.
 
 ## 3. Create the AgentBridge profiles
 
