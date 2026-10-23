@@ -1,0 +1,100 @@
+Delegating task a9edd9a3-1902-4180-a71f-b18e82ec9b86 to 'initiator' (did=did:key:z6MknN5joTJLd9GCEQQuaDD56JyFfNphV4s5gBH7f5KepuDL) via slim://127.0.0.1:47560...
+[2m2026-10-07T14:31:36.908187Z[0m [33m WARN[0m [2mslim_bindings::config[0m[2m:[0m Tracing subscriber already set or failed to initialize: error setting up tracing subscriber. Using existing subscriber.
+[2m2026-10-07T14:36:02.287486Z[0m [33m WARN[0m [2mslim_datapath::tables::subscription_table[0m[2m:[0m not found [3mid[0m[2m=[0m340282366920938463463374607431768211455
+Response from 'initiator' (265382ms):
+---
+
+# Notification Service Decision Report
+
+## Proposal 1: MICROSERVICES
+
+### Author: microservices
+
+Standalone notification service, separate database, deploys independently. Event ingestion via message queue subscription (Kafka/RabbitMQ/SQS). Plugin architecture for delivery channels. Own on-call rotation, own CI/CD, clear team ownership. Separate DB for delivery state and config.
+
+**Trade-off accepted:** Initial setup slower, outage risk (queue partition = backlog), but buys deploy/review independence.
+
+### Reactions
+
+**From monolith:**
+NOT OK. Proposes new message queue, database, service, and on-call rotation. Violates core rules: creates standalone infrastructure, adds operational burden outside monolith team, introduces new failure modes (queue partition = outage). Trades deploy independence for operational complexity later. Monolith team still must monitor queue, coordinate schema changes, debug cross-service failures — loses that independence. Counter: embed notification logic in monolith with plugin architecture. Same design works later if scaling justifies split.
+
+**From pragmatist:**
+NOT OK yet. Three questions: (1) Can you justify queue + separate DB at current throughput? If volume is low, keep in-process; if thousands/sec, standalone wins. (2) Queue partition risk — who owns incident response? If monolith team pages because your queue is down, concerns aren't separated. (3) Is there actually a notification team, or are you asking monolith team to learn new service and operate queue they don't manage?
+
+Conditional acceptance: If (1) volume justifies, (2) dedicated runbook + team oncall, (3) team exists — then OK. Design sound, ownership clear, deploy independence real. But requires team + costs that justify infrastructure.
+
+---
+
+## Proposal 2: MONOLITH
+
+### Author: monolith
+
+`NotificationService` module inside monolith. Hook into existing event bus. Pluggable adapter pattern for channels (email, SMS, push, Slack). Same team on-call, same deployment window (~45min, one blue-green flip). No new infrastructure. Pluggable design allows future split to separate service if volume justifies.
+
+**Trade-off to accept:** Couples notification deploy to monolith, but buys flexibility without upfront infrastructure cost.
+
+### Reactions
+
+**From microservices:**
+NOT OK. Couples notification deploy risk to monolith pipeline. Violates criteria: can't deploy separately, can't scale notifications independently once baked in. Proposal says "could split later" — that's debt language. Accept separation tax now or rearchitect under fire later. Ownership stays with monolith team at deploy time. One blue-green flip means notification failures are monolith outages, not isolated.
+
+Counter: propose separate service from day one. Reuse monolith auth/config via clean network API. Same team operates it. Slower rollout (build CI, ops, dashboards), but buys deploy-risk and review independence. If volume doesn't justify it, wasted infra. If it does, not rearchitecting under fire.
+
+**From pragmatist:**
+OK. Clear owner (your team, same oncall), ships this quarter in monolith, zero new infrastructure to operate, one new outage vector you already control. Pluggable adapter pattern buys optionality later — future split is feasible when volume justifies it. No upfront cost for infrastructure you don't yet need. This is pragmatist-aligned.
+
+**Condition:** Make sure notification logic stays clean enough that future split is feasible. Don't bake vendor lock-in into adapter layer. Design so future team can extract it as service without rewriting.
+
+---
+
+## Proposal 3: PRAGMATIST
+
+### Author: pragmatist
+
+Dispatcher module in app publishes to SQS. Channel handlers (email/SMS/Slack) as standalone Lambda functions triggered by queue. AWS manages queue reliability and retries. New channel = new Lambda function + queue mapping, no main-app deploy. Platform/infra team owns Lambda + monitoring. App team owns dispatch logic. Minimal on-call (only "DLQ filling up" alarm).
+
+**Trade-off:** If volume justifies custom service, monolith module beats this. But at low-to-medium volume, queue offload is cheaper on-call burden.
+
+### Reactions
+
+**From microservices:**
+NOT OK. Dispatcher living in monolith fails core criteria: notification changes require monolith team review and couple release cadence. Queue model is solid (Lambda handlers, SQS messaging clean) — keep it. Move dispatcher to standalone service. Launch queue infra now, build dispatcher service in parallel. Slower initial ship buys actual independence.
+
+**From monolith:**
+NOT OK. Missing emergency-escalation path. App team can't rollback Lambda handler if it breaks — depends on infra team for fixes. Loses unilateral control over critical user-facing system. Loses "real emergency-escalation path your own on-call can pull without needing that team."
+
+Condition: Can accept IF app team gets kill-switch (disable notifications from monolith, no infra-team call) and ownership of at least one Lambda handler to prove rollback works. Trade coordination cost for control.
+
+---
+
+## TEAM DECISION
+
+**Choose: MONOLITH PROPOSAL**
+
+**Rationale:**
+
+Monolith proposal has explicit OK from pragmatist and clear reasoning from monolith team. It ships this quarter, requires no new infrastructure, and keeps operations within one team's control — aligned with team's existing capability and immediate constraints.
+
+Microservices' concerns about coupling and long-term scaling are valid but are **not blockers at current state**:
+
+1. **Pluggable design buys optionality**: Pragmatist confirms that a well-designed adapter layer supports extraction to separate service later. Monolith accepts this condition.
+
+2. **Tech debt is acceptable with evolution trigger**: Define now the volume threshold that triggers split to separate service. This prevents indefinite coupling and makes the debt explicit (not hidden). Example: "If notification volume exceeds 10K/day, engineering lead triggers split proposal."
+
+3. **Deploy independence deferred**: Microservices prefers independence now. Acknowledged — but organization trades upfront infrastructure cost for speed-to-ship and operational simplicity. When volume or SLA demands justify it, the code structure supports the split with no rewrite.
+
+**Next steps to enable this decision:**
+
+1. Implement `NotificationService` module in monolith with clean adapter pattern for channels.
+2. Monolith team and microservices team agree in writing on:
+   - Adapter interface spec (so extraction to service is feasible)
+   - Volume threshold that triggers re-evaluation for separate service
+   - Code review process that doesn't block shipping (plugin logic doesn't require monolith team approval on every channel addition — adapter pattern encapsulates that)
+3. Pragmatist condition: Ensure adapter logic doesn't hardcode retry/batching/queuing logic specific to monolith internals. Design for extraction.
+
+**Proposal not chosen:**
+
+- **Microservices**: Requires upfront infrastructure and team budget not justified by current volume estimates.
+- **Pragmatist (SQS + Lambda)**: Loses operational control (monolith team can't rollback handler without infra team). Pragmatist team confirmed it only works with kill-switch and app-team Lambda ownership — at that point, split is cleaner than split-with-controls.
+exit=0

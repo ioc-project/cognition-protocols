@@ -47,6 +47,11 @@ evaluated against independent dimensions — convergence, correctness, cost, and
 so claims about behaviour are measurable, not asserted. See the [evaluation overview](evaluation/index.md)
 for results and methodology.
 
+## Guided tour
+
+See ACCORD and CONCORD work without running anything: a step-by-step tour of recorded
+AgentBridge runs, with and without a protocol. See the [guided tour](demos/guided-tour.md).
+
 ## Demos
 
 Recorded end-to-end demos across SRE triage, e-commerce, and multi-agent

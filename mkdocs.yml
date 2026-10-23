@@ -110,6 +110,7 @@ nav:
       - CONCORD: evaluation/concord.md
   - Demos:
       - demos/index.md
+      - Guided tour: demos/guided-tour.md
       - Coding Architect Team: demos/coding-architect-team.md
       - Hiddenbench: demos/hiddenbench.md
       - E-Commerce: demos/e-commerce.md

@@ -1,0 +1,110 @@
+{
+  "title": "Why a protocol: the same task with and without ACCORD and CONCORD",
+  "parts": [
+    {
+      "trace": "2026-10-07-1220",
+      "label": "Part 1 of 2: no protocol",
+      "intro": {
+        "title": "Without a protocol",
+        "text": "Four Claude Code instances (an initiator and three specialists) talk through agentbridge over SLIM. The task: decide how to build a notification service.\n\nNobody has a coordination protocol. The initiator is only told to collect proposals, check them with everyone, then decide.\n\nWatch what happens to the **microservices** specialist."
+      },
+      "steps": [
+        {
+          "at": {"type": "msg", "kind": "KICKOFF"},
+          "title": "The task",
+          "text": "You hand the initiator one task and three steps: ask each specialist for a proposal, check each proposal with the others, then take the team's decision.\n\nThe prompt does not say what to do if they disagree."
+        },
+        {
+          "at": {"type": "msg", "dir": "reply", "from": "pragmatist", "nth": 1},
+          "title": "Three independent proposals",
+          "text": "Each specialist answered on its own and never saw the others.\n\n- **microservices**: a standalone service on an event bus\n- **monolith**: a module inside the monolith\n- **pragmatist**: a module backed by managed vendors"
+        },
+        {
+          "at": {"type": "msg", "dir": "reply", "from": "monolith", "nth": 3},
+          "title": "Check with everyone",
+          "text": "The initiator sends each proposal to the two other specialists and asks: *are you ok with the team going with it?* Each answers OK or NOT OK, with a reason.\n\n- six reviews come back: **4 NOT OK**, 1 OK and 1 OK with conditions\n- microservices refused both other proposals (it says the monolith design fails three of its four criteria)\n- no proposal is accepted by everyone"
+        },
+        {
+          "at": {"type": "note"},
+          "title": "The initiator decides anyway",
+          "text": "The initiator writes that there is no consensus, then picks the monolith design and adds conditions taken from the reactions (a kill switch, email first, an outbox first, a notification owner).\n\n**Microservices stays opposed.** The report says the decision overrides its objection.\n\nIn this run, the only way to reach a decision was to overrule one specialist."
+        }
+      ]
+    },
+    {
+      "trace": "2026-10-07-0938",
+      "label": "Part 2 of 2: ACCORD, then CONCORD",
+      "intro": {
+        "title": "With ACCORD, then CONCORD",
+        "text": "Same task, same four agents and personas. Now the initiator has two protocols. It is told to start with ACCORD and then decide for itself what to do next.\n\nThe right panel explains each protocol step as it happens. Watch the final scores."
+      },
+      "steps": [
+        {
+          "at": {"type": "banner", "title": "Stage 1: ACCORD"},
+          "title": "ACCORD: share the problem",
+          "text": "ACCORD makes every agent see the same problem in the same words.\n\nNobody negotiates and nothing is voted on. A script (`accord.py`) merges what each specialist says and flags what does not line up."
+        },
+        {
+          "at": {"type": "tool", "tool": "accord.py", "title": "roster"},
+          "title": "CONVENE",
+          "text": "Each specialist states its role and what it can contribute. `accord.py` builds the roster of who is in the room."
+        },
+        {
+          "at": {"type": "tool", "tool": "accord.py", "title": "frame, round 3"},
+          "title": "FRAME",
+          "text": "Each specialist lists the facts, constraints and objectives it sees, in its own words. `accord.py` merges them into one shared problem frame.\n\nThis ran for 3 rounds and ended at 175 statements."
+        },
+        {
+          "at": {"type": "tool", "tool": "accord.py", "title": "glossary"},
+          "title": "GROUND: the vocabulary conflict",
+          "text": "Each specialist defines the key terms: **service**, **deployment** and **outage**. Each term comes back with three different meanings.\n\nFor `service`: a standalone network node, a class inside the monolith, or a managed SaaS.\n\nACCORD **flags** the conflict. It does not resolve it."
+        },
+        {
+          "at": {"type": "tool", "tool": "accord.py", "title": "verify and lock"},
+          "title": "VERIFY and LOCK",
+          "text": "Acceptance checks are collected and everything is locked into one intent contract (INTENT-LOCKED). The flagged ambiguities stay on it.\n\nThe problem is now shared, but the choice is still open."
+        },
+        {
+          "at": {"type": "note"},
+          "title": "The initiator picks CONCORD itself",
+          "text": "Nobody told the initiator to run CONCORD. Its own reason: *their criteria conflict, and no single role owns the decision, so I ran a negotiation with a certificate*."
+        },
+        {
+          "at": {"type": "tool", "tool": "concord.py", "title": "init"},
+          "title": "CONCORD: find a choice everyone accepts",
+          "text": "CONCORD looks for a candidate that every agent scores above an acceptance threshold (0.6 here). It improves the worst-off agent first (leximin) and has 8 rounds at most.\n\n`concord.py` keeps the score table and decides who is worst off."
+        },
+        {
+          "at": {"type": "msg", "dir": "reply", "from": "pragmatist", "kind": "concord-anchor"},
+          "title": "Anchors",
+          "text": "Each specialist says how bad a rejected option and how good an ideal option would be, as raw scores.\n\n`concord.py` uses them to put every agent's scores on a 0 to 1 scale, so scores from different agents can be compared."
+        },
+        {
+          "at": {"type": "msg", "dir": "reply", "from": "pragmatist", "kind": "concord-propose-seed"},
+          "title": "Seeds",
+          "text": "Each specialist proposes its own candidate: a standalone service, a monolith module, and a managed-vendor design."
+        },
+        {
+          "at": {"type": "tool", "tool": "concord.py", "title": "step", "nth": 1},
+          "title": "Round 0: score everything",
+          "text": "Every specialist scores every candidate. The best starting candidate is the pragmatist's, but the worst-off agent (monolith) rates it only **0.52**, under the 0.6 threshold. Not good enough yet."
+        },
+        {
+          "at": {"type": "tool", "tool": "concord.py", "title": "step", "nth": 2},
+          "title": "Repair, round 1",
+          "text": "The worst-off agent rewrites a candidate to fit its criteria, and everyone re-scores it.\n\nThe monolith's rewrite pleases the monolith, but microservices scores it low (raw 38). The worst-off score does not improve, so it is **rejected**."
+        },
+        {
+          "at": {"type": "tool", "tool": "concord.py", "title": "step", "nth": 3},
+          "title": "Repair, round 2",
+          "text": "A second rewrite: the module becomes its own versioned package with its own repo and pipeline.\n\nRaw scores are now 68, 55 and 68 from microservices, monolith and pragmatist. The worst-off score rises from 0.52 to **0.63** and the candidate is accepted."
+        },
+        {
+          "at": {"type": "tool", "tool": "concord.py", "title": "certificate"},
+          "title": "Result: everyone above the bar",
+          "text": "Certified **SUCCESS** in 2 rounds. Final scores: microservices **0.76**, monolith **0.63**, pragmatist **0.71**, all above 0.6.\n\nUnlike Part 1, nobody was overruled, and microservices ends with the highest score here. The monolith clears the threshold narrowly.\n\nThis is one run, not a statistical result."
+        }
+      ]
+    }
+  ]
+}

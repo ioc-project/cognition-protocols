@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agents exchange replay</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1b1f24; --muted:#6a737d; --line:#e1e4e8; --soft:#f0f2f5;
+  --accent:#2563eb; --good:#15803d; --bad:#b91c1c; --warn:#b45309;
+  --c-avatar:#64748b; --c-initiator:#0d9488; --c-accord:#ea580c; --c-concord:#0891b2;
+  --c-microservices:#16a34a; --c-monolith:#7c3aed; --c-pragmatist:#dc2626;
+  --shadow:0 1px 2px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1318; --panel:#171c23; --ink:#e6e9ee; --muted:#8b95a3; --line:#2a313b; --soft:#1e252e;
+    --accent:#60a5fa; --good:#4ade80; --bad:#f87171; --warn:#fbbf24;
+    --c-avatar:#94a3b8; --c-initiator:#2dd4bf; --c-accord:#fb923c; --c-concord:#22d3ee;
+    --c-microservices:#4ade80; --c-monolith:#a78bfa; --c-pragmatist:#f87171;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1318; --panel:#171c23; --ink:#e6e9ee; --muted:#8b95a3; --line:#2a313b; --soft:#1e252e;
+  --accent:#60a5fa; --good:#4ade80; --bad:#f87171; --warn:#fbbf24;
+  --c-avatar:#94a3b8; --c-initiator:#2dd4bf; --c-accord:#fb923c; --c-concord:#22d3ee;
+  --c-microservices:#4ade80; --c-monolith:#a78bfa; --c-pragmatist:#f87171; --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+header{flex:none;display:flex;align-items:center;gap:16px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:15px;margin:0;font-weight:650}
+header .meta{color:var(--muted);font-size:12.5px;min-width:0;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header button{flex:none;white-space:nowrap}
+header h1{white-space:nowrap}
+header .grow{flex:1}
+#trace{max-width:300px;text-overflow:ellipsis}
+header h1{flex:none}
+button,select{white-space:nowrap;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--soft)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;min-width:84px}
+button.primary:hover{filter:brightness(1.08)}
+main{flex:1;min-height:0;display:grid;grid-template-columns:250px minmax(0,1fr) 330px;grid-template-rows:minmax(0,1fr);overflow:hidden}
+aside{background:var(--panel);overflow:auto;padding:14px}
+aside.left{border-right:1px solid var(--line)}
+aside.right{border-left:1px solid var(--line)}
+h2{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:650}
+.agent{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:10px;margin-bottom:2px;transition:background .2s}
+.agent .av.sq{border-radius:8px}
+.agent .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;flex:none}
+.agent .nm{font-weight:600;line-height:1.15}
+.agent .st{font-size:11.5px;color:var(--muted)}
+.agent.active{background:var(--soft)}
+.agent.active .av{box-shadow:0 0 0 3px color-mix(in srgb,var(--col) 35%,transparent)}
+.legend{margin-top:16px;font-size:12px;color:var(--muted)}
+.legend p{margin:0 0 6px}
+#chatwrap{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column}
+#chat{flex:1;min-height:0;overflow:auto;padding:16px 22px 28px}
+.banner{display:flex;align-items:center;gap:12px;margin:22px 0 12px;color:var(--muted)}
+.banner:before,.banner:after{content:"";height:1px;background:var(--line);flex:1}
+.banner .bt{font-weight:700;color:var(--ink);text-align:center}
+.banner .bs{font-size:12px;text-align:center}
+.banner.accord .bt{color:var(--c-accord)} .banner.concord .bt{color:var(--c-concord)}
+.banner.v-ok .bt{color:var(--good)} .banner.v-bad .bt{color:var(--bad)} .banner.v-ok .bt,.banner.v-bad .bt{font-size:16px;letter-spacing:.04em} .banner.v-ok .bs,.banner.v-bad .bs{font-size:14px;margin-top:2px}
+.banner .bw{font-size:14px;color:var(--ink);max-width:640px;margin:6px auto 0;text-align:center}
+.msg{display:flex;gap:10px;margin:12px 0;max-width:880px;animation:in .25s ease-out}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.msg,.card{animation:none}}
+.msg.reply{margin-left:44px}
+.msg .av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;flex:none;margin-top:2px}
+.bubble{background:var(--panel);border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:9px 13px;min-width:0;box-shadow:var(--shadow);flex:0 1 auto;max-width:100%}
+.msg.reply .bubble{border-left:3px solid var(--col)}
+.msg.req .bubble{background:var(--soft)}
+.who{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;margin-bottom:4px;font-size:12.5px}
+.who b{color:var(--col)} .who .to{color:var(--muted)}
+.kind{font:600 10.5px/1 ui-monospace,Menlo,monospace;padding:3px 6px;border-radius:6px;background:var(--soft);color:var(--muted);border:1px solid var(--line)}
+.who .time{margin-left:auto;color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums}
+.txt{white-space:pre-wrap;overflow-wrap:anywhere}
+.md{overflow-wrap:anywhere;line-height:1.5}
+.md>:first-child{margin-top:0}.md>:last-child{margin-bottom:0}
+.md p{margin:.55em 0}
+.md h3,.md h4,.md h5,.md h6{margin:.9em 0 .35em;line-height:1.25}
+.md h3{font-size:1.12em}.md h4{font-size:1.05em}.md h5,.md h6{font-size:1em}
+.md ul,.md ol{margin:.4em 0;padding-left:1.4em}.md li{margin:.15em 0}
+.md li>ul,.md li>ol{margin:.15em 0}
+.md code{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--soft);border:1px solid var(--line);border-radius:5px;padding:0 2px}
+.md pre{margin:.5em 0}.md pre code{background:none;border:0;padding:0}
+.md blockquote{margin:.5em 0;padding:.1em 0 .1em .8em;border-left:3px solid var(--line);color:var(--muted)}
+.md hr{border:0;border-top:1px solid var(--line);margin:.8em 0}
+.md table{display:block;overflow-x:auto;border-collapse:collapse;margin:.5em 0;font-size:.95em}
+.md th,.md td{border:1px solid var(--line);padding:3px 8px;text-align:left;vertical-align:top}
+.md th{background:var(--soft)}
+.md a{color:inherit;text-decoration:underline}
+.tour{border:1px solid var(--accent);border-left-width:4px;border-radius:10px;background:var(--panel);padding:12px 14px;margin:0 0 14px;box-shadow:var(--shadow)}
+.tour .tpart{font:700 11px/1.2 system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--accent)}
+.tour .tcount{font-size:11.5px;color:var(--muted);margin-top:2px}
+.tour h3{margin:8px 0 6px;font-size:15px;line-height:1.3}
+.tour .tbody{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.tour .tbody p{margin:.5em 0}.tour .tbody ul{margin:.4em 0;padding-left:1.3em}
+.tour .tbody code{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--soft);border:1px solid var(--line);border-radius:5px;padding:0 3px}
+.tour #tNext:disabled{opacity:.55;cursor:progress}
+.tour .tprog{margin-top:10px;font-size:12px;color:var(--muted)}
+.tour .tbar{height:6px;border-radius:4px;background:var(--soft);border:1px solid var(--line);overflow:hidden;margin-bottom:5px}
+.tour .tbar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s ease}
+.tour .tprog.ready{color:var(--good);font-weight:650}
+.tour .tprog.ready .tbar i{background:var(--good)}
+@keyframes tready{0%,100%{box-shadow:0 0 0 0 rgba(37,99,235,.55)}50%{box-shadow:0 0 0 6px rgba(37,99,235,0)}}
+.tour #tNext.ready{animation:tready 1.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.tour #tNext.ready{animation:none}.tour .tbar i{transition:none}}
+.tour .tnav{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.tour label{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center;margin-top:8px}
+.tour-hl{outline:3px solid #f5a524;outline-offset:3px;border-radius:12px}
+body.rawmode .md{display:none}
+body:not(.rawmode) .rawtxt{display:none}
+pre,.mono{font:12px/1.45 ui-monospace,Menlo,Consolas,monospace}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 0;padding:9px 11px;background:var(--soft);border-radius:8px;border:1px solid var(--line)}
+.clamp{max-height:170px;overflow:hidden;position:relative}
+.clamp:after{content:"";position:absolute;left:0;right:0;bottom:0;height:46px;background:linear-gradient(transparent,var(--panel))}
+.msg.req .clamp:after{background:linear-gradient(transparent,var(--soft))}
+.more{margin-top:6px;font-size:12px;padding:3px 9px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}
+.chip{font-size:11.5px;padding:2px 8px;border-radius:999px;background:var(--soft);border:1px solid var(--line)}
+.atoms{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:5px}
+.atoms li{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start}
+.t{font:700 9.5px/1 ui-monospace,Menlo,monospace;text-transform:uppercase;letter-spacing:.04em;padding:4px 6px;border-radius:5px;color:#fff;margin-top:2px;white-space:nowrap}
+.t.objective{background:#2563eb}.t.constraint{background:#b45309}.t.assumption{background:#6b7280}.t.sub_goal{background:#0f766e}.t.deliverable{background:#7c3aed}
+table.kv{border-collapse:collapse;width:100%;margin-top:6px}
+table.kv td,table.kv th{border-top:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
+table.kv th{width:96px;color:var(--muted);font-weight:600;font-size:12px}
+.big{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.raw{display:flex;gap:18px;margin:4px 0}
+.raw div span{display:block;font-size:11px;color:var(--muted)}
+.typing{display:flex;gap:10px;margin:12px 0 12px 44px;color:var(--muted);align-items:center;font-size:12.5px}
+.dots i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);margin-right:3px;animation:b 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,60%,100%{opacity:.25;transform:none}30%{opacity:1;transform:translateY(-3px)}}
+.card{margin:12px 0 12px 44px;max-width:840px;border:1px dashed var(--col);border-radius:10px;padding:8px 12px;background:color-mix(in srgb,var(--col) 7%,var(--panel));animation:in .25s ease-out}
+.card .h{display:flex;gap:8px;align-items:center;font-size:12px;font-weight:650;color:var(--col)}
+.card .h code{font:600 11.5px ui-monospace,Menlo,monospace}
+.card ul{margin:5px 0 0;padding-left:18px}
+.card li{margin:1px 0}
+.note{margin:14px 0 14px 44px;max-width:840px;border-left:3px solid var(--c-initiator);padding:6px 12px;background:var(--soft);border-radius:0 8px 8px 0}
+.note .h{font-size:12px;font-weight:650;color:var(--c-initiator);margin-bottom:3px}
+.note .txt{font-size:13px}
+footer{flex:none;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+footer input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
+.pos{font-size:12px;color:var(--muted);min-width:96px;text-align:right;font-variant-numeric:tabular-nums}
+.sec{margin-bottom:18px}
+.kvl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12.5px}
+.kvl b{color:var(--muted);font-weight:600}
+.pill{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:var(--soft);margin:1px 3px 1px 0}
+.pill.ok{border-color:var(--good);color:var(--good)} .pill.bad{border-color:var(--bad);color:var(--bad)}
+.flag{font-size:12px;margin:3px 0;color:var(--warn)}
+table.mx{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums}
+table.mx th,table.mx td{padding:4px 5px;border-bottom:1px solid var(--line);text-align:center}
+table.mx th:first-child,table.mx td:first-child{text-align:left;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell{border-radius:6px;padding:1px 6px;font-weight:600}
+.empty{color:var(--muted);font-size:12.5px}
+@media (max-width:1100px){main{grid-template-columns:230px minmax(0,1fr)}aside.right{display:none}}
+@media (max-width:720px){header{flex-wrap:wrap;gap:8px}header .meta{display:none}header h1{font-size:14px}main{grid-template-columns:1fr}aside.left{display:none}#chat{padding:12px}.msg.reply,.typing,.card,.note{margin-left:0}}
+#graph svg{width:100%;height:auto;display:block}
+.card .clamp:after{background:linear-gradient(transparent,color-mix(in srgb,var(--col) 7%,var(--panel)))}
+.gcap{font-size:12.5px;margin-top:6px;min-height:40px}
+.gcap b{font-weight:650}.gcap .m{color:var(--muted);font-size:11.5px}
+.flow{stroke-dasharray:5 4;animation:dash .7s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-9}}
+@media (prefers-reduced-motion:reduce){.flow{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Agents exchange replay</h1>
+  <span class="meta" id="meta"></span>
+  <span class="grow"></span>
+  <select id="trace" aria-label="Choose a trace"></select>
+  <button id="open" title="Open a trace .json file (or drop it on the page)">Open trace file</button>
+  <input id="file" type="file" accept=".json,application/json" hidden>
+  <button id="jumpA" title="Jump to the start of ACCORD">ACCORD</button>
+  <button id="jumpC" title="Jump to the start of CONCORD">CONCORD</button>
+  <button id="jumpR" title="Jump to the result">Result</button>
+  <button id="tourBtn" class="primary" hidden title="Guided tour: walk through the runs with an explanation of each step">Tour</button>
+  <button id="md" title="Show the agents' messages rendered as markdown, or as the exact text" aria-pressed="true">Markdown</button>
+  <button id="theme" title="Toggle light or dark">Theme</button>
+</header>
+<main>
+  <aside class="left" aria-label="Agents">
+    <h2>Agents</h2>
+    <p class="gcap" id="about" style="margin:0 0 8px"></p>
+    <div id="agents"></div>
+    <h2 style="margin-top:18px">Interaction graph</h2>
+    <div id="graph"></div>
+    <div id="gcap" class="gcap"></div>
+  </aside>
+  <div id="chatwrap"><div id="chat" role="log" aria-live="polite"></div></div>
+  <aside class="right" aria-label="State">
+    <div class="tour" id="tour" hidden>
+      <div class="tpart" id="tPart"></div>
+      <div class="tcount" id="tCount"></div>
+      <h3 id="tTitle"></h3>
+      <div class="tbody" id="tText"></div>
+      <div class="tprog" id="tProg" role="status" aria-live="polite"><div class="tbar"><i id="tBar"></i></div><span id="tProgText"></span></div>
+      <div class="tnav">
+        <button id="tBack">Back</button>
+        <button class="primary" id="tNext">Next</button>
+        <button id="tExit">Exit tour</button>
+      </div>
+      <label><input type="checkbox" id="tAuto"> Auto-advance</label>
+    </div>
+    <div class="sec" id="secAccord"><h2>ACCORD</h2><div id="sAccord" class="empty">Not started.</div></div>
+    <div class="sec" id="secConcord"><h2>CONCORD</h2><div id="sConcord" class="empty">Not started.</div></div>
+    <div id="secGeneric" hidden></div>
+  </aside>
+</main>
+<footer>
+  <button class="primary" id="play">Play</button>
+  <button id="step" title="Show the next message">Next</button>
+  <button id="restart">Restart</button>
+  <label class="meta">Speed
+    <select id="speed">
+      <option value="demo" selected>Demo pace</option>
+      <option value="real">Real time</option>
+      <option value="x10">10x real</option>
+      <option value="instant">Instant</option>
+    </select>
+  </label>
+  <input id="scrub" type="range" min="0" value="0" aria-label="Position in the replay">
+  <span class="pos" id="pos"></span>
+</footer>
+<script id="data" type="application/json">{"format": "agentbridge-replay/1", "traces": []}</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+const TR = D.traces.slice();
+let cur = 0, E = [], M = {title:"Agents exchange replay", calls:0, minutes:0, outcome:"-", archive:""};
+if(TR.length){ E = TR[0].events; M = TR[0].meta; }
+window.__TR = TR;
+const AG0 = {
+  avatar:{name:"You",ini:"Y",col:"var(--c-avatar)",st:"human"},
+  initiator:{name:"initiator",ini:"IN",col:"var(--c-initiator)",st:"coordinator · Claude Code"},
+  "accord.py":{name:"accord.py",ini:"AC",col:"var(--c-accord)",st:"local script"},
+  "concord.py":{name:"concord.py",ini:"CO",col:"var(--c-concord)",st:"local script"},
+  microservices:{name:"microservices",ini:"MS",col:"var(--c-microservices)",st:"specialist · Claude Code"},
+  monolith:{name:"monolith",ini:"MO",col:"var(--c-monolith)",st:"specialist · Claude Code"},
+  pragmatist:{name:"pragmatist",ini:"PR",col:"var(--c-pragmatist)",st:"specialist · Claude Code"}
+};
+const ORDER0 = ["avatar","initiator","microservices","monolith","pragmatist"];
+const ABOUT0 = "The initiator and the three specialists are each a separate Claude Code instance (<code>claude --print</code>), connected through agentbridge over SLIM.";
+let AG = Object.assign({}, AG0), ORDER = ORDER0;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const chat = $("#chat");
+let shown = 0, playing = false, token = 0, typingEl = null;
+// any id the trace does not declare still gets a usable row
+const ag = k => AG[k] || (AG[k] = {name:String(k), ini:String(k).slice(0,2).toUpperCase(), col:"var(--c-avatar)", st:""});
+
+function applyMeta(){
+  $("#title").textContent = M.title;
+  $("#meta").title = $("#meta").textContent = M.calls ? `${M.calls} messages out and back, ${M.minutes} min live, outcome ${M.outcome} (${M.archive})` : "";
+  document.title = M.title;
+  // a trace may declare its own participants (meta.agents, meta.order, meta.about); otherwise the ACCORD/CONCORD set
+  AG = Object.assign({}, AG0, M.agents || {});
+  ORDER = M.order || (M.agents ? Object.keys(M.agents) : ORDER0);
+  $("#about").innerHTML = M.about ? esc(M.about) : ABOUT0;
+  $("#agents").innerHTML = ORDER.map(agentRow).join("");
+  layoutGraph();
+  const has = re => E.some(e => e.type === "banner" && re.test(e.title || ""));
+  $("#jumpA").hidden = !E.some(e => e.type === "banner" && e.phase === "accord");
+  $("#jumpC").hidden = !E.some(e => e.type === "banner" && e.phase === "concord" && /^(Stage 2|CONCORD$)/.test(e.title));
+  $("#jumpR").hidden = !has(/^Result$/);
+  // the generic panel only for traces that fill it; ACCORD/CONCORD and baseline traces keep the original two sections
+  const generic = E.some(e => e.state && e.state.panel);
+  // a generic-panel trace (mas-lab) still gets the ACCORD/CONCORD sections when it carries their state
+  $("#secAccord").hidden = generic && !E.some(e => e.state && e.state.accord);
+  $("#secConcord").hidden = generic && !E.some(e => e.state && e.state.concord);
+  $("#secGeneric").hidden = !generic;
+  // there they go under the generic panel (after Activity); other traces keep the original order
+  const right = $("aside.right"), G = $("#secGeneric");
+  if(generic) right.append($("#secAccord"), $("#secConcord"));
+  else if(G.compareDocumentPosition($("#secAccord")) & Node.DOCUMENT_POSITION_FOLLOWING){ right.insertBefore($("#secAccord"), G); right.insertBefore($("#secConcord"), G); }
+}
+function fillPicker(){
+  const sel = $("#trace");
+  sel.innerHTML = TR.map((t, i) => `<option value="${i}">${esc(t.meta.label || t.meta.archive || ("trace " + (i+1)))}</option>`).join("");
+  sel.value = cur; sel.style.display = TR.length > 1 ? "" : "none";
+}
+function agentRow(k){
+  const a = ag(k), sq = k.endsWith(".py");
+  return `<div class="agent" id="ag-${k.replace('.','_')}" style="--col:${a.col}"><div class="av${sq?' sq':''}" style="background:${a.col}">${esc(a.ini)}</div><div><div class="nm">${esc(a.name)}</div><div class="st">${esc(a.st)}</div></div></div>`;
+}
+function setActive(k){
+  document.querySelectorAll(".agent").forEach(e => e.classList.remove("active"));
+  if(k){ const e = $("#ag-" + k.replace('.','_')); if(e) e.classList.add("active"); }
+}
+function mmss(t){ t = Math.max(0, Math.round(t)); return "+" + Math.floor(t/60) + ":" + String(t%60).padStart(2,"0"); }
+
+/* ---------- body rendering ---------- */
+function tryJSON(s){ try { return JSON.parse(s); } catch(e){ return null; } }
+function parseXML(s){
+  const d = new DOMParser().parseFromString(s, "text/xml");
+  return d.querySelector("parsererror") ? null : d;
+}
+function atoms(list){
+  return `<ul class="atoms">` + list.map(a => `<li><span class="t ${esc(a.type)}">${esc((a.type||"").replace("_"," "))}</span><span>${esc(a.text)}</span></li>`).join("") + `</ul>`;
+}
+/* ---------- markdown (small, safe: input is escaped first, only http(s) links) ---------- */
+function mdInline(t){
+  t = esc(t);
+  const codes = [];
+  t = t.replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return "\u0000" + (codes.length - 1) + "\u0000"; });
+  t = t.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  t = t.replace(/\*\*(?=\S)(.+?)(?<=\S)\*\*/g, "<strong>$1</strong>");
+  t = t.replace(/(^|[^\w])__(?=\S)(.+?)(?<=\S)__(?!\w)/g, "$1<strong>$2</strong>");
+  t = t.replace(/(^|[^*\w])\*(?=[^\s*])([^*\n]+?)(?<=[^\s*])\*(?!\*)/g, "$1<em>$2</em>");
+  t = t.replace(/(^|[^\w])_(?=[^\s_])([^_\n]+?)(?<=[^\s_])_(?!\w)/g, "$1<em>$2</em>");
+  return t.replace(/\u0000(\d+)\u0000/g, (_, n) => "<code>" + codes[+n] + "</code>");
+}
+function md(src){
+  const L = String(src).replace(/\r/g, "").split("\n"), out = [];
+  const HR = /^\s*([-*_])(\s*\1){2,}\s*$/, LI = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/, FENCE = /^\s*```/;
+  const SEP = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+  const cells = l => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(c => c.trim());
+  const starts = l => /^(#{1,6}\s|>)/.test(l) || FENCE.test(l) || HR.test(l) || LI.test(l);
+  let i = 0;
+  while(i < L.length){
+    const l = L[i];
+    if(/^\s*$/.test(l)){ i++; continue; }
+    if(FENCE.test(l)){
+      const buf = []; i++;
+      while(i < L.length && !FENCE.test(L[i])) buf.push(L[i++]);
+      i++; out.push("<pre><code>" + esc(buf.join("\n")) + "</code></pre>"); continue;
+    }
+    let m = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(l);
+    if(m){ const n = Math.min(m[1].length + 2, 6); out.push(`<h${n}>${mdInline(m[2])}</h${n}>`); i++; continue; }
+    if(HR.test(l)){ out.push("<hr>"); i++; continue; }
+    if(/^>/.test(l)){
+      const buf = [];
+      while(i < L.length && /^>/.test(L[i])) buf.push(L[i++].replace(/^>\s?/, ""));
+      out.push("<blockquote>" + md(buf.join("\n")) + "</blockquote>"); continue;
+    }
+    if(l.includes("|") && i + 1 < L.length && SEP.test(L[i + 1]) && L[i + 1].includes("-")){
+      const head = cells(l); i += 2; const rows = [];
+      while(i < L.length && L[i].includes("|") && !/^\s*$/.test(L[i])) rows.push(cells(L[i++]));
+      out.push("<table><thead><tr>" + head.map(c => `<th>${mdInline(c)}</th>`).join("") + "</tr></thead><tbody>" +
+        rows.map(r => "<tr>" + r.map(c => `<td>${mdInline(c)}</td>`).join("") + "</tr>").join("") + "</tbody></table>");
+      continue;
+    }
+    if((m = LI.exec(l))){
+      const items = [];
+      while(i < L.length){
+        const x = LI.exec(L[i]);
+        if(x && !HR.test(L[i])){ items.push({ind:x[1].replace(/\t/g, "    ").length, ord:/\d/.test(x[2][0]), txt:x[3]}); i++; }
+        else if(items.length && /^\s+\S/.test(L[i]) && !FENCE.test(L[i])){ items[items.length - 1].txt += " " + L[i].trim(); i++; }
+        else break;
+      }
+      let html = "", stack = [];
+      for(const it of items){
+        while(stack.length && it.ind < stack[stack.length - 1].ind){ const t = stack.pop(); html += `</li></${t.tag}>`; }
+        let top = stack[stack.length - 1];
+        if(top && it.ind === top.ind && top.ord !== it.ord){ stack.pop(); html += `</li></${top.tag}>`; top = stack[stack.length - 1]; }
+        if(top && it.ind === top.ind) html += "</li>";
+        else if(!top || it.ind > top.ind){ const tag = it.ord ? "ol" : "ul"; stack.push({ind:it.ind, tag, ord:it.ord}); html += `<${tag}>`; }
+        html += "<li>" + mdInline(it.txt);
+      }
+      while(stack.length){ const t = stack.pop(); html += `</li></${t.tag}>`; }
+      out.push(html); continue;
+    }
+    const buf = [l]; i++;
+    while(i < L.length && !/^\s*$/.test(L[i]) && !starts(L[i])) buf.push(L[i++]);
+    out.push("<p>" + buf.map((x, k) => mdInline(x.replace(/\s+$/, "")) + (/  $/.test(buf[k]) && k < buf.length - 1 ? "<br>" : "")).join(" ") + "</p>");
+  }
+  return out.join("\n");
+}
+const structured = t => /^\s*(<|\{|\[\s*[\{"])/.test(t);
+/* markdown view plus the exact text, the page toggles between them */
+const mdBlock = (t, extra) => structured(t) ? `<div class="txt"${extra||""}>${esc(t)}</div>`
+  : `<div class="txt rawtxt"${extra||""}>${esc(t)}</div><div class="md"${extra||""}>${md(t)}</div>`;
+
+const unfence = t => t.replace(/^\s*```[a-zA-Z]*[ \t]*\n?/, "").replace(/\n?```\s*$/, "");
+function renderReply(e){
+  const txt = unfence(e.text);
+  const j = tryJSON(txt);
+  if(j && j.roles){
+    return `<div class="chips">${j.roles.map(r=>`<span class="chip">${esc(r)}</span>`).join("")}</div>
+      <table class="kv"><tr><th>Can do</th><td>${j.capabilities.map(esc).join("<br>")}</td></tr>
+      <tr><th>Access</th><td>${(j.access_scopes||[]).map(esc).join("<br>")}</td></tr>
+      <tr><th>Brings</th><td>${esc(j.holdings_summary)}</td></tr></table>`;
+  }
+  if(j && j.atoms) return `<div class="mono" style="color:var(--muted)">${j.atoms.length} statements</div>` + atoms(j.atoms);
+  if(j && j.units){
+    return `<table class="kv">` + Object.keys(j.units).map(t => `<tr><th>${esc(t)}</th><td>${esc(j.units[t])}</td></tr>`).join("") + `</table>`;
+  }
+  if(j && (j.holds || j.checks)){
+    return `<table class="kv"><tr><th>Holds</th><td>${(j.holds||[]).map(esc).join("<br>")}</td></tr>
+      <tr><th>Checks</th><td>${(j.checks||[]).map(c=>`<b>${esc(c.criterion)}</b><br><span style="color:var(--muted)">covers: ${(c.covers||[]).map(esc).join(" | ")}</span>`).join("<hr style='border:0;border-top:1px solid var(--line)'>")}</td></tr></table>`;
+  }
+  const x = txt.trim().startsWith("<") ? parseXML(txt) : null;
+  if(x){
+    const root = x.documentElement.nodeName, g = n => (x.querySelector(n)||{}).textContent;
+    if(root === "concord-anchor-reply"){
+      return `<div class="raw"><div><span>raw reject</span><div class="big">${esc(g("raw_reject"))}</div></div><div><span>raw ideal</span><div class="big">${esc(g("raw_ideal"))}</div></div></div>${g("note")?`<div class="txt">${esc(g("note"))}</div>`:""}`;
+    }
+    if(root === "concord-candidate-reply"){
+      return `<div class="mono" style="color:var(--muted);margin-bottom:4px">${esc(e.candidate ? e.candidate.id : "candidate")}</div>${mdBlock((g("candidate")||"").trim())}${g("rationale")?`<div class="txt" style="margin-top:8px;color:var(--muted)"><b>Why:</b> ${esc(g("rationale"))}</div>`:""}`;
+    }
+    if(root === "concord-score-reply"){
+      return `<table class="kv">` + [...x.querySelectorAll("score")].map(s => `<tr><th>${esc(s.getAttribute("candidate_id"))}</th><td><span class="big" style="font-size:17px">${esc(s.querySelector("raw")?.textContent)}</span> <span style="color:var(--muted)">${esc(s.querySelector("rationale")?.textContent||"")}</span>${s.querySelector("feedback")?`<div style="margin-top:3px"><b>Feedback:</b> ${esc(s.querySelector("feedback").textContent)}</div>`:""}</td></tr>`).join("") + `</table>`;
+    }
+  }
+  return mdBlock(e.text);
+}
+function renderReq(e){
+  const t = e.text, long = t.length > 700;
+  return `<div class="${long?'clamp':''} ${long?'cl':''}">${mdBlock(t)}</div>` +
+    (long ? `<button class="more" data-n="${t.length}">Show all ${t.length.toLocaleString()} characters</button>` : "");
+}
+function clampDetail(t){
+  const long = t.length > 600;
+  return `<div class="${long?'clamp':''}"><pre>${esc(t)}</pre></div>` + (long ? `<button class="more">Show all ${t.length.toLocaleString()} characters</button>` : "");
+}
+
+/* ---------- appending events ---------- */
+function typingOn(who){
+  typingOff();
+  const a = ag(who);
+  typingEl = document.createElement("div"); typingEl.className = "typing"; typingEl.style.setProperty("--col", a.col);
+  typingEl.innerHTML = `<span class="dots"><i></i><i></i><i></i></span><span>${a.name} is answering</span>`;
+  chat.appendChild(typingEl); setActive(who); scrollEnd();
+}
+function typingOff(){ if(typingEl){ typingEl.remove(); typingEl = null; } }
+function scrollEnd(){ chat.scrollTop = chat.scrollHeight; }
+function append(e){
+  typingOff();
+  const el = document.createElement("div");
+  if(e.type === "banner"){
+    el.className = "banner " + (e.phase||"") + (e.verdict ? " v-" + e.verdict : "");
+    el.innerHTML = `<div><div class="bt">${esc(e.title)}</div><div class="bs">${esc(e.sub||"")}</div>${e.why?`<div class="bw">${esc(e.why)}</div>`:""}</div>`;
+  } else if(e.type === "note"){
+    el.className = "note";
+    el.innerHTML = `<div class="h">${esc(e.title)}</div>${mdBlock(e.text)}`;
+    setActive(e.from || "initiator");
+  } else if(e.type === "tool"){
+    // e.by: the agent that ran the tool (mas-lab traces); without it the tool is its own participant
+    const a = AG[e.tool] || ag(e.by || e.tool); el.className = "card"; el.style.setProperty("--col", a.col);
+    el.innerHTML = `<div class="h">${e.by?`<span>${esc(ag(e.by).name)}</span>`:""}<code>${esc(e.tool)}</code>${e.title!==e.tool?`<span>${esc(e.title)}</span>`:""}${e.t!==undefined?`<span class="time" style="margin-left:auto;color:var(--muted);font-weight:400">${mmss(e.t)}</span>`:""}</div>` +
+      (e.lines && e.lines.length ? `<ul>${e.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : "") +
+      (e.detail ? (e.by ? clampDetail(e.detail) : `<pre>${esc(e.detail)}</pre>`) : "");
+    setActive(e.by || e.tool);
+  } else {
+    const a = ag(e.from), to = ag(e.to);
+    el.className = "msg " + e.dir; el.style.setProperty("--col", a.col);
+    el.innerHTML = `<div class="av" style="background:${a.col}">${esc(a.ini)}</div><div class="bubble"><div class="who"><b>${esc(a.name)}</b><span class="to">to ${esc(to.name)}</span><span class="kind">${esc(e.kind)}</span><span class="time">${mmss(e.t)}${e.dir==="reply"&&e.latency>=1?` · answered in ${Math.round(e.latency)}s`:""}</span></div>${e.dir==="req"?renderReq(e):renderReply(e)}</div>`;
+    setActive(e.from);
+  }
+  chat.appendChild(el);
+  el.querySelectorAll(".more").forEach(b => b.addEventListener("click", () => {
+    const c = b.previousElementSibling; c.classList.remove("clamp"); b.remove();
+  }));
+}
+
+/* ---------- right panel state ---------- */
+function computeState(n){
+  const S = {accord:{}, concord:{matrix:{}, anchors:{}, cands:[], steps:[]}};
+  for(let i = 0; i < n; i++){
+    const e = E[i];
+    if(e.state && e.state.accord){ const s = e.state.accord; for(const k in s) S.accord[k] = s[k]; }
+    if(e.state && e.state.concord){ const s = e.state.concord; for(const k in s) S.concord[k] = s[k]; if(s.round !== undefined) S.concord.steps.push({round:s.round, inc:s.incumbent, floor:s.floor}); }
+    if(e.anchor) S.concord.anchors[e.anchor.agent] = e.anchor;
+    if(e.candidate && (e.dir === "reply" || e.type === "tool") && !S.concord.cands.includes(e.candidate.id)) S.concord.cands.push(e.candidate.id);
+    if(e.scores){ for(const c in e.scores.raw){ (S.concord.matrix[c] = S.concord.matrix[c] || {})[e.scores.agent] = e.scores.raw[c]; if(!S.concord.cands.includes(c)) S.concord.cands.push(c); } }
+  }
+  return S;
+}
+function norm(agent, raw, S){
+  const a = S.concord.anchors[agent]; if(!a) return null;
+  return Math.max(0, Math.min(1, (raw - a.reject) / (a.ideal - a.reject)));
+}
+const colOf = x => M.agents ? ag(x).col : `var(--c-${x})`;
+function renderState(n){
+  const usedA = E.some(e => e.state && e.state.accord), usedC = E.some(e => e.state && e.state.concord);
+  const S = computeState(n), A = S.accord, C = S.concord;
+  let h = "";
+  if(A.roster) h += `<div class="kvl"><b>Roster</b><span>${A.roster.map(r=>`<span class="pill ok">${esc(r)}</span>`).join("")}</span></div>`;
+  if(A.frame) h += `<div class="kvl"><b>Frame</b><span>round ${A.frame.round}: ${A.frame.atoms} merged statements</span></div>`;
+  if(A.glossary) h += `<div class="kvl"><b>Glossary</b><span>${A.glossary.map(g=>`<span class="pill ${g.status==="flagged"?"bad":"ok"}">${esc(g.term)}: ${esc(g.status)}</span>`).join("")}</span></div>`;
+  if(A.locked) h += `<div class="kvl"><b>Contract</b><span class="pill ok">${esc(A.locked)}</span></div>`;
+  if(A.flags) h += `<div style="margin-top:8px">${A.flags.map(f=>`<div class="flag">${esc(f)}</div>`).join("")}</div>`;
+  if(A.checks) h += `<div style="margin-top:8px"><div class="empty" style="margin-bottom:3px">Acceptance checks</div>${A.checks.map(c=>`<div style="font-size:12.5px;margin:3px 0"><b style="color:${colOf(c.by)}">${esc(c.by)}</b>: ${esc(c.text)}</div>`).join("")}</div>`;
+  $("#sAccord").className = h ? "" : "empty"; $("#sAccord").innerHTML = h || (usedA ? "Not started." : "Not used in this trace.");
+  let c = "";
+  if(C.threshold !== undefined) c += `<div class="kvl"><b>Threshold</b><span>every role at or above ${C.threshold} (budget ${C.budget} rounds)</span></div>`;
+  const cands = C.cands;
+  if(cands.length){
+    // traces that declare their own agents (mas-lab) get their own columns and colours; the others keep the original three
+    const cols = M.agents && C.agents ? C.agents : ["microservices","monolith","pragmatist"];
+    // first five letters, or the agents' initials when those collide (participant-a, participant-b, ...)
+    const clash = M.agents && new Set(cols.map(x => x.slice(0,5))).size < cols.length;
+    const short = x => clash ? ag(x).ini : x.slice(0,5);
+    c += `<table class="mx" style="margin-top:8px"><tr><th>Candidate</th>${cols.map(x=>`<th title="${esc(x)}" style="color:${colOf(x)}">${esc(short(x))}</th>`).join("")}</tr>` +
+      cands.map(id => `<tr><td title="${esc(id)}">${esc(id)}</td>${cols.map(x => { const r = (C.matrix[id]||{})[x]; if(r === undefined) return `<td class="empty">·</td>`; const nv = norm(x, r, S); const ok = nv !== null && nv >= C.threshold; return `<td title="raw ${r}"><span class="cell" style="background:color-mix(in srgb,${ok?'var(--good)':'var(--bad)'} 22%,transparent)">${nv===null?r:nv.toFixed(2)}</span></td>`; }).join("")}</tr>`).join("") + `</table><div class="empty" style="margin-top:4px">Scores are each role's raw rating mapped onto its own anchors (0 to 1).</div>`;
+  }
+  if(C.steps.length){
+    const last = C.steps[C.steps.length-1];
+    c += `<div class="kvl" style="margin-top:10px"><b>Round</b><span>${last.round}</span><b>Incumbent</b><span>${esc(last.inc)}</span><b>Worst-off</b><span>${last.floor}</span></div>`;
+  }
+  if(C.outcome){
+    c += `<div style="margin-top:10px"><span class="pill ${C.outcome==="SUCCESS"?"ok":"bad"}" style="font-size:13px">${esc(C.outcome)}</span> <span class="pill">${esc(C.winner)}</span></div>` +
+      Object.keys(C.final||{}).map(k => `<div class="kvl" style="margin-top:4px"><b style="color:${colOf(k)}">${esc(k)}</b><span>${C.final[k].toFixed(2)}</span></div>`).join("");
+  }
+  $("#sConcord").className = c ? "" : "empty"; $("#sConcord").innerHTML = c || (usedC ? "Not started." : "Not used in this trace.");
+  if(!$("#secGeneric").hidden) renderGeneric(n);
+}
+/* traces without ACCORD/CONCORD: sections from state.panel patches, plus per-agent activity counted from the events */
+function renderGeneric(n){
+  const P = {}, act = {};
+  const row = k => act[k] = act[k] || {msgs:0, tools:0, llm:0, tokens:0};
+  for(let i = 0; i < n; i++){
+    const e = E[i];
+    if(e.state && e.state.panel) for(const s in e.state.panel) P[s] = Object.assign(P[s] || {}, e.state.panel[s]);
+    if(e.type === "msg") row(e.from).msgs++;
+    if(e.type === "tool" && e.by) row(e.by).tools++;
+    (e.usage || []).forEach(u => { const r = row(u.agent); r.llm += u.llm || 0; r.tokens += u.tokens || 0; });
+  }
+  const pill = (s, v) => s === "Result" && /^(status|verdict)$/.test(v[0]) ? `<span class="pill ${/^(ok|success)$/i.test(v[1]) ? "ok" : "bad"}">${esc(v[1])}</span>` : esc(v[1]);
+  let h = Object.keys(P).map(s => `<div class="sec"><h2>${esc(s)}</h2><div class="kvl">${Object.entries(P[s]).filter(v => v[1] !== "" && v[1] !== undefined).map(v => `<b>${esc(v[0])}</b><span>${pill(s, v)}</span>`).join("")}</div></div>`).join("");
+  const ids = ORDER.filter(k => act[k]).concat(Object.keys(act).filter(k => !ORDER.includes(k)));
+  h += `<div class="sec"><h2>Activity</h2>` + (ids.length
+    ? `<table class="mx"><tr><th>Agent</th><th title="messages sent">msgs</th><th title="tool calls">tools</th><th title="LLM calls">LLM</th><th title="total tokens">tokens</th></tr>` +
+      ids.map(k => { const r = act[k]; return `<tr><td style="color:${ag(k).col};font-weight:600" title="${esc(ag(k).name)}">${esc(ag(k).name)}</td><td>${r.msgs}</td><td>${r.tools}</td><td>${r.llm}</td><td>${r.tokens.toLocaleString()}</td></tr>`; }).join("") + `</table>`
+    : `<div class="empty">Nothing yet.</div>`) + `</div>`;
+  $("#secGeneric").innerHTML = h;
+}
+
+
+/* ---------- interaction graph ---------- */
+const GN0 = {avatar:[140,30], initiator:[140,128], microservices:[40,276], monolith:[140,292], pragmatist:[240,276]};
+const GE0 = [["avatar","initiator"],["initiator","microservices"],["initiator","monolith"],["initiator","pragmatist"]];
+const GR = 16;
+let GN = GN0, GE = GE0, GH = 324, GSIDE = new Set(["avatar","initiator"]);
+// meta.edges ([from, to] pairs) gives the graph; nodes are placed in layers by distance from the first node
+function layoutGraph(){
+  if(!M.edges || !M.edges.length){ GN = GN0; GE = GE0; GH = 324; GSIDE = new Set(["avatar","initiator"]); return; }
+  GE = M.edges.filter(([a,b]) => a !== b);
+  const start = (M.order || [])[0] || GE[0][0], lvl = {[start]:0}, q = [start];
+  while(q.length){ const a = q.shift(); GE.forEach(([x,y]) => { const o = x === a ? y : y === a ? x : null; if(o !== null && lvl[o] === undefined){ lvl[o] = lvl[a] + 1; q.push(o); } }); }
+  GE.forEach(([a,b]) => [a,b].forEach(k => { if(lvl[k] === undefined) lvl[k] = 1; }));
+  const rows = [];
+  (M.order || []).concat(Object.keys(lvl)).forEach(k => { if(lvl[k] !== undefined && !(rows[lvl[k]] || []).includes(k)) (rows[lvl[k]] = rows[lvl[k]] || []).push(k); });
+  GN = {}; GSIDE = new Set();
+  rows.forEach((r, d) => r.forEach((k, j) => {
+    const x = r.length === 1 ? 140 : 30 + j * 220 / (r.length - 1);
+    // stagger wide rows so the labels under the nodes do not collide
+    GN[k] = [x, 30 + d * 105 + (r.length > 2 && j % 2 ? 22 : 0)];
+    if(r.length === 1 && d < rows.length - 1) GSIDE.add(k);
+  }));
+  GH = 30 + (rows.length - 1) * 105 + 60;
+}
+function renderGraph(n){
+  const cnt = {}; let last = null, msgs = 0;
+  for(let i = 0; i < n; i++){ const e = E[i]; if(e.type === "msg"){ cnt[e.from + ">" + e.to] = (cnt[e.from + ">" + e.to] || 0) + 1; last = e; msgs++; } }
+  const total = E.filter(e => e.type === "msg").length;
+  let svg = `<svg viewBox="${GE === GE0 ? "0 0 280" : "-30 0 340"} ${GH}" role="img" aria-label="Who is talking to whom"><defs>` +
+    Object.keys(GN).map(k => `<marker id="mk-${k}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="${ag(k).col}"/></marker>`).join("") +
+    `<marker id="mk-dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>`;
+  const arrow = (a, b, off) => {
+    const [x1,y1] = GN[a], [x2,y2] = GN[b], dx = x2-x1, dy = y2-y1, L = Math.hypot(dx,dy), ux = dx/L, uy = dy/L, nx = -uy, ny = ux;
+    const sx = x1 + ux*GR + nx*off, sy = y1 + uy*GR + ny*off, ex = x2 - ux*(GR+2) + nx*off, ey = y2 - uy*(GR+2) + ny*off;
+    const c = cnt[a + ">" + b] || 0, hot = last && last.from === a && last.to === b;
+    const mx = (sx+ex)/2 + nx*(off>0?13:-13), my = (sy+ey)/2 + ny*(off>0?13:-13);
+    let o = `<path d="M${sx.toFixed(1)} ${sy.toFixed(1)}L${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${hot?ag(a).col:"var(--muted)"}" stroke-width="${hot?2.6:1.3}" opacity="${hot?1:(c?0.55:0.18)}" marker-end="url(#mk-${hot?a:"dim"})" ${hot?'class="flow"':''}/>`;
+    if(c) o += `<text x="${mx.toFixed(1)}" y="${(my+3).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="${hot?ag(a).col:"var(--muted)"}" font-weight="${hot?700:500}">${c}</text>`;
+    return o;
+  };
+  GE.forEach(([a,b]) => { svg += arrow(a,b,6) + arrow(b,a,6); });
+  Object.keys(GN).forEach(k => {
+    const [x,y] = GN[k], a = ag(k), side = GSIDE.has(k), isFrom = last && last.from === k, isTo = last && last.to === k;
+    if(isFrom || isTo) svg += `<circle cx="${x}" cy="${y}" r="${GR+4}" fill="none" stroke="${a.col}" stroke-width="2" ${isTo&&!isFrom?'stroke-dasharray="3 3"':''}/>`;
+    svg += `<circle cx="${x}" cy="${y}" r="${GR}" fill="${a.col}"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${esc(a.ini)}</text>` +
+      (side ? `<text x="${x-GR-8}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--ink)">${esc(a.name)}</text>`
+                   : `<text x="${x}" y="${y+GR+13}" text-anchor="middle" font-size="10.5" fill="var(--ink)">${esc(a.name)}</text>`);
+  });
+  svg += `</svg>`;
+  $("#graph").innerHTML = svg;
+  $("#gcap").innerHTML = last
+    ? `<b style="color:${ag(last.from).col}">${esc(ag(last.from).name)}</b> to <b style="color:${ag(last.to).col}">${esc(ag(last.to).name)}</b><div class="m">${esc(last.kind)} · message ${msgs} of ${total}</div>`
+    : `<div class="m">No messages yet.</div>`;
+}
+
+/* ---------- playback ---------- */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function mode(){ return $("#speed").value; }
+function typingMs(e){
+  const m = mode();
+  if(m === "instant") return 0;
+  if(m === "real") return e.latency * 1000;
+  if(m === "x10") return e.latency * 100;
+  return Math.min(2600, 700 + Math.log2(1 + e.latency) * 300);
+}
+function readMs(e){
+  const m = mode();
+  if(m === "instant") return 0; if(m === "real") return 150; if(m === "x10") return 120;
+  const len = (e.text || "").length + (e.lines ? e.lines.join("").length : 0);
+  return e.type === "banner" ? 700 : Math.min(3600, 450 + len * 0.9);
+}
+async function showNext(my, skipRead){
+  const e = E[shown]; if(!e) return;
+  if(e.type === "msg" && e.dir === "reply" && typingMs(e) > 0){ typingOn(e.from); await sleep(typingMs(e)); if(my !== token) return; }
+  if(my !== token) return;
+  append(e); shown++; sync();
+  if(typeof tourProgress === "function") tourProgress();
+  scrollEnd();
+  if(!skipRead) await sleep(readMs(e));
+}
+async function run(){
+  const my = ++token; playing = true; $("#play").textContent = "Pause";
+  while(playing && my === token && shown < E.length) await showNext(my);
+  if(my === token){ playing = false; $("#play").textContent = shown >= E.length ? "Replay" : "Play"; }
+}
+function pause(){ playing = false; token++; typingOff(); $("#play").textContent = shown >= E.length ? "Replay" : "Play"; }
+function rebuild(n){
+  chat.innerHTML = ""; typingEl = null;
+  for(let i = 0; i < n; i++) append(E[i]);
+  shown = n; sync(); scrollEnd();
+}
+function sync(){
+  $("#scrub").value = shown; $("#pos").textContent = shown + " of " + E.length;
+  renderState(shown); renderGraph(shown);
+}
+$("#scrub").max = E.length;
+$("#play").addEventListener("click", () => {
+  if(playing){ pause(); return; }
+  if(shown >= E.length) rebuild(0);
+  run();
+});
+$("#step").addEventListener("click", async () => { if(playing) pause(); const my = ++token; const sp = $("#speed").value; await showNext(my); });
+$("#restart").addEventListener("click", () => { pause(); rebuild(0); });
+$("#scrub").addEventListener("input", e => { pause(); rebuild(+e.target.value); });
+function jump(pred){ const i = E.findIndex(pred); if(i >= 0){ pause(); rebuild(i + 1); } }
+$("#jumpA").addEventListener("click", () => jump(e => e.type === "banner" && e.phase === "accord"));
+$("#jumpC").addEventListener("click", () => jump(e => e.type === "banner" && e.phase === "concord" && /^(Stage 2|CONCORD$)/.test(e.title)));
+$("#jumpR").addEventListener("click", () => { pause(); rebuild(E.length); });
+(function(){
+  let raw = false; try { raw = localStorage.getItem("replay-raw") === "1"; } catch(e){}
+  const b = $("#md");
+  const apply = () => { document.body.classList.toggle("rawmode", raw); b.setAttribute("aria-pressed", String(!raw)); b.textContent = raw ? "Raw text" : "Markdown"; };
+  apply();
+  b.addEventListener("click", () => { raw = !raw; apply(); try { localStorage.setItem("replay-raw", raw ? "1" : "0"); } catch(e){} });
+})();
+$("#theme").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+  try { localStorage.setItem("replay-theme", cur === "dark" ? "light" : "dark"); } catch(e){}
+});
+try { const t = localStorage.getItem("replay-theme"); if(t) document.documentElement.setAttribute("data-theme", t); } catch(e){}
+addEventListener("keydown", e => {
+  if(e.target.tagName === "SELECT" || (e.target.tagName === "INPUT" && e.target.type !== "checkbox")) return;
+  if(tour){
+    if(e.code === "ArrowRight" || e.code === "Enter" || e.code === "Space"){ e.preventDefault(); tourNext(); }
+    else if(e.code === "ArrowLeft"){ tourBack(); }
+    else if(e.code === "Escape"){ tourExit(); }
+    return;
+  }
+  if(e.code === "Space"){ e.preventDefault(); $("#play").click(); }
+  if(e.code === "ArrowRight") $("#step").click();
+  if(e.code === "ArrowLeft"){ pause(); rebuild(Math.max(0, shown - 1)); }
+});
+
+
+/* ---------- fetch mode: build the events in the browser from an archive folder ---------- */
+const stripAnsi = s => s.replace(/\x1b\[[0-9;]*m/g, "");
+const unent = s => s.replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");
+async function getText(url){ try { const r = await fetch(url); return r.ok ? await r.text() : null; } catch(e){ return null; } }
+async function getJSON(url){ const t = await getText(url); try { return t ? JSON.parse(t) : null; } catch(e){ return null; } }
+function bodyOf(r){ const m = /^Response from '[^']*' \(\d+ms\):\n/m.exec(r.stdout); return (m ? r.stdout.slice(m.index + m[0].length) : r.stdout).trim(); }
+function kindOf(r){ const m = /^\s*(<concord-[a-z-]+>|[A-Z_]+_REQUEST)/.exec(r.prompt || ""); return m ? m[1].replace(/[<>]/g, "") : "message"; }
+const NOTE_RE = /^(?:#+\s*|\*\*)\(?2\)?\.?\s*(?:What I did next|Decision)[^\n]*\n([\s\S]*?)(?=^(?:#+\s*|\*\*)\(?3|$(?![\s\S]))/im;
+async function buildFromArchive(dir, has){
+  dir = dir.endsWith("/") ? dir : dir + "/";
+  const want = f => !has || has.includes(f);
+  const gj = f => want(f) ? getJSON(dir + f) : Promise.resolve(null);
+  const gt = f => want(f) ? getText(dir + f) : Promise.resolve(null);
+  const ex = await getText(dir + "exchange.jsonl");
+  if(!ex) throw new Error("could not fetch " + dir + "exchange.jsonl");
+  const recs = ex.split("\n").filter(l => l.trim()).map(l => JSON.parse(l));
+  if(!recs.length) throw new Error("exchange.jsonl is empty");
+  // optional sibling files: anything missing just means fewer cards
+  const [acc, contract, certTxt, initlog, runlog] = await Promise.all([
+    gj("state/accord-state.json"), gj("state/intent_contract.json"), gt("state/certificate.txt"),
+    gt("logs/initiator.log"), gt("logs/run-pipeline.log")]);
+  // certificate: the file if the run saved one, else the one the initiator printed in its final report
+  const cert = certTxt || (runlog ? (/<concord-certificate>[\s\S]*?<\/concord-certificate>/.exec(stripAnsi(runlog)) || [null])[0] : null);
+  const t0 = Date.parse(recs[0].t_start), rel = ts => (Date.parse(ts) - t0) / 1000;
+  const specialists = acc ? acc.specialists : ["microservices","monolith","pragmatist"];
+  const GROUPED = ["CONVENE_REQUEST","FRAME_REQUEST","GROUND_REQUEST","VERIFY_REQUEST","concord-score"];
+  const E2 = [];
+  const add = o => { E2.push(o); };
+  const scoresOf = b => { const o = {}; for(const m of b.matchAll(/candidate_id="([^"]+)">\s*<raw>([\d.]+)/g)) o[m[1]] = parseFloat(m[2]); return o; };
+  // certificate pieces
+  const cs = cert ? {
+    outcome: (/<outcome>(\w+)/.exec(cert)||[])[1], winner: (/<winner id="([^"]+)"/.exec(cert)||[])[1],
+    detail: ((/<winner[^>]*>\s*(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?\s*<\/winner>/.exec(cert)||[])[1] || "").trim(),
+    final: [...cert.matchAll(/<score agent="(\w+)" value="([\d.]+)" status="([\w-]+)"/g)].map(m => [m[1], m[2], m[3]]),
+    log: [...cert.matchAll(/<round t="(\d+)" incumbent="([^"]+)" floor="([\d.]+)" accepted="(\w+)" why="([^"]*)"/g)].map(m => ({t:+m[1], x:m[2], floor:parseFloat(m[3]), acc:m[4]==="true", why:unent(m[5])})),
+    st: /<state rounds="(\d+)" budget="(\d+)" satisfaction-threshold="([\d.]+)"/.exec(cert)
+  } : null;
+  // kickoff text and the initiator's account
+  let kick = "(kickoff text not found in the initiator log)";
+  if(initlog){ const m = /A2A recv \[initiator\] task [^\n]*\n((?:│[^\n]*\n)+)/.exec(initlog); if(m) kick = m[1].split("\n").map(l => l.replace(/^│ {0,2}/, "")).join("\n").trim(); }
+  let report = ""; if(runlog){ const m = /^Response from 'initiator'.*?\n([\s\S]*)$/m.exec(runlog); report = stripAnsi(m ? m[1] : "").replace(/\n?exit=\d+\s*$/, ""); }
+  const ctxMsg = recs.map(r => r.prompt).find(p => /<context>/.test(p) && /<concord-/.test(p));
+  const context = ctxMsg ? unent(/<context>([\s\S]*?)<\/context>/.exec(ctxMsg)[1]).trim() : "";
+
+  const hasAccord = recs.some(r => /^\s*[A-Z_]+_REQUEST/.test(r.prompt || ""));
+  const hasConcord = recs.some(r => /^\s*<concord-/.test(r.prompt || ""));
+  const hasProtocol = hasAccord || hasConcord;
+  const hasClarify = recs.some(r => kindOf(r) === "CLARIFY_REQUEST");
+  add({type:"banner", title:"Kickoff", sub: hasAccord ? "The task goes to the initiator. It is not told which protocol to use after ACCORD." : hasConcord ? "The task goes to the initiator, told to use CONCORD only. No ACCORD first." : "The initiator relays messages between the task and the specialists. No ACCORD, no CONCORD."});
+  add({type:"msg", dir:"req", from:"avatar", to:"initiator", kind:"KICKOFF", phase:hasAccord ? "accord" : hasConcord ? "concord" : "", text:kick, t:0, latency:0, call:0});
+  if(hasAccord) add({type:"banner", title:"Stage 1: ACCORD", sub:"Share the problem. Nobody negotiates; accord.py only merges.", phase:"accord"});
+  else if(!hasConcord) add({type:"banner", title:"Relay, no protocol", sub:"The initiator sends the messages itself. No coordination protocol is loaded."});
+  if(acc) add({type:"tool", tool:"accord.py", title:"init", lines:[`specialists: ${acc.specialists.join(", ")}`, `key terms: ${acc.key_terms.join(", ")}`, `action step: ${acc.action_tool}`], state:{accord:{specialists:acc.specialists}}});
+
+  let concord = false, frameRound = 0, stepI = 0, i = 0;
+  const anchors = {};
+  const repairIds = {}; // call index -> candidate id, read from the scores that follow
+  for(let k = 0; k < recs.length; k++){
+    if(kindOf(recs[k]) === "concord-repair"){
+      for(let q = k + 1; q < recs.length; q++){ if(kindOf(recs[q]) === "concord-score"){ const ids = Object.keys(scoresOf(bodyOf(recs[q]))); if(ids.length) repairIds[k] = ids[0]; break; } }
+    }
+  }
+  while(i < recs.length){
+    const k = kindOf(recs[i]); let j = i;
+    while(j + 1 < recs.length && (j - i) < specialists.length - 1 && kindOf(recs[j + 1]) === k && GROUPED.includes(k)) j++;
+    if(k.startsWith("concord") && !concord){
+      concord = true;
+      add(hasAccord ? {type:"banner", phase:"concord", title:"Stage 2: CONCORD, started by the initiator", sub:"Nobody told it to run this. Its own reason is quoted below."}
+                    : {type:"banner", phase:"concord", title:"CONCORD", sub:"Anchors, seeds, scores and repairs until a certificate."});
+      const nm = hasAccord ? NOTE_RE.exec(report) : null;
+      if(nm) add({type:"note", from:"initiator", title:"The initiator's own account, from its final report", text:nm[1].trim()});
+      const thr = cs && cs.st ? cs.st[3] : "?", bud = cs && cs.st ? +cs.st[2] : "?";
+      add({type:"tool", tool:"concord.py", title:"init", lines:[`agents: ${specialists.join(", ")}`, `satisfaction threshold ${thr}, budget ${bud}`].concat(context ? ["context passed to every specialist:", context] : []),
+           state:{concord:{threshold:thr === "?" ? undefined : parseFloat(thr), budget:bud, agents:specialists}}});
+    }
+    for(let x = i; x <= j; x++){
+      const r = recs[x], kd = kindOf(r), c = E2.length, b = bodyOf(r);
+      add({type:"msg", dir:"req", from:"initiator", to:r.to, kind:kd, phase:concord ? "concord" : "accord", text:r.prompt, t:rel(r.t_start), latency:0, call:c});
+      const extra = {};
+      if(kd === "concord-anchor"){ const mm = /<raw_reject>([\d.]+)[\s\S]*?<raw_ideal>([\d.]+)/.exec(b); if(mm) extra.anchor = {agent:r.to, reject:parseFloat(mm[1]), ideal:parseFloat(mm[2])}; }
+      else if(kd === "concord-score") extra.scores = {agent:r.to, raw:scoresOf(b)};
+      else if(kd === "concord-propose-seed") extra.candidate = {id:"seed-" + r.to, by:r.to};
+      else if(kd === "concord-repair") extra.candidate = {id: repairIds[x] || "repair", by:r.to};
+      add(Object.assign({type:"msg", dir:"reply", from:r.to, to:"initiator", kind:kd, phase:concord ? "concord" : "accord", text:b, t:rel(r.t_end), latency:rel(r.t_end) - rel(r.t_start), call:c}, extra));
+    }
+    if(k === "CONVENE_REQUEST" && contract){
+      const names = (contract.roster || []).map(q => q.identity);
+      add({type:"tool", tool:"accord.py", title:"roster", lines:[`roster of ${names.length}: ${names.join(", ")}`], state:{accord:{roster:names}}});
+    } else if(k === "FRAME_REQUEST"){
+      frameRound++;
+      const fo = (await gj(`state/frame${frameRound}_out.json`)) || (await gj(`state/out_frame${frameRound}.json`));
+      if(fo){ const d = fo.data; add({type:"tool", tool:"accord.py", title:`frame, round ${frameRound}`, lines:[`${d.atoms.length} merged atoms (${d.new_this_round} new observations)`, `estimated coverage ${d.coverage.coverage.toFixed(2)}, stop = ${d.stop ? "True" : "False"}`], state:{accord:{frame:{round:frameRound, atoms:d.atoms.length, new:d.new_this_round}}}}); }
+    } else if(k === "GROUND_REQUEST" && contract){
+      const gl = contract.glossary;
+      add({type:"tool", tool:"accord.py", title:"glossary", lines:gl.map(g => `${g.term}: ${g.status} (${(g.variants||[]).length} variants)`).concat(hasClarify ? [] : ["no ambiguous pairs, so no CLARIFY"]), state:{accord:{glossary:gl.map(g => ({term:g.term, status:g.status}))}}});
+    } else if(k === "VERIFY_REQUEST" && contract){
+      const checks = (contract.verifiable_objective && contract.verifiable_objective.checks) || contract.acceptance_checks || [];
+      const flags = contract.flagged_items || [];
+      const nAtoms = contract.problem_frame ? contract.problem_frame.length : (acc && acc.frame ? acc.frame.length : null);
+      const lines = [`status: ${contract.status}`, `${nAtoms === null ? "" : nAtoms + " frame atoms, "}${checks.length} acceptance checks`].concat(flags.map(f => `flagged: ${f}`), checks.map(q => `check (${q.assigned_to}): ${q.criterion}`));
+      add({type:"tool", tool:"accord.py", title:"verify and lock", lines, state:{accord:{flags, checks:checks.map(q => ({by:q.assigned_to, text:q.criterion})), locked:contract.status}}});
+    } else if(k === "concord-score" && cs && stepI < cs.log.length){
+      const e = cs.log[stepI++];
+      add({type:"tool", tool:"concord.py", title:"step", lines:[`round ${e.t}: incumbent ${e.x}, worst-off score ${e.floor.toFixed(2)}`, e.acc ? "accepted" : "not accepted (" + e.why + ")"], state:{concord:{round:e.t, incumbent:e.x, floor:Math.round(e.floor*1000)/1000}}});
+    }
+    i = j + 1;
+  }
+  if(cs){
+    add({type:"banner", phase:"concord", title:"Result", sub:`${cs.outcome}, winner ${cs.winner}`});
+    add({type:"tool", tool:"concord.py", title:"certificate", lines:[`outcome: ${cs.outcome}`, `winner: ${cs.winner}`].concat(cs.final.map(f => `${f[0]}: ${f[1]} (${f[2]})`)), detail:cs.detail,
+         state:{concord:{outcome:cs.outcome, winner:cs.winner, final:Object.fromEntries(cs.final.map(f => [f[0], parseFloat(f[1])]))}}});
+  }
+  if(!cs && report.trim()) add({type:"note", from:"initiator", title:"The initiator's final report", text:report.trim()});
+  // verdict: did the team reach a decision every role accepts? (there is no single right architecture)
+  const vd = (ok, sub) => add({type:"banner", title: ok ? "SUCCESS" : "FAIL", sub, verdict: ok ? "ok" : "bad"});
+  if(cs){
+    const below = cs.final.filter(f => f[2] !== "above-threshold").map(f => f[0]);
+    vd(cs.outcome === "SUCCESS" && !below.length, cs.outcome === "SUCCESS" && !below.length
+      ? `decision every role accepts: ${cs.winner}, all roles above the satisfaction threshold`
+      : `no decision every role accepts: outcome ${cs.outcome}` + (below.length ? `, below the threshold: ${below.join(", ")}` : ""));
+  } else if(!hasProtocol){
+    // reviews: each proposal goes to the other specialists, who answer OK or NOT OK
+    const rev = recs.filter(r => /^\s*A teammate proposes/.test(r.prompt || ""));
+    if(!rev.length) vd(false, "no decision: the initiator only relays the three proposals");
+    else {
+      const per = Math.max(1, specialists.length - 1), groups = [];
+      for(let k = 0; k < rev.length; k += per) groups.push(rev.slice(k, k + per));
+      const okOf = r => /^\W*OK\b/.test(bodyOf(r));
+      const all = groups.filter(g => g.every(okOf)).map(g => specialists.find(sp => !g.some(r => r.to === sp)) || "?");
+      vd(all.length > 0, all.length ? `a proposal every reviewer accepted: ${all.join(", ")}`
+        : "decision imposed by the initiator: no proposal was accepted by every role");
+    }
+  }
+  const last = recs[recs.length - 1], name = dir.replace(/\/$/, "").split("/").pop();
+  const minutes = Math.round(rel(last.t_end) / 6) / 10;
+  const meta = {title: hasAccord && hasConcord ? "ACCORD then CONCORD: the agents' exchange" : hasConcord ? "CONCORD only: the agents' exchange" : hasAccord ? "ACCORD only: the agents' exchange" : "Relay without a protocol: the agents' exchange",
+                label:`${name}: ${cs ? cs.outcome + ", " + cs.winner + ", " : (hasProtocol ? "" : "relay only, ")}${recs.length} calls, ${minutes} min`,
+                calls:recs.length, minutes, outcome:cs ? cs.outcome : (hasProtocol ? "unknown" : "no protocol"), winner:cs ? cs.winner : "", archive:name};
+  return {format:"agentbridge-replay/1", meta, events:E2};
+}
+async function bootFetch(){
+  if(location.protocol === "file:"){
+    chat.innerHTML = `<div class="note" style="margin-left:0"><div class="h">This page loads traces with fetch()</div><div class="txt">Browsers block that on file:// pages. Start the small local server, then open the address it prints:\n\n  concord/testing/replay/serve.sh\n\nOr use "Open trace file" with a trace.json.</div></div>`;
+    return false;
+  }
+  const man = await getJSON("traces.json");
+  if(!man || !Array.isArray(man.traces) || !man.traces.length){ toast("traces.json is missing or has no traces."); return false; }
+  // an entry is either a raw archive folder (dir, built here) or a prebuilt trace file (trace, e.g. a mas-lab run)
+  man.traces.forEach(t => TR.push({meta:{label:t.label || t.dir || t.trace, archive:t.dir || t.trace, title:"Agents exchange replay", calls:0}, events:null, dir:t.dir || t.trace, trace:t.trace, mlabel:t.label, has:t.has}));
+  fillPicker(); await loadTrace(0); return true;
+}
+
+/* ---------- several traces ---------- */
+async function loadTrace(i){
+  pause(); cur = i;
+  if(TR[i].events === null){
+    chat.innerHTML = `<div class="empty" style="padding:18px">Loading ${esc(TR[i].dir)} ...</div>`;
+    try {
+      let t;
+      if(TR[i].trace){ t = await getJSON(TR[i].trace); if(!validTrace(t)) throw new Error("not an agentbridge-replay trace"); }
+      else t = await buildFromArchive(TR[i].dir, TR[i].has);
+      if(TR[i].mlabel) t.meta.label = TR[i].mlabel; TR[i].meta = t.meta; TR[i].events = t.events; }
+    catch(e){ toast("Could not load " + TR[i].dir + ": " + e.message); chat.innerHTML = ""; return; }
+    fillPicker();
+  }
+  E = TR[i].events; M = TR[i].meta;
+  applyMeta(); $("#scrub").max = E.length; $("#trace").value = i; rebuild(0);
+}
+function toast(msg){
+  const t = document.createElement("div");
+  t.textContent = msg; t.setAttribute("role", "status");
+  t.style.cssText = "position:fixed;left:50%;bottom:76px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:9;max-width:80vw";
+  document.body.appendChild(t); setTimeout(() => t.remove(), 4500);
+}
+function validTrace(t){
+  return t && typeof t === "object" && String(t.format || "").startsWith("agentbridge-replay/") && Array.isArray(t.events) && t.meta;
+}
+async function openFile(file){
+  let obj;
+  try { obj = JSON.parse(await file.text()); } catch(e){ toast(file.name + " is not valid JSON."); return; }
+  const list = Array.isArray(obj.traces) ? obj.traces : [obj];
+  const ok = list.filter(validTrace);
+  if(!ok.length){ toast(file.name + " is not an agentbridge-replay trace (expected format \"agentbridge-replay/1\" with meta and events)."); return; }
+  ok.forEach(t => { if(!t.meta.label) t.meta.label = t.meta.archive || file.name; });
+  const first = TR.length; TR.push(...ok); fillPicker(); loadTrace(first);
+  toast("Loaded " + ok.length + " trace" + (ok.length > 1 ? "s" : "") + " from " + file.name);
+}
+$("#trace").addEventListener("change", e => loadTrace(+e.target.value));
+$("#open").addEventListener("click", () => $("#file").click());
+$("#file").addEventListener("change", e => { const f = e.target.files[0]; if(f) openFile(f); e.target.value = ""; });
+addEventListener("dragover", e => e.preventDefault());
+addEventListener("drop", e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if(f) openFile(f); });
+applyMeta(); fillPicker();
+function applyHash(){
+  const h = new URLSearchParams(location.hash.slice(1));
+  if(h.get("speed")) $("#speed").value = h.get("speed");
+  if(h.get("trace") && TR[+h.get("trace")] && TR[+h.get("trace")].events){ cur = +h.get("trace"); E = TR[cur].events; M = TR[cur].meta; applyMeta(); $("#scrub").max = E.length; $("#trace").value = cur; }
+  $("#scrub").max = E.length;
+  if(h.get("at")) rebuild(Math.min(E.length, +h.get("at"))); else sync();
+  if(h.has("play")) run();
+}
+/* ---------- guided tour: tour.json (next to index.html) lists, per trace, steps anchored to events ---------- */
+let TOUR = null, tour = null, tourTimer = null;
+async function loadTourFile(){
+  const j = await getJSON("tour.json");
+  if(!j || !Array.isArray(j.parts) || !j.parts.length) return;
+  TOUR = j; $("#tourBtn").hidden = false;
+  const h = new URLSearchParams(location.hash.slice(1));
+  if(h.has("tour")) startTour(h.get("tour") === "auto");
+}
+// an anchor matches events by field; title is a prefix match; nth picks the n-th match, last the final one
+function tourIdx(at){
+  const hit = [];
+  E.forEach((e, i) => { if(Object.keys(at).every(k => k === "nth" || k === "last" ? true : k === "title" ? String(e.title || "").startsWith(at.title) : e[k] === at[k])) hit.push(i); });
+  if(!hit.length) return -1;
+  return at.last ? hit[hit.length - 1] : (hit[(at.nth || 1) - 1] ?? -1);
+}
+async function tourEnter(p){
+  const part = TOUR.parts[p];
+  const i = TR.findIndex(t => String(t.dir || "").includes(part.trace));
+  if(i < 0){ toast("Tour trace not found: " + part.trace); return tourExit(); }
+  const auto = tour ? tour.auto : false;
+  await loadTrace(i);
+  if(!new URLSearchParams(location.hash.slice(1)).get("speed")) $("#speed").value = "demo";
+  const steps = part.steps.map(s => ({...s, idx: tourIdx(s.at)})).filter(s => s.idx >= 0).sort((a, b) => a.idx - b.idx);
+  tour = {p, steps, s:-1, auto};
+  renderTour();
+}
+// progress of the current step: a bar and a line of text while the chat plays, and a clear "ready" state
+function setProg(state, done, total){
+  const ready = state === "ready";
+  $("#tProg").classList.toggle("ready", ready);
+  $("#tNext").classList.toggle("ready", ready);
+  $("#tBar").style.width = (ready ? 100 : total ? Math.round(100 * done / total) : 0) + "%";
+  const next = $("#tNext").textContent;
+  const final = tour && tour.p === TOUR.parts.length - 1 && tour.s === tour.steps.length - 1;
+  $("#tProgText").textContent = !ready ? `Playing the exchange: ${done} of ${total} messages`
+    : tour && tour.s < 0 ? `Ready. Click ${next} to begin.`
+    : final ? `That was the last step. Click ${next} to close the tour.`
+    : `Done. Click ${next} to continue.`;
+}
+function tourProgress(){ if(tour && tour.total) setProg("play", Math.min(shown - tour.start, tour.total), tour.total); }
+// the explanation shows as soon as the step is chosen; tourSettled() runs once the chat has caught up
+function renderTour(animating){
+  clearTimeout(tourTimer);
+  const part = TOUR.parts[tour.p], lastPart = tour.p === TOUR.parts.length - 1;
+  const st = tour.s < 0 ? part.intro : tour.steps[tour.s];
+  const lastStep = tour.s === tour.steps.length - 1;
+  $("#tour").hidden = false;
+  $("#tPart").textContent = part.label || ("Part " + (tour.p + 1));
+  $("#tCount").textContent = tour.s < 0 ? "Introduction" : `Step ${tour.s + 1} of ${tour.steps.length}`;
+  $("#tTitle").textContent = st.title;
+  $("#tText").innerHTML = md(st.text);
+  $("#tBack").disabled = tour.s < 0;
+  $("#tNext").textContent = tour.s < 0 ? "Start" : lastStep ? (lastPart ? "Finish" : "Next part") : "Next";
+  $("#tAuto").checked = tour.auto;
+  document.querySelectorAll(".tour-hl").forEach(e => e.classList.remove("tour-hl"));
+  document.querySelector("aside.right").scrollTop = 0;
+  if(!animating) tourSettled();
+}
+function tourSettled(){
+  tour.total = 0; setProg("ready");
+  const st = tour.s < 0 ? TOUR.parts[tour.p].intro : tour.steps[tour.s];
+  if(tour.s >= 0 && chat.lastElementChild) chat.lastElementChild.classList.add("tour-hl");
+  if(tour.auto) tourTimer = setTimeout(tourNext, Math.min(18000, 3000 + st.text.length * 30));
+}
+async function tourNext(){
+  if(!tour) return;
+  clearTimeout(tourTimer);
+  if(tour.s === tour.steps.length - 1){
+    if(tour.p < TOUR.parts.length - 1) return tourEnter(tour.p + 1);
+    return tourExit();
+  }
+  const target = tour.steps[tour.s + 1].idx;
+  tour.start = shown; tour.total = Math.max(1, target + 1 - shown);
+  tour.s++; renderTour(true); setProg("play", 0, tour.total);
+  const my = ++token; playing = true; $("#play").textContent = "Pause"; $("#tNext").disabled = true;
+  while(playing && my === token && shown <= target) await showNext(my, shown === target);
+  $("#tNext").disabled = false;
+  if(!tour || my !== token) return;
+  playing = false; $("#play").textContent = "Play";
+  tourSettled();
+}
+function tourBack(){
+  if(!tour || tour.s < 0) return;
+  clearTimeout(tourTimer); pause(); $("#tNext").disabled = false;
+  tour.s--; rebuild(tour.s < 0 ? 0 : tour.steps[tour.s].idx + 1); renderTour();
+}
+function tourExit(){
+  if(!tour) return;
+  clearTimeout(tourTimer); tour = null;
+  $("#tour").hidden = true;
+  document.querySelectorAll(".tour-hl").forEach(e => e.classList.remove("tour-hl"));
+}
+function startTour(auto){
+  if(!TOUR) return;
+  if(matchMedia("(max-width:1100px)").matches){ toast("Widen the window to at least 1100px to see the explanations."); return; }
+  pause(); tour = {p:0, steps:[], s:-1, auto:!!auto}; tourEnter(0);
+}
+$("#tourBtn").addEventListener("click", () => startTour(false));
+$("#tNext").addEventListener("click", tourNext);
+$("#tBack").addEventListener("click", tourBack);
+$("#tExit").addEventListener("click", tourExit);
+$("#tAuto").addEventListener("change", e => { if(tour){ tour.auto = e.target.checked; renderTour(); } });
+// using any player control by hand leaves the tour
+["#play", "#step", "#restart", "#jumpA", "#jumpC", "#jumpR"].forEach(sel => $(sel).addEventListener("click", tourExit, true));
+$("#scrub").addEventListener("input", tourExit, true); $("#trace").addEventListener("change", tourExit, true);
+
+// deep links: #trace=N, #at=N (show the first N events instantly), #speed=..., #play
+$("#scrub").max = E.length;
+if(TR.length){ applyHash(); }
+else { bootFetch().then(async ok => { if(ok){ applyHash(); await loadTourFile(); } window.__ready = true; }); }
+window.__ready = TR.length > 0;
+</script>
+</body>
+</html>
