@@ -46,12 +46,6 @@ flowchart LR
     !!! note "Other installation paths"
         Docker and developer-workspace installs also work. See [Tutorial 0](https://outshift-open.github.io/mas-lab/tutorials/00-environment-setup/) for those paths. Prefix every `mas-ctl` command with `docker compose --profile tools run --rm --no-deps cli` when using Docker.
 
-- The Cognition Protocols marketplace, added once:
-
-    ```bash
-    claude plugin marketplace add ioc-project/cognition-protocols
-    ```
-
 ## 1. Create the project directory
 
 Create an empty directory for the MAS:
@@ -66,18 +60,20 @@ Run every command from this directory.
 
 MAS Lab discovers skills by name from the `skills/` directory next to the manifests. The
 protocol skills follow the [agentskills.io](https://agentskills.io/) format: each skill is a
-directory with a `SKILL.md` file. Install the protocol's plugin with Claude Code, then copy
-the skill directories into your project:
+directory with a `SKILL.md` file. Download the skill zips from the
+[GitHub releases page](https://github.com/ioc-project/cognition-protocols/releases) and
+unzip them into `skills/`:
 
 ```bash
 PROTOCOL=concord   # or accord
+RELEASE=https://github.com/ioc-project/cognition-protocols/releases/latest/download
 
-claude plugin install $PROTOCOL@cognition-protocols --scope user
-
-PLUGIN_DIR=$(ls -dt ~/.claude/plugins/cache/cognition-protocols/$PROTOCOL/*/skills/ 2>/dev/null | head -1)
-mkdir -p skills
-cp -r "$PLUGIN_DIR/${PROTOCOL}-initiator" skills/
-cp -r "$PLUGIN_DIR/${PROTOCOL}-receiver"  skills/
+mkdir -p skills /tmp/cp-skills
+for SKILL in ${PROTOCOL}-initiator ${PROTOCOL}-receiver; do
+  curl -fsSL $RELEASE/${SKILL}.zip -o /tmp/cp-skills/${SKILL}.zip
+  unzip -q /tmp/cp-skills/${SKILL}.zip -d /tmp/cp-skills/
+  mv /tmp/cp-skills/${SKILL} skills/
+done
 ```
 
 The `skills/` directory should now contain:
