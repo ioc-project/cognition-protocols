@@ -11,9 +11,10 @@ message bus. It is used purely as process launcher and transport: the protocol i
 and the initiator uses `agentbridge delegate` as its delegation primitive, where an in-process
 orchestrator would use its sub-agent tool.
 
-Any Cognition Protocol can run this way, on any [example](examples/index.md). The tutorial
-uses independent Claude Code processes: one initiator and one receiver per specialist of the
-example. It uses the SLIM transport; the node and identity steps are specific to it.
+Any Cognition Protocol can run this way, on any team of agents. The tutorial describes the steps
+to run one: independent coding-harness processes, one initiator and one per specialist. It uses
+the SLIM transport; the node and identity steps are specific to it. The
+[examples](examples/index.md) are complete implementations with the real prompts.
 
 ```mermaid
 flowchart LR
@@ -47,9 +48,10 @@ flowchart LR
 
 ## Prerequisites
 
-- Claude Code, with `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_AUTH_TOKEN`
-  set in the shell that registers the agents. The sandbox that wraps each agent cannot
-  read your keychain login.
+- A coding harness for each agent. The tutorial uses Claude Code, with `ANTHROPIC_API_KEY`,
+  `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_AUTH_TOKEN` set in the shell that registers the agents:
+  the sandbox that wraps each agent cannot read your keychain login. The
+  [other harnesses](#other-harnesses) AgentBridge supports work too.
 - `agentbridge` and `shadictl` from [`agntcy/shadi`](https://github.com/agntcy/shadi), on your `PATH`. On macOS:
 
     ```bash
@@ -61,39 +63,51 @@ flowchart LR
     The commands above are for macOS. On another system, follow the installation instructions
     in the [`agntcy/shadi`](https://github.com/agntcy/shadi) repository instead.
 
-## 1. Choose the example
+## 1. Decide the team
 
-An [example](examples/index.md) provides the task, the specialists and their role
-definitions. Point `SCENARIO` at the example page, for example the
-[Coding Agent Team](examples/coding-agent-team/index.md), and create the project directory:
+A run needs three things, all of them specific to your use case:
+
+- **A task**: the decision or piece of work the team has to deliver.
+- **Specialists**: the agents that take part, each with an id.
+- **A role for each specialist**: what it cares about, and how it judges a result.
+
+The initiator is the lead of the team and is the same in every use case: it coordinates the
+specialists with the protocol and has no stake in the outcome. Each agent runs in its own
+harness; the tutorial uses Claude Code for all of them. Write the specialists' ids in `team.env`:
 
 ```bash
-SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/agentbridge/examples/coding-agent-team   # an example page
-
 mkdir -p ~/agent-team && cd ~/agent-team
-curl -fsSL $SCENARIO/scenario.env -o scenario.env && source scenario.env
-curl -fsSL $SCENARIO/task.txt -o task.txt
 
-mkdir -p profiles .tmp
-for role in initiator $(echo $SPECIALISTS); do mkdir -p agents/$role; done
+cat > team.env <<'EOF'
+SPECIALISTS="specialist-a specialist-b specialist-c"   # your agent ids
+EOF
+source team.env
 ```
 
-`scenario.env` defines `SPECIALISTS`, the ids of the example's agents, and the identities used
-in [step 6](#6-define-the-identities-and-the-environment). Run every command from this
-directory unless stated otherwise.
+## 2. Create the project directory
 
-## 2. Install the protocol in each agent
+Create a directory per agent, one for the AgentBridge profiles and one for scratch files:
 
-Claude Code discovers skills and role files from its working directory, so each agent has its own
-directory. Register the Cognition Protocols marketplace once, then install the protocol's plugin
-in each agent's directory with project scope, so that it is enabled for that agent only:
+```bash
+mkdir -p profiles .tmp
+for id in initiator $(echo $SPECIALISTS); do mkdir -p agents/$id; done
+```
+
+Run every command from this directory unless stated otherwise.
+
+## 3. Install the protocol in each agent
+
+The harness discovers skills and instructions from its working directory, so each agent has its
+own directory, with the protocol's skills in it. With Claude Code, register the Cognition
+Protocols marketplace once, then install the protocol's plugin in each agent's directory with
+project scope, so that it is enabled for that agent only:
 
 ```bash
 claude plugin marketplace add ioc-project/cognition-protocols
 
 PROTOCOL=concord   # or accord
-for role in initiator $(echo $SPECIALISTS); do
-  (cd agents/$role && claude plugin install $PROTOCOL@cognition-protocols --scope project)
+for id in initiator $(echo $SPECIALISTS); do
+  (cd agents/$id && claude plugin install $PROTOCOL@cognition-protocols --scope project)
 done
 ```
 
@@ -101,10 +115,13 @@ Each plugin carries both the initiator and the receiver skill. Their activation 
 are precise, so the initiator skill only activates on the agent that starts the protocol and
 the receiver skill on the agents that receive its messages.
 
-## 3. Write the role definitions
+For another harness, put the skills in the skills folder of its project directory instead, as
+described in [Installing a skill](../../getting-started.md#installing-a-skill).
 
-Each agent's `CLAUDE.md` holds its role definition. The initiator's file only sets working rules,
-and is the same in every example:
+## 4. Write the role definitions
+
+Each agent reads its role from the instruction file of its harness: `CLAUDE.md` for Claude Code.
+The initiator's file only sets working rules, and is the same in every use case:
 
 ```bash
 cat > agents/initiator/CLAUDE.md <<'EOF'
@@ -118,31 +135,37 @@ cat > agents/initiator/CLAUDE.md <<'EOF'
 EOF
 ```
 
-Download one role definition per specialist from the example, and save each as `CLAUDE.md` in
-the agent's directory:
+For each specialist, write its role description in `agents/<id>/CLAUDE.md`. The role is what makes
+the specialist take a position: say what it cares about, and what it will and will not accept.
+
+### Other harnesses
+
+AgentBridge can run these harnesses as agents: Claude Code, Codex, Copilot, Cursor Agent, Goose
+and opencode. They differ in the file they read their instructions from and the folder they load
+skills from, so adapt steps 3 and 4:
+
+| Harness | Role file in the agent directory |
+|---|---|
+| Claude Code | `CLAUDE.md` |
+| Codex, opencode | `AGENTS.md` |
+| Others | `AGENTS.md`, or the file the harness documents for project instructions |
+
+Agents can use different harnesses in the same team. Steps 5 and 7 below cover the profile and the
+sandbox of a harness other than Claude Code.
+
+## 5. Create the AgentBridge profiles
+
+Each agent needs an AgentBridge profile (`--tool <id>`) that tells AgentBridge how to launch the
+harness and sets the agent id. AgentBridge bundles one profile per harness; a profile for your own
+agent id is the bundled one with its `id` changed. For Claude Code, the profiles differ only in
+their `id`, so generate them in a loop. The in-process `Task` tool is disallowed, so that agents
+can only work with each other over the network:
 
 ```bash
-for role in $(echo $SPECIALISTS); do
-  curl -fsSL $SCENARIO/roles/$role.txt -o agents/$role/CLAUDE.md
-done
-
-for f in task.txt agents/*/CLAUDE.md; do
-  grep -qi '<html' $f && echo "download failed for $f"
-done
-```
-
-## 4. Create the AgentBridge profiles
-
-Each role needs an AgentBridge profile (`--tool <role>`) that launches Claude Code in print mode
-and sets the agent id. The profiles differ only in their `id`, so generate them in a loop.
-The in-process `Task` tool is disallowed, so that agents can only work with each other over the
-network:
-
-```bash
-for role in initiator $(echo $SPECIALISTS); do
-  cat > profiles/$role.json <<EOF
+for id in initiator $(echo $SPECIALISTS); do
+  cat > profiles/$id.json <<EOF
 {
-  "id": "$role",
+  "id": "$id",
   "bin": "claude",
   "pin_tmpdir": true,
   "env": {
@@ -174,7 +197,16 @@ EOF
 done
 ```
 
-## 5. Generate the certificates
+For another harness, take its bundled profile from the
+[AgentBridge repository](https://github.com/agntcy/shadi/tree/main/crates/agentbridge/profiles)
+and change the `id`, for example for a Codex agent:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agntcy/shadi/main/crates/agentbridge/profiles/codex.json \
+  | sed 's/"id": "codex"/"id": "specialist-a"/' > profiles/specialist-a.json
+```
+
+## 6. Generate the certificates
 
 The SLIM node and every agent authenticate each other with mutual TLS. AgentBridge refuses to
 connect without it, even on the loopback address. The `agntcy/shadi` repository has a script
@@ -188,20 +220,23 @@ bash generate_slim_mtls_certs.sh "$PWD/.tmp/shadi-slim-mtls"
 ```
 
 The node itself needs no installation or configuration file: `shadictl slim start-node` runs a
-native SLIM node, as shown in [step 7](#7-start-the-mesh).
+native SLIM node, as shown in [step 8](#8-start-the-mesh).
 
-## 6. Define the identities and the environment
+## 7. Define the identities and the environment
 
-AgentBridge authenticates members of the bus with DIDs. The DIDs are derived deterministically
-from a fixed seed and the participant's name, and the example's `scenario.env` already exports
-them (`SLIM_HUMAN_SEED` and `SLIM_MEMBER_DIDS`). `env.sh` exports everything else the agents and
-your terminal need. The participants are:
+AgentBridge authenticates members of the bus with DIDs. Each participant has one, derived
+deterministically from a fixed seed and the participant's name. The participants are:
 
 | Identity | Used for |
 |---|---|
 | `avatar` | You: the kickoff `agentbridge delegate` call from your terminal |
 | `driver` | The initiator's own outbound calls to the receivers (the bus allows one active session per identity, so it cannot reuse `avatar` or `initiator`) |
-| `initiator` and the example's specialists | The registered agents |
+| `initiator` and the specialists | The registered agents |
+
+`env.sh` exports everything the agents and your terminal need. It derives the identities with
+`shadictl derive-agent-identity` the first time, one at a time, and keeps them in
+`.tmp/member-dids`. Run `source env.sh` once before starting the agents, so that they do not all
+derive them at the same time.
 
 ```bash
 cat > env.sh <<'EOF'
@@ -209,29 +244,45 @@ cat > env.sh <<'EOF'
 export SLIM_ENDPOINT=127.0.0.1:47560
 export AGENTBRIDGE_PROFILES_DIR="$PWD/profiles"
 
-# Where AgentBridge looks for the certificates (and the CA) generated in step 5
+# Where AgentBridge looks for the certificates (and the CA) generated in step 6
 export SHADI_TMP_DIR="$PWD/.tmp"
 export SLIM_TLS_CERT="$PWD/.tmp/shadi-slim-mtls/client-avatar.crt"
 export SLIM_TLS_KEY="$PWD/.tmp/shadi-slim-mtls/client-avatar.key"
 
-# DID authentication. The example provides the seed and the member DIDs.
+# DID authentication: the specialists, and the seed and identities if team.env gives them
 export SHADI_SLIM_AUTH=did
-source "$PWD/scenario.env"
+source "$PWD/team.env"
+export SLIM_HUMAN_SEED="${SLIM_HUMAN_SEED:-agent-team-seed}"
+
+if [ -z "${SLIM_MEMBER_DIDS:-}" ]; then
+  if [ ! -s "$PWD/.tmp/member-dids" ]; then
+    printf '%s' "$SLIM_HUMAN_SEED" > "$PWD/.tmp/seed"
+    dids=""
+    # avatar, driver, initiator and the specialists, in this order
+    for name in avatar driver initiator $(echo $SPECIALISTS); do
+      did="$(shadictl derive-agent-identity --source seed --in "$PWD/.tmp/seed" -n "$name" | awk '/^DID: /{print $2; exit}')"
+      dids="${dids:+$dids,}$did"
+    done
+    rm -f "$PWD/.tmp/seed"
+    printf '%s' "$dids" > "$PWD/.tmp/member-dids"
+  fi
+  export SLIM_MEMBER_DIDS="$(cat "$PWD/.tmp/member-dids")"
+fi
 EOF
 ```
 
-For your own example, derive the identities as described in
-[Adding an example](examples/index.md#adding-an-example).
+On macOS, deriving an identity also stores its keys in the keychain. An example can provide
+the identities in its `team.env`, which skips the derivation.
 
-Next, a script that registers one agent. It runs `agentbridge register` for a role under
+Next, a script that registers one agent. It runs `agentbridge register` for an agent under
 `shadictl`, from the agent's own directory:
 
 ```bash
 cat > register-agent.sh <<'EOF'
 #!/usr/bin/env bash
-# Usage: ./register-agent.sh <role>
+# Usage: ./register-agent.sh <agent id>
 set -euo pipefail
-ROLE="${1:?usage: register-agent.sh <role>}"
+ID="${1:?usage: register-agent.sh <agent id>}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 if [[ -z "${ANTHROPIC_API_KEY:-}" && -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -z "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
@@ -240,21 +291,26 @@ if [[ -z "${ANTHROPIC_API_KEY:-}" && -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -z "${
 fi
 
 cd "$ROOT" && source ./env.sh
-cd "agents/$ROLE"
+cd "agents/$ID"
 
 shadictl \
   --allow . --read ~/.claude \
   --allow "$ROOT/.tmp" --read "$ROOT/profiles" --allow /tmp --allow /private/tmp \
   --net-block --net-allow api.anthropic.com --net-allow "$SLIM_ENDPOINT" \
-  -- agentbridge register --tool "$ROLE" --command "$PWD" \
+  -- agentbridge register --tool "$ID" --command "$PWD" \
   --slim-endpoint "$SLIM_ENDPOINT"
 EOF
 chmod +x register-agent.sh
 ```
 
+For a harness other than Claude Code, adapt the `shadictl` options to it: allow the folders where
+it keeps its configuration and skills for reading, and the host of its model API for network
+access, in place of `~/.claude` and `api.anthropic.com`, and set that harness's credentials in
+the shell instead of the Claude Code ones.
+
 !!! note "Claude Code installed in `~/.local`"
     The sandbox grants read access to `~/.claude`, where Claude Code keeps its settings and the
-    plugin you installed in step 2. If Claude Code was installed with its native installer, the
+    plugin you installed in step 3. If Claude Code was installed with its native installer, the
     `claude` binary lives in `~/.local/bin` and `~/.local/share/claude`, which the sandbox blocks
     by default. Add `--read ~/.local/bin --read ~/.local/share/claude` to the `shadictl` command.
     With a Homebrew install this is not needed.
@@ -282,21 +338,21 @@ chmod +x register-agent.sh
 
 ### Resulting layout
 
-For the Coding Agent Team example, the project directory now looks like this:
+For a team with three specialists, the project directory now looks like this:
 
 ```text
 agent-team/
-├── scenario.env              # the specialists' ids and identities
-├── task.txt                  # the task
+├── team.env                  # the specialists' ids, and optionally their identities
 ├── env.sh                    # endpoint, certificates, DID identities
 ├── register-agent.sh         # registers one agent under the sandbox
 ├── profiles/                 # AgentBridge profiles, one per agent
 │   ├── initiator.json
-│   ├── microservices.json
-│   ├── monolith.json
-│   └── pragmatist.json
+│   ├── specialist-a.json
+│   ├── specialist-b.json
+│   └── specialist-c.json
 ├── generate_slim_mtls_certs.sh
 ├── .tmp/
+│   ├── member-dids           # the identities, derived once
 │   └── shadi-slim-mtls/      # CA, server and client certificates
 └── agents/
     ├── initiator/
@@ -304,18 +360,18 @@ agent-team/
     │   ├── .claude/
     │   │   └── settings.json # enables the protocol plugin (project scope)
     │   └── run/              # created by the initiator during the run
-    ├── microservices/
+    ├── specialist-a/
     │   ├── CLAUDE.md
     │   └── .claude/settings.json
-    ├── monolith/
+    ├── specialist-b/
     │   ├── CLAUDE.md
     │   └── .claude/settings.json
-    └── pragmatist/
+    └── specialist-c/
         ├── CLAUDE.md
         └── .claude/settings.json
 ```
 
-## 7. Start the mesh
+## 8. Start the mesh
 
 Use one terminal per process so that each agent's traffic is visible. In each terminal, go to
 the project directory first. In the agent terminals, also export the credential from the
@@ -323,49 +379,41 @@ the project directory first. In the agent terminals, also export the credential 
 cannot read your keychain login.
 
 ```bash
-# terminal 1: the SLIM node
+# terminal 1: the SLIM node. This also derives the identities, once.
 source env.sh
 shadictl slim start-node
 
-# one more terminal per agent: the initiator and each specialist of the example
+# one more terminal per agent: the initiator and each specialist
 ./register-agent.sh initiator
 ./register-agent.sh <specialist id>   # for each id in $SPECIALISTS
 ```
 
 Wait until every agent prints `ready — listening on ...`.
 
-## 8. Run the protocol
+## 9. Prompt the initiator
 
-Write the kickoff message. Give the initiator the task **inline**: a registered Claude Code
-instance cannot read files outside its own directory.
+Give the initiator its prompt **inline**: a registered agent cannot read files outside its own
+directory. The prompt is a template with the task, the protocol to use, and how to reach the
+specialists. The roles are not in it: each specialist already has its own, in its directory.
+Replace what is in angle brackets, and save it as `prompt.md`.
 
-This message is the only part that depends on the example, and it takes everything from the
-files downloaded in step 1: to run another example, change `SCENARIO` there and write it again.
+```text
+You coordinate a team of specialists (agent ids: <SPECIALIST IDS, COMMA-SEPARATED>). You cannot
+read files outside this directory; everything you need is below. Put every file you write in
+./run/.
 
-```bash
-source env.sh                # SLIM_ENDPOINT, and SPECIALISTS from scenario.env
-PROTOCOL=concord             # the protocol you installed in step 2
-: "${SPECIALISTS:?}" "${SLIM_ENDPOINT:?}" "${PROTOCOL:?}"   # stop if one is empty
+TASK FOR THE TEAM: "<TASK>"
 
-NAMES="$(echo $SPECIALISTS | sed 's/ /, /g')"
-
-cat > kickoff.md <<EOF
-You coordinate a team of specialists (agent ids: $NAMES). You cannot read files outside this
-directory; everything you need is below. Put every file you write in ./run/.
-
-TASK FOR THE TEAM: "$(cat task.txt)"
-
-Load the $PROTOCOL-initiator skill and follow it to the end. Reach each specialist with
-'agentbridge delegate "<message>" --to <agent id> --agent-id driver --endpoint $SLIM_ENDPOINT'.
+Load the <PROTOCOL>-initiator skill and follow it to the end. Reach each specialist with
+'agentbridge delegate "<message>" --to <agent id> --agent-id driver --endpoint 127.0.0.1:47560'.
 Never write a specialist's reply yourself. Report the skill's final output verbatim.
-EOF
 ```
 
-Then hand it to the initiator with `delegate`, as `avatar`, from a sixth terminal:
+Then hand it to the initiator with `delegate`, as `avatar`, from another terminal:
 
 ```bash
 source env.sh
-agentbridge delegate "$(cat kickoff.md)" \
+agentbridge delegate "$(cat prompt.md)" \
   --to initiator --agent-id avatar --endpoint "$SLIM_ENDPOINT"
 ```
 
@@ -375,3 +423,11 @@ protocol's own call budget, where it declares one, is printed when the initiator
 
 The initiator's state file in `./run/` holds the authoritative record of the run, in the
 format defined by the protocol.
+
+## 10. Look at the examples
+
+The [examples](examples/index.md) are complete implementations with the real prompts and role
+files. Use them as inspiration for adapting the steps to your own use case:
+
+- [Coding Agent Team](examples/coding-agent-team/index.md): three specialists that must decide
+  how to build a notification service.

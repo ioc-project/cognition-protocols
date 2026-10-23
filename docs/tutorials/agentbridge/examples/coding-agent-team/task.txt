@@ -1,4 +1,0 @@
-We are adding a new notification-delivery capability to the product (a notification
-service): users can opt in to email / push / SMS notifications for events raised across
-several existing subsystems. Your team must develop it, and the team needs one decision on
-how to build it that everyone can live with.
