@@ -94,9 +94,9 @@ nav:
       - tutorials/index.md
       - Claude Agent Teams: tutorials/agent-teams.md
       - AgentBridge: tutorials/agentbridge.md
-  - Scenarios:
-      - scenarios/index.md
-      - Coding Agent Team: scenarios/coding-agent-team/index.md
+      - Scenarios:
+          - tutorials/scenarios/index.md
+          - Coding Agent Team: tutorials/scenarios/coding-agent-team/index.md
   - Evaluation:
       - evaluation/index.md
       - ACCORD: evaluation/accord.md

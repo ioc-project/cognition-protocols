@@ -11,9 +11,9 @@ message bus. It is used purely as process launcher and transport: the protocol i
 and the initiator uses `agentbridge delegate` as its delegation primitive, where an in-process
 orchestrator would use its sub-agent tool.
 
-Any Cognition Protocol can run this way, on any [scenario](../scenarios/index.md). The tutorial
+Any Cognition Protocol can run this way, on any [scenario](scenarios/index.md). The tutorial
 uses independent Claude Code processes: one initiator and one receiver per specialist of the
-scenario. The diagram shows the [Coding Agent Team](../scenarios/coding-agent-team/index.md)
+scenario. The diagram shows the [Coding Agent Team](scenarios/coding-agent-team/index.md)
 scenario, with three specialists. It uses the SLIM transport; the node and identity steps are
 specific to it.
 
@@ -63,12 +63,12 @@ flowchart LR
 
 ## 1. Choose the scenario
 
-A [scenario](../scenarios/index.md) provides the task, the specialists and their role
+A [scenario](scenarios/index.md) provides the task, the specialists and their role
 definitions. Point `SCENARIO` at the scenario page, for example the
-[Coding Agent Team](../scenarios/coding-agent-team/index.md), and create the project directory:
+[Coding Agent Team](scenarios/coding-agent-team/index.md), and create the project directory:
 
 ```bash
-SCENARIO=https://ioc-project.github.io/cognition-protocols/scenarios/coding-agent-team   # a scenario page
+SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/scenarios/coding-agent-team   # a scenario page
 
 mkdir -p ~/agent-team && cd ~/agent-team
 curl -fsSL $SCENARIO/scenario.env -o scenario.env && source scenario.env
@@ -221,7 +221,7 @@ EOF
 ```
 
 For your own scenario, derive the identities as described in
-[Adding a scenario](../scenarios/index.md#adding-a-scenario).
+[Adding a scenario](scenarios/index.md#adding-a-scenario).
 
 Next, a script that registers one agent. It runs `agentbridge register` for a role under
 `shadictl`, from the agent's own directory:
