@@ -18,7 +18,9 @@ which is the quickest way to try a protocol in your local Claude Code.
 Each protocol is distributed as **skills** — an initiator skill, a receiver skill,
 and the scripts that implement the deterministic portion of the protocol. Install the
 initiator on any agent that may trigger the protocol and the receiver on every agent
-that may be asked to take part. An agent can carry both.
+that may be asked to take part. If any agent in the system can trigger the protocol,
+every agent should carry both skills: each one can then start a run, and each one can
+answer when another starts it.
 
 ### Getting the skills
 
