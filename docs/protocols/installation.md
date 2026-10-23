@@ -184,23 +184,22 @@ that it can only delegate over the bus:
 Point `AGENTBRIDGE_PROFILES_DIR` at the directory holding these profiles. The full profiles,
 with session handling and temp-directory pinning, are in the reference setup linked at the end of this section.
 
-### Why the agents run sandboxed
+!!! note "Why the agents run sandboxed"
+    With AgentBridge, agents are reached over the network: any member of the bus can send a
+    prompt to an agent, and that prompt is acted on by a coding harness that can run commands
+    and read and write files on your machine. An agent is therefore only as safe as the least
+    trusted party that can message it. Each agent is launched under `shadictl`, which sandboxes
+    the harness and restricts what it can do locally and what it can connect to:
 
-With AgentBridge, agents are reached over the network: any member of the bus can send a
-prompt to an agent, and that prompt is acted on by a coding harness that can run commands
-and read and write files on your machine. An agent is therefore only as safe as the least
-trusted party that can message it. Each agent is launched under `shadictl`, which sandboxes
-the harness and restricts what it can do locally and what it can connect to:
+    - **Filesystem:** the agent can write only to its own directory (plus the harness's own
+      configuration and temp directories) and read only the skills it needs.
+    - **Network:** outbound connections are blocked except for an explicit allow-list: the bus
+      endpoint and the model API (`api.anthropic.com`).
 
-- **Filesystem:** the agent can write only to its own directory (plus the harness's own
-  configuration and temp directories) and read only the skills it needs.
-- **Network:** outbound connections are blocked except for an explicit allow-list: the bus
-  endpoint and the model API (`api.anthropic.com`).
+    Bus membership is restricted in the same spirit: only the DIDs listed in `SLIM_MEMBER_DIDS`
+    are admitted, and a protocol message can only trigger what the agent's own sandbox allows.
 
-Bus membership is restricted in the same spirit: only the DIDs listed in `SLIM_MEMBER_DIDS`
-are admitted, and a protocol message can only trigger what the agent's own sandbox allows.
-
-!!! note "Sandboxing on macOS"
+!!! warning "Sandboxing on macOS"
     On some macOS setups Claude Code cannot resolve hostnames under the sandbox, so its API calls
     fail. If that happens on a loopback-only bus, you can run `agentbridge register` without
     `shadictl`. Do not do this once the bus endpoint is reachable beyond `127.0.0.1`.
