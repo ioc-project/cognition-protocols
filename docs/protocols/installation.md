@@ -99,14 +99,17 @@ The example below runs CONCORD across four independent Claude Code processes: on
 initiator and three receivers with conflicting criteria (`microservices`, `monolith`,
 `pragmatist`) that must agree on how to build a notification service.
 
-```
-                      SLIM node (127.0.0.1:47560)
-                              |
-        +-----------+---------+---------+-----------+
-        |           |                   |           |
-    initiator   microservices        monolith    pragmatist
-    (concord-   (concord-receiver,   (receiver,  (receiver,
-    initiator)   persona)             persona)    persona)
+```mermaid
+flowchart TB
+    SLIM["SLIM node<br/>127.0.0.1:47560"]
+    SLIM --- I["initiator<br/>concord-initiator"]
+    SLIM --- M["microservices<br/>concord-receiver + persona"]
+    SLIM --- O["monolith<br/>concord-receiver + persona"]
+    SLIM --- P["pragmatist<br/>concord-receiver + persona"]
+    You(["you (avatar)<br/>agentbridge delegate"]) --> I
+    I -. "agentbridge delegate<br/>(as concord-driver)" .-> M
+    I -.-> O
+    I -.-> P
 ```
 
 ### Prerequisites
