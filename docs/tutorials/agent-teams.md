@@ -6,7 +6,7 @@ To try a protocol on your own machine without a message bus, use the experimenta
 agent teams feature of Claude Code. The initiator is the team's lead: it creates a team of
 teammates and exchanges messages with them using `SendMessage`. The teammates play the
 receivers, and the protocol is unchanged.
-It works with any Cognition Protocol.
+It works with any Cognition Protocol and any [scenario](../scenarios/index.md).
 
 Agent teams work only on a single machine, with no network between the agents, and only
 with Claude Code. Use AgentBridge when agents must run in separate processes, containers or
@@ -28,7 +28,7 @@ Create an empty directory outside any repository, with a directory for the teamm
 files and one for the initiator's files:
 
 ```bash
-mkdir -p ~/coding-agent-team-teams && cd ~/coding-agent-team-teams
+mkdir -p ~/agent-team && cd ~/agent-team
 mkdir -p personas run
 ```
 
@@ -44,16 +44,24 @@ PROTOCOL=concord   # or accord
 claude plugin install $PROTOCOL@cognition-protocols --scope project
 ```
 
-## 3. Write the role definitions
+## 3. Choose the scenario
 
-Download the three [role definitions](index.md#role-descriptions) from this documentation site into
-`personas/`:
+A [scenario](../scenarios/index.md) provides the task, the specialists and their role
+definitions. Point `SCENARIO` at the scenario page, for example the
+[Coding Agent Team](../scenarios/coding-agent-team/index.md), and download its files from this
+documentation site: the task, and one role definition per specialist, into `personas/`:
 
 ```bash
-for role in microservices monolith pragmatist; do
-  curl -fsSL https://ioc-project.github.io/cognition-protocols/tutorials/coding-agent-team/roles/$role.txt \
-    -o personas/$role.md
-  grep -q '^# Role' personas/$role.md || echo "download failed for $role"
+SCENARIO=https://ioc-project.github.io/cognition-protocols/scenarios/coding-agent-team   # a scenario page
+
+curl -fsSL $SCENARIO/scenario.env -o scenario.env && source scenario.env
+curl -fsSL $SCENARIO/task.txt -o task.txt
+for role in $(echo $SPECIALISTS); do
+  curl -fsSL $SCENARIO/roles/$role.txt -o personas/$role.md
+done
+
+for f in task.txt personas/*.md; do
+  grep -qi '<html' $f && echo "download failed for $f"
 done
 ```
 
@@ -61,13 +69,17 @@ The initiator needs no file: its rules are in the kickoff message below.
 
 ### Resulting layout
 
+For the Coding Agent Team scenario:
+
 ```text
-coding-agent-team-teams/
+agent-team/
 ├── .claude/
 │   └── settings.json         # enables the protocol plugin (project scope)
+├── scenario.env              # the specialists' ids
+├── task.txt                  # the task
 ├── kickoff.md                # the initiator's prompt, written in the next step
 ├── personas/
-│   ├── microservices.md
+│   ├── microservices.md      # one role definition per specialist
 │   ├── monolith.md
 │   └── pragmatist.md
 └── run/                      # the initiator's files, including the protocol's state file
@@ -75,35 +87,35 @@ coding-agent-team-teams/
 
 ## 4. Write the kickoff message
 
-The kickoff message has three parts: the task ([the example task](index.md#the-task)), the
-protocol to use, and the team setup with the messaging rules. Wherever the protocol says to send
-a message to an agent, the initiator sends it with `SendMessage` to the teammate of that name, one
-teammate at a time, waits for the reply, and uses that reply text as the agent's answer.
+The kickoff message has three parts: the task, the protocol to use, and the team setup with the
+messaging rules. Wherever the protocol says to send a message to an agent, the initiator sends
+it with `SendMessage` to the teammate of that name, one teammate at a time, waits for the reply,
+and uses that reply text as the agent's answer.
+
+This message is the only part that depends on the scenario, and it takes everything from the
+files above: to run another scenario, change `SCENARIO` in the previous step and write it again.
 
 ```bash
-cat > kickoff.md <<EOF
-You coordinate a team of three specialists (agent ids: microservices, monolith, pragmatist).
-You cannot read files outside this directory; everything you need is below. Put every file
-you write in ./run/.
+NAMES="$(echo $SPECIALISTS | sed 's/ /, /g')"
 
-TASK FOR THE TEAM: "We are adding a new notification-delivery capability to the product (a
-notification service): users can opt in to email / push / SMS notifications for events raised
-across several existing subsystems. Your team must develop it, and the team needs one decision
-on how to build it that everyone can live with."
+cat > kickoff.md <<EOF
+You coordinate a team of specialists (agent ids: $NAMES). You cannot read files outside this
+directory; everything you need is below. Put every file you write in ./run/.
+
+TASK FOR THE TEAM: "$(cat task.txt)"
 
 Use the $PROTOCOL-initiator skill and follow it to the end, with --state ./run/<name>.json on
-every call of its script. The specialists are named exactly microservices, monolith and
-pragmatist.
+every call of its script. The specialists are named exactly $NAMES.
 
-Team setup (do this first). You are the initiator of an agent team. Create a team with three
-teammates named exactly microservices, monolith and pragmatist. Spawn each one with this
-instruction, replacing ROLE with its name: "You are the ROLE specialist of a team that must
-decide how to build a feature. Read ./personas/ROLE.md first and act as that role. Do not open
-any other file in ./personas/. Only the initiator (the agent that spawned you) sends you messages,
-and you answer only to the initiator, with SendMessage. Never message another teammate. Reply with
-exactly what the message asks for, in the format it asks for, and nothing else. Skills in
-.claude/skills/ are yours to load when a message calls for them." You, the initiator, do not read
-./personas/ at all.
+Team setup (do this first). You are the initiator of an agent team. Create a team with one
+teammate per specialist, named exactly $NAMES. Spawn each one with this instruction, replacing
+ROLE with its name: "You are the ROLE specialist of a team working on a task. Read
+./personas/ROLE.md first and act as that role. Do not open any other file in ./personas/. Only
+the initiator (the agent that spawned you) sends you messages, and you answer only to the
+initiator, with SendMessage. Never message another teammate. Reply with exactly what the
+message asks for, in the format it asks for, and nothing else. Skills in .claude/skills/ are
+yours to load when a message calls for them." You, the initiator, do not read ./personas/ at
+all.
 
 Messaging rules. Where the skill says to send a message to an agent, send it with SendMessage
 to the teammate of that name, one specialist at a time, and wait for that specialist's reply
@@ -123,8 +135,3 @@ CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude "$(cat kickoff.md)"
 
 The session stays open, so you can follow the team while the protocol runs. The initiator ends with
 the protocol's final output, and its files, including the script's state file, are in `run/`.
-
-!!! tip "Reference setup"
-    A `setup.sh` that builds this directory, the three personas and the exact kickoff prompts
-    (including a no-protocol baseline) are in the `concord/testing/agent-teams` folder of
-    `ioc-core-l9`, next to the AgentBridge setup.
