@@ -119,6 +119,10 @@ This message is the only part that depends on the scenario, and it takes everyth
 files above: to run another scenario, change `SCENARIO` in the previous step and write it again.
 
 ```bash
+source scenario.env
+PROTOCOL=concord             # the protocol you installed in step 2
+: "${SPECIALISTS:?}" "${PROTOCOL:?}"   # stop if one is empty
+
 NAMES="$(echo $SPECIALISTS | sed 's/ /, /g')"
 
 cat > kickoff.md <<EOF

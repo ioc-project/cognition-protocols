@@ -336,14 +336,17 @@ Wait until every agent prints `ready — listening on ...`.
 
 ## 8. Run the protocol
 
-Write the kickoff message, in the shell where you set `PROTOCOL` and sourced `env.sh`. Give the
-initiator the task **inline**: a registered Claude Code instance cannot read files outside its
-own directory.
+Write the kickoff message. Give the initiator the task **inline**: a registered Claude Code
+instance cannot read files outside its own directory.
 
 This message is the only part that depends on the scenario, and it takes everything from the
 files downloaded in step 1: to run another scenario, change `SCENARIO` there and write it again.
 
 ```bash
+source env.sh                # SLIM_ENDPOINT, and SPECIALISTS from scenario.env
+PROTOCOL=concord             # the protocol you installed in step 2
+: "${SPECIALISTS:?}" "${SLIM_ENDPOINT:?}" "${PROTOCOL:?}"   # stop if one is empty
+
 NAMES="$(echo $SPECIALISTS | sed 's/ /, /g')"
 
 cat > kickoff.md <<EOF
