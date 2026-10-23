@@ -37,16 +37,15 @@ These are supplied once at run start and are immutable for the run.
 | Parameter | Required | Default | Meaning |
 |---|---|---|---|
 | `agents` | yes | — | Ordered list of participant agent identifiers |
-| `satisfaction_threshold` (τ) | yes | — | Normalized score every agent must clear for SUCCESS; set at the genuine bar, not an estimated reachable value |
+| `satisfaction_threshold` (τ) | no | 0.6 | Normalized score every agent must clear for SUCCESS, in (0, 1]; set at the genuine bar, not an estimated reachable value |
 | `eps` | no | 0.05 | Minimum leximin improvement required to replace the incumbent |
 | `B` | no | 10 | Maximum repair rounds before BEST_EFFORT termination |
 | `schema` | yes | — | Candidate format specification broadcast to agents |
 | `context` | yes | — | Problem statement broadcast to agents |
 | `x_reject` | yes | — | Outcome description anchoring the bottom (worst) of each agent's scale |
 | `x_ideal` | yes | — | Outcome description anchoring the top (best) of each agent's scale |
-| `known_proposals` | no | — | Pre-existing agent positions; broadcast anonymously in Seed messages |
 
-`x_reject` and `x_ideal` must describe outcome states ("error rate returns to 0"), not proposals or mechanisms. A conforming implementation should reject configurations where either anchor shares significant vocabulary with `known_proposals` (anchor-leak guard), as this would bias the scoring scale.
+`x_reject` and `x_ideal` must describe outcome states ("error rate returns to 0"), not proposals or mechanisms, as an anchor that names an action biases the scoring scale.
 
 ---
 
@@ -125,15 +124,11 @@ Each agent proposes one candidate independently.
   <candidate_schema>format specification</candidate_schema>
   <satisfaction_threshold>0.6</satisfaction_threshold>
   <context>problem statement</context>
-  <prior_proposals>                    <!-- optional; anonymized -->
-    <proposal>prior position text</proposal>
-    …
-  </prior_proposals>
   <instructions>Propose the single candidate that best satisfies your own role …</instructions>
 </concord-propose-seed>
 ```
 
-If `prior_proposals` is present, agents should revise their position only if an argument genuinely changes their assessment — not to pre-compromise.
+Each agent proposes from its own role's perspective, without pre-compromising for other roles. The rationale should state the facts that support the candidate and the domain knowledge that argues against the other options in the schema.
 
 ### `<concord-candidate-reply>` — Agent → Initiator
 
@@ -184,7 +179,7 @@ Requests ratings for one or more candidates. After the initial seed round, only 
 </concord-score-reply>
 ```
 
-Agents must rate every candidate in the message on the same raw 0–100 scale used at anchoring.
+Agents must rate every candidate in the message on the same raw 0–100 scale used at anchoring. Reasoning and rationale text is the only channel through which an agent's private domain knowledge reaches the other participants and the repair agent, so agents should state everything relevant, including evidence against a candidate.
 
 ---
 
@@ -243,7 +238,6 @@ Terminates the run. No reply required from participants.
   </unknown>
 </concord-commit>
 ```
-
 ---
 
 ## Scoring Model
