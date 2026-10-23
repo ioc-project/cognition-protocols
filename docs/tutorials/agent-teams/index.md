@@ -6,7 +6,7 @@ To try a protocol on your own machine without a message bus, use the experimenta
 agent teams feature of Claude Code. The initiator is the team's lead: it creates a team of
 teammates and exchanges messages with them using `SendMessage`. The teammates play the
 receivers, and the protocol is unchanged.
-It works with any Cognition Protocol and any [scenario](scenarios/index.md).
+It works with any Cognition Protocol and any [example](examples/index.md).
 
 ```mermaid
 flowchart LR
@@ -67,15 +67,15 @@ PROTOCOL=concord   # or accord
 claude plugin install $PROTOCOL@cognition-protocols --scope project
 ```
 
-## 3. Choose the scenario
+## 3. Choose the example
 
-A [scenario](scenarios/index.md) provides the task, the specialists and their role
-definitions. Point `SCENARIO` at the scenario page, for example the
-[Coding Agent Team](scenarios/coding-agent-team/index.md), and download its files from this
+An [example](examples/index.md) provides the task, the specialists and their role
+definitions. Point `SCENARIO` at the example page, for example the
+[Coding Agent Team](examples/coding-agent-team/index.md), and download its files from this
 documentation site: the task, and one role definition per specialist, into `personas/`:
 
 ```bash
-SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/scenarios/coding-agent-team   # a scenario page
+SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/agent-teams/examples/coding-agent-team   # an example page
 
 curl -fsSL $SCENARIO/scenario.env -o scenario.env && source scenario.env
 curl -fsSL $SCENARIO/task.txt -o task.txt
@@ -92,7 +92,7 @@ The initiator needs no file: its rules are in the kickoff message below.
 
 ### Resulting layout
 
-For the Coding Agent Team scenario:
+For the Coding Agent Team example:
 
 ```text
 agent-team/
@@ -115,8 +115,8 @@ messaging rules. Wherever the protocol says to send a message to an agent, the i
 it with `SendMessage` to the teammate of that name, one teammate at a time, waits for the reply,
 and uses that reply text as the agent's answer.
 
-This message is the only part that depends on the scenario, and it takes everything from the
-files above: to run another scenario, change `SCENARIO` in the previous step and write it again.
+This message is the only part that depends on the example, and it takes everything from the
+files above: to run another example, change `SCENARIO` in the previous step and write it again.
 
 ```bash
 source scenario.env
