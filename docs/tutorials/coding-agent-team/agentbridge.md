@@ -225,8 +225,7 @@ cd "$ROOT" && source ./env.sh
 cd "agents/$ROLE"
 
 shadictl \
-  --allow . --allow ~/.claude --allow ~/.claude.json \
-  --allow ~/.local/bin --allow ~/.local/share/claude \
+  --allow . --read ~/.claude \
   --allow "$ROOT/.tmp" --allow /tmp --allow /private/tmp \
   --net-block --net-allow api.anthropic.com --net-allow "$SLIM_ENDPOINT" \
   -- agentbridge register --tool "$ROLE" --command "$PWD" \
@@ -234,6 +233,13 @@ shadictl \
 EOF
 chmod +x register-agent.sh
 ```
+
+!!! note "Claude Code installed in `~/.local`"
+    The sandbox grants read access to `~/.claude`, where Claude Code keeps its settings and the
+    plugin you installed in step 2. If Claude Code was installed with its native installer, the
+    `claude` binary lives in `~/.local/bin` and `~/.local/share/claude`, which the sandbox blocks
+    by default. Add `--read ~/.local/bin --read ~/.local/share/claude` to the `shadictl` command.
+    With a Homebrew install this is not needed.
 
 !!! note "Why the agents run sandboxed"
     With AgentBridge, agents are reached over the network: any member of the bus can send a
