@@ -1,8 +1,8 @@
-# Example scenario
+# Coding Agent Team
 
-<p class="eyebrow">The decision and the roles used by the tutorials</p>
+<p class="eyebrow">A team of coding agents settling an architecture decision</p>
 
-Both tutorials run a protocol on the same decision, so the roles are defined once, here.
+A team of coding agents has to settle how to build a feature. This scenario is shared by two tutorials, so the task and the roles are defined once, here: [Running a protocol over AgentBridge](agentbridge.md) and [Running a protocol with Claude Agent Teams](agent-teams.md).
 
 ## The task
 

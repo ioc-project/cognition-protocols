@@ -88,7 +88,7 @@ are precise, so the initiator skill only activates on the agent that starts the 
 the receiver skill on the agents that receive its messages.
 
 Write each role's description to `agents/<role>/CLAUDE.md`, using the text on the
-[example scenario](scenario.md) page. The initiator's file also tells it to keep every file it
+[Coding Agent Team scenario](index.md) page. The initiator's file also tells it to keep every file it
 writes under `./run/`.
 
 ## Identity and profiles
@@ -174,7 +174,7 @@ agentbridge delegate "$(cat kickoff.md)" \
   --to initiator --agent-id avatar --endpoint 127.0.0.1:47560
 ```
 
-`kickoff.md` contains [the task](scenario.md#the-task), with everything the initiator needs inline, and tells it to
+`kickoff.md` contains [the task](index.md#the-task), with everything the initiator needs inline, and tells it to
 load the `$PROTOCOL-initiator` skill (`concord-initiator` or `accord-initiator`), name the three receivers, follow the skill to the end,
 and report its final output verbatim. The initiator runs the skill's script itself. Every
 message the script asks for is a real `agentbridge delegate` call to a live receiver, so a run
