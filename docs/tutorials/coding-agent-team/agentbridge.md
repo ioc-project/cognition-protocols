@@ -39,6 +39,11 @@ flowchart LR
     I -. "final outcome" .-> you
 ```
 
+!!! note "Local setup"
+    The agents could run on different systems, each reaching the others over the network. To keep
+    this tutorial simple, everything runs on one machine, and the SLIM node listens on the
+    loopback address `127.0.0.1`.
+
 ## Prerequisites
 
 - Claude Code, with `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_AUTH_TOKEN`
