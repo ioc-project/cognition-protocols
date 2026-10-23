@@ -70,8 +70,7 @@ claude plugin install $PROTOCOL@cognition-protocols --scope project
 An [example](examples/index.md) provides the task, the specialists and their role
 definitions. Point `SCENARIO` at the example page, for example the
 [Coding Agent Team](examples/coding-agent-team/index.md), and download its files from this
-documentation site. The role definitions are not saved as files: they are collected in `ROLES`,
-and go straight into the initiator's prompt.
+documentation site.
 
 ```bash
 SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/agent-teams/examples/coding-agent-team   # an example page
