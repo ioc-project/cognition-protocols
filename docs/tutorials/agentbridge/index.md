@@ -48,9 +48,7 @@ flowchart LR
 
 ## Prerequisites
 
-- A coding harness for each agent. The tutorial uses Claude Code, with `ANTHROPIC_API_KEY`,
-  `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_AUTH_TOKEN` set in the shell that registers the agents:
-  the sandbox that wraps each agent cannot read your keychain login. The
+- A coding harness for each agent. The tutorial uses Claude Code. The
   [other harnesses](#other-harnesses) AgentBridge supports work too.
 - `agentbridge` and `shadictl` from [`agntcy/shadi`](https://github.com/agntcy/shadi), on your `PATH`. On macOS:
 
