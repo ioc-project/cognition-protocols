@@ -50,7 +50,7 @@ that the contract is constructed and used but goal success is flat against the
 baseline. Measuring dimension by dimension is what [locates that gap](accord.md#benefit)
 rather than only reporting it, which an outcome-only comparison would not do.
 
-## Full results
+## Full methodology and results
 
 - [ACCORD](accord.md)
 - [CONCORD](concord.md)
