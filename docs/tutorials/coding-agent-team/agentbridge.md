@@ -164,7 +164,7 @@ native SLIM node, as shown in [step 7](#7-start-the-mesh).
 
 ## 6. Define the identities and the environment
 
-AgentBridge authenticates members of the bus with DIDs, not shared secrets. `env.sh` derives
+AgentBridge authenticates members of the bus with DIDs. `env.sh` derives
 one DID per participant from a fixed seed with `shadictl derive-agent-identity`, and exports
 everything the agents and your terminal need. The participants are:
 
