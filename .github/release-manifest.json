@@ -1,6 +1,6 @@
 {
-    "protocols/concord/skills/concord-initiator": "0.0.0",
-    "protocols/concord/skills/concord-receiver": "0.0.0",
+    "protocols/concord/skills/concord-initiator": "0.1.0",
+    "protocols/concord/skills/concord-receiver": "0.1.0",
     "protocols/accord/skills/accord-initiator": "0.1.0",
     "protocols/accord/skills/accord-receiver": "0.1.0"
 }
