@@ -1,5 +1,7 @@
 ---
 icon: material/puzzle-outline
+hide:
+  - toc
 ---
 
 # Hiddenbench

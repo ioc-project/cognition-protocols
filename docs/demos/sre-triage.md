@@ -1,5 +1,7 @@
 ---
 icon: material/alert-circle-outline
+hide:
+  - toc
 ---
 
 # SRE Triage

@@ -1,5 +1,7 @@
 ---
 icon: material/tag-outline
+hide:
+  - toc
 ---
 
 # Customer renewal discount

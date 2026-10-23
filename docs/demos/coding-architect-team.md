@@ -1,5 +1,7 @@
 ---
 icon: material/code-braces
+hide:
+  - toc
 ---
 
 # Coding Architect Team
