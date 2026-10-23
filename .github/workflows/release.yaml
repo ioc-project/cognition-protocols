@@ -132,5 +132,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/ai-catalog.json
           git diff --cached --quiet && exit 0
-          git commit -s -m "chore: update ai-catalog.json for new skill versions [skip ci]"
+          git commit -s -m "chore: update ai-catalog.json for new skill versions"
           git push
