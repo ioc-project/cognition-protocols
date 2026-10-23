@@ -9,14 +9,14 @@ follow a tutorial with an example of your own.
 
 <div class="grid cards" markdown>
 
--   **[Running a protocol with Claude Agent Teams](agent-teams/index.md)**
+-   **[Running Cognition Protocols with Claude Agent Teams](agent-teams/index.md)**
 
     ---
 
     The quickest way to try a protocol: an initiator and its teammates in your local Claude
     Code, with no message bus. [Examples](agent-teams/examples/index.md)
 
--   **[Running a protocol over AgentBridge](agentbridge/index.md)**
+-   **[Running Cognition Protocols over AgentBridge](agentbridge/index.md)**
 
     ---
 
@@ -24,7 +24,7 @@ follow a tutorial with an example of your own.
     each sandboxed. Agents can live in separate processes, containers or harnesses.
     [Examples](agentbridge/examples/index.md)
 
--   **[Running a protocol with MAS Lab](mas-lab/index.md)**
+-   **[Running Cognition Protocols with MAS Lab](mas-lab/index.md)**
 
     ---
 

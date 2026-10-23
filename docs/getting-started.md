@@ -20,7 +20,7 @@ The quickest way to try a protocol: an initiator and its teammates in a single C
 session, with no message bus. The initiator spawns teammates directly and exchanges messages
 with them using `SendMessage`. Works on a single machine with no network between agents.
 
-[**Tutorial: running a protocol with Claude Agent Teams**](tutorials/agent-teams/index.md)
+[**Tutorial: running Cognition Protocols with Claude Agent Teams**](tutorials/agent-teams/index.md)
 
 ## AgentBridge
 
@@ -28,14 +28,14 @@ Independent agent processes joined by AgentBridge (A2A, here over a SLIM message
 sandboxed. Agents can live in separate processes, containers or harnesses — and use different
 runtimes — and communicate over the network.
 
-[**Tutorial: running a protocol over AgentBridge**](tutorials/agentbridge/index.md)
+[**Tutorial: running Cognition Protocols over AgentBridge**](tutorials/agentbridge/index.md)
 
 ## MAS Lab
 
 Agents defined as YAML manifests (`kind: Agent`, `kind: MAS`) and run with `mas-ctl`. No
 coding harness required: add the protocol skills to the agents' manifests and run the MAS.
 
-[**Tutorial: running a protocol with MAS Lab**](tutorials/mas-lab/index.md)
+[**Tutorial: running Cognition Protocols with MAS Lab**](tutorials/mas-lab/index.md)
 
 ## Other coding harnesses and Claw-like agents
 
