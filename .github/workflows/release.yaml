@@ -61,13 +61,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ matrix.pr.headBranchName }}
+          fetch-depth: 0
 
       - name: Add new skill versions to ai-catalog.json
         env:
           REPO: ${{ github.repository }}
+          BASE_BRANCH: ${{ matrix.pr.baseBranchName }}
         run: |
           python3 - <<'PYEOF'
-          import json, re, os, yaml
+          import json, re, os, subprocess, yaml
           from pathlib import Path
           from datetime import datetime, timezone
 
@@ -76,12 +78,19 @@ jobs:
           repo = os.environ["REPO"]
 
           manifest = json.loads(manifest_path.read_text())
+          base_manifest = json.loads(subprocess.check_output(
+              ["git", "show", f"origin/{os.environ['BASE_BRANCH']}:{manifest_path}"], text=True
+          ))
           catalog = json.loads(catalog_path.read_text())
 
           existing = {(e["identifier"], e.get("version")) for e in catalog["entries"]}
           changed = False
 
           for skill_path, version in manifest.items():
+              # only skills released by this PR, i.e. bumped relative to the base branch
+              if base_manifest.get(skill_path) == version:
+                  continue
+
               name = Path(skill_path).name
               identifier = f"urn:air:ioc-project:skill:{name}"
 
