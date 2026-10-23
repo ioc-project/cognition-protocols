@@ -1,0 +1,506 @@
+{
+  "ok": true,
+  "phase": "frame",
+  "data": {
+    "atoms": [
+      {
+        "id": "s1",
+        "text": "Notification delivery must be its own deployable service: standalone container, own web server, own datastore, own CI/CD pipeline, reached only through a versioned API contract (gRPC or REST).",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s2",
+        "text": "Event sources (the existing subsystems) publish events to an event bus or message queue using versioned schemas. The notification service consumes them. No in-process calls and no shared in-process code with the monolith.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s3",
+        "text": "Adding a new event source or channel (email, push, SMS) must not require changes to the monolith or its deploy pipeline. Each channel is added behind a clean versioned interface.",
+        "type": "objective",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s4",
+        "text": "Delivery volume must scale independently of the rest of the product. Consumers and channel workers scale horizontally and apart from the monolith.",
+        "type": "objective",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s5",
+        "text": "Changes to notification logic must not need review or approval from the monolith team. The service needs its own approval and rollback path. A gated, versioned release step inside the shared pipeline is acceptable only if its approval and rollback do not route through the monolith team.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s6",
+        "text": "The notification service owns user opt-in preferences per channel and per event type in its own datastore. Other systems read or change them only through its API.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s7",
+        "text": "Reusing monolith auth and plumbing is acceptable only through a clean network API, not through shared in-process code.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s8",
+        "text": "A slower initial rollout is acceptable if it buys real service independence.",
+        "type": "assumption",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s9",
+        "text": "Service-boundary failures (timeouts, tripped circuit breakers, queue backlog from a partition) must not break the monolith's event-raising path. Publishing must be asynchronous and decoupled, with retries, dead-letter handling and idempotent delivery.",
+        "type": "sub_goal",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s10",
+        "text": "Event schema versioning and compatibility rules must be defined and agreed with each existing subsystem that raises events, using a documented contract for each.",
+        "type": "sub_goal",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s11",
+        "text": "Deployment of the notification service is a container image rollout (registry push, pod roll), about 10 minutes, with independent rollback.",
+        "type": "assumption",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s12",
+        "text": "Deliverable: a decision recommending a standalone notification service, with the event-bus contract, API contract, data ownership, scaling model and deploy/rollback path.",
+        "type": "deliverable",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s13",
+        "text": "Deliverable: a trade-off statement covering the costs this design accepts: slower rollout, operational overhead, eventual consistency, and the risk of queue backlog or partition outages.",
+        "type": "deliverable",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s14",
+        "text": "The monolith team has capacity to emit events to the bus, but not to own or review notification logic.",
+        "type": "assumption",
+        "support": 1,
+        "agents": [
+          "microservices"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s15",
+        "text": "Objective: deliver opt-in email/push/SMS notification delivery for events raised by several existing subsystems, with one build decision the whole team can accept.",
+        "type": "objective",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s16",
+        "text": "Constraint: on-call, paging and operational burden for notification logic must stay with teams and rotations that already exist. No one gets paged for a component they did not build and cannot roll back.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s17",
+        "text": "Constraint: if a dedicated team owns routine review and release, the monolith team's own on-call must still have an emergency lever (kill-switch or rollback) that works without that team.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s18",
+        "text": "Constraint: no new standalone infrastructure (new datastore, deploy pipeline, or alerting/on-call system) unless a scaling reason exists. Reuse infrastructure the team already runs.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s19",
+        "text": "Constraint: ship within the current quarter, using only tooling and patterns already running in production.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s20",
+        "text": "Constraint: minimize moving parts (services, queues, datastores) a future on-call engineer must reason about.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s21",
+        "text": "Constraint: in monolith terms, a 'service' is an in-process class/module such as a NotificationService. Subsystems call it with a local method call, not over the network.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s22",
+        "text": "Constraint: in monolith terms, a 'deployment' is a release of the whole monolith (full test suite, shared DB schema migration, blue-green release, about 45 minutes). A 'outage' is an unhandled exception or memory leak that takes down the whole app because everything shares one runtime.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s23",
+        "text": "Assumption: current scale does not justify a standalone service. A separate service would be premature operational overhead unless the proposal shows the operational surface stays small (same infra, same rotation, nothing new to learn).",
+        "type": "assumption",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s24",
+        "text": "Assumption: notification-delivery failures (provider errors, retries, backlog) can be contained inside the monolith without a new queue or datastore, for example by reusing the existing job runner and DB. This needs verification.",
+        "type": "assumption",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s25",
+        "text": "Assumption: the monolith shares one runtime, so a bug or memory leak in notification code can take down every subsystem. This blast radius needs a mitigation such as isolation, timeouts, bulkheads, or a feature flag.",
+        "type": "assumption",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s26",
+        "text": "Assumption: a 45-minute whole-app deployment is the release path for notification changes if the code lives in the monolith. This couples notification fixes to the monolith release cadence.",
+        "type": "assumption",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s27",
+        "text": "Sub-goal: define a clean internal interface (e.g. NotificationService with a narrow publish/enqueue API) so subsystems depend on the interface, not on delivery internals. This keeps a later service split possible without new infrastructure now.",
+        "type": "sub_goal",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s28",
+        "text": "Sub-goal: provide a kill-switch or rollback lever (per channel and global) that the existing on-call can pull without help from another team.",
+        "type": "sub_goal",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s29",
+        "text": "Sub-goal: reuse existing infrastructure for opt-in preferences storage, delivery retries and the email/push/SMS provider integrations. Name each reused piece and flag anything that would be new.",
+        "type": "sub_goal",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s30",
+        "text": "Sub-goal: use existing monitoring and alerting for notification health (delivery failures, queue depth, provider errors) so no new alerting system is needed.",
+        "type": "sub_goal",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s31",
+        "text": "Deliverable: one recommended build approach, scored against the four criteria (ops burden stays put, no new infra, ships this quarter, minimal moving parts). It states what is reused, what is new, and the on-call impact.",
+        "type": "deliverable",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s32",
+        "text": "Deliverable: an explicit list of trade-offs the monolith advocate accepts (internal interface, ceding routine review with an emergency lever) and does not accept (new infra, new pager duties before a scaling reason).",
+        "type": "deliverable",
+        "support": 1,
+        "agents": [
+          "monolith"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s33",
+        "text": "Objective: pick one build approach for the notification-delivery capability (email/push/SMS opt-in, events from several existing subsystems) that every team can live with after launch.",
+        "type": "objective",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s34",
+        "text": "Rate each candidate on post-launch burden: on-call load, time-to-ship, clear ownership, and cost, not on monolith-vs-standalone preference.",
+        "type": "objective",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s35",
+        "text": "Constraint: minimize new alert sources, dashboards, and runbooks. Each one added is a standing on-call cost.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s36",
+        "text": "Constraint: must ship within the current quarter using the team's existing tooling, with no new infra to stand up first.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s37",
+        "text": "Constraint: exactly one named team owns the capability after launch and gets paged. A design with no clear owner is rejected.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s38",
+        "text": "Constraint: no new always-on infrastructure (new datastore, message queue, or deploy pipeline) unless its ongoing cost is justified at current notification volume.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s39",
+        "text": "Constraint: prefer managed cloud primitives and third-party SaaS (e.g. AWS SNS, SendGrid, Twilio) for delivery, so the team writes no infrastructure code and runs no runtime of its own for them.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s40",
+        "text": "Constraint: deployment should be a Terraform apply wiring a managed event bus to external delivery APIs, with no servers to patch and no containers to build.",
+        "type": "constraint",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s41",
+        "text": "Assumption: current notification volume is low enough that always-on infrastructure is hard to justify. This needs confirming with real volume numbers.",
+        "type": "assumption",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s42",
+        "text": "Assumption: the failure modes to plan for are vendor outages, misconfigured IAM permissions, and alert avalanches. The last needs aggressive rate limiting and per-user or per-event throttling.",
+        "type": "assumption",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s43",
+        "text": "Assumption: the several existing subsystems that raise events each have their own owners. Event contracts between them and the notification capability need an explicit owner.",
+        "type": "assumption",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s44",
+        "text": "Sub-goal: identify the single owning team and the paging path for delivery failures, vendor outages, and IAM misconfiguration.",
+        "type": "sub_goal",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s45",
+        "text": "Sub-goal: count the new alerts, dashboards, and runbooks each candidate adds, and list what existing ones it can reuse.",
+        "type": "sub_goal",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s46",
+        "text": "Sub-goal: define rate limiting and dedupe to contain alert avalanches and user-facing notification floods.",
+        "type": "sub_goal",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s47",
+        "text": "Sub-goal: define where opt-in preferences are stored. Prefer an existing datastore over a new one.",
+        "type": "sub_goal",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s48",
+        "text": "Deliverable: one recommended build decision with a short on-call, time-to-ship, ownership, and cost scorecard for each candidate.",
+        "type": "deliverable",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      },
+      {
+        "id": "s49",
+        "text": "Deliverable: a runbook outline and an alert list for the chosen design, kept to the minimum.",
+        "type": "deliverable",
+        "support": 1,
+        "agents": [
+          "pragmatist"
+        ],
+        "flagged_singleton": true
+      }
+    ],
+    "new_this_round": 49,
+    "round": 1,
+    "stop": false,
+    "coverage": {
+      "good_turing_missing_mass": 1.0,
+      "chao1": 1225.0,
+      "coverage": 0.0
+    }
+  }
+}

@@ -90,6 +90,7 @@ nav:
           - protocols/concord/index.md
           - Configuration: protocols/concord/configuration.md
           - Specification: protocols/concord/specification.md
+      - See protocols in action: protocols/replay.md
   - Tutorials:
       - tutorials/index.md
       - Claude Agent Teams:

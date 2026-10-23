@@ -1,0 +1,847 @@
+{
+  "specialists": [
+    "microservices",
+    "monolith",
+    "pragmatist"
+  ],
+  "key_terms": [
+    "service",
+    "deployment",
+    "outage"
+  ],
+  "action_tool": "decide_notification_architecture",
+  "roster": [
+    {
+      "identity": "claude-haiku-4.5",
+      "roles": [
+        "microservices-advocate",
+        "architecture-evaluator"
+      ],
+      "capabilities": [
+        "evaluate notification-service architecture against microservices criteria",
+        "assess monolith coupling and service-isolation tradeoffs",
+        "analyze event-bus and message-queue patterns",
+        "review deploy-risk and organizational-review independence",
+        "identify clean versioned interfaces for event sources and channels",
+        "evaluate independent scaling requirements"
+      ],
+      "accessScopes": [
+        "project codebase at /home/user/repos/ioc-core-l9-main/concord/testing/agentbridge/agents/microservices",
+        "git history and code inspection",
+        "CLAUDE.md role definition and evaluation criteria",
+        "existing monolith architecture patterns"
+      ],
+      "holdingsSummary": "Microservices criteria for notification-delivery: isolated service with own datastore/release cadence, clean versioned event interfaces, independent scaling, and deploy/review independence from monolith\u2014not in-process coupling."
+    },
+    {
+      "identity": "monolith-advocate-primary",
+      "roles": [
+        "notification-architecture-reviewer",
+        "operational-burden-assessor",
+        "infrastructure-reuse-advocate"
+      ],
+      "capabilities": [
+        "evaluate notification-delivery design proposals against operational criteria",
+        "assess infrastructure footprint and on-call surface",
+        "identify shipping blockers and timeline risks",
+        "audit team operational burden and escalation paths"
+      ],
+      "accessScopes": [
+        "codebase structure and monolith architecture",
+        "existing infrastructure and deployment pipelines",
+        "team on-call rotations and operational patterns",
+        "current subsystems raising events"
+      ],
+      "holdingsSummary": "Deep operational perspective on monolith architecture, team on-call burden, and infrastructure reuse; skeptical of standalone services without proven scaling need; can evaluate whether notification design keeps operational surface small and ships within current patterns."
+    },
+    {
+      "identity": "claude-haiku-4-5-pragmatist",
+      "roles": [
+        "pragmatist",
+        "on-call-burden-evaluator",
+        "cost-owner"
+      ],
+      "capabilities": [
+        "on-call-burden-assessment",
+        "cost-analysis",
+        "ownership-clarity-review",
+        "time-to-ship-estimation",
+        "monolith-vs-microservice-tradeoff-analysis"
+      ],
+      "accessScopes": [
+        "codebase",
+        "project-documentation",
+        "architecture-decisions",
+        "team-structure",
+        "infrastructure-code"
+      ],
+      "holdingsSummary": "I evaluate notification-service designs purely on operational reality: on-call burden, time-to-ship feasibility, clear ownership, and infrastructure cost justification\u2014no architectural bias."
+    }
+  ],
+  "obs": [
+    {
+      "text": "Notification service must be independently deployable with its own datastore and release cadence, decoupled from monolith deploy pipeline and risk",
+      "agent": "microservices-advocate",
+      "kind": "objective"
+    },
+    {
+      "text": "Notification logic must not require monolith team review or approval for changes",
+      "agent": "microservices-advocate",
+      "kind": "objective"
+    },
+    {
+      "text": "Notification delivery volume must be independently scalable from rest of product",
+      "agent": "microservices-advocate",
+      "kind": "objective"
+    },
+    {
+      "text": "Event sources must integrate via clean versioned interface (event bus or message queue), never in-process function calls",
+      "agent": "microservices-advocate",
+      "kind": "constraint"
+    },
+    {
+      "text": "Notification service must not live inside monolith module or share in-process code with it",
+      "agent": "microservices-advocate",
+      "kind": "constraint"
+    },
+    {
+      "text": "Event sources span multiple existing subsystems, requiring coordinated but asynchronous integration",
+      "agent": "microservices-advocate",
+      "kind": "assumption"
+    },
+    {
+      "text": "Notification service owns its own user preference and opt-in datastore, not shared monolith tables",
+      "agent": "microservices-advocate",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Event interface contract (schema, versioning, delivery guarantees) between subsystems and notification service",
+      "agent": "microservices-advocate",
+      "kind": "deliverable"
+    },
+    {
+      "text": "Notification service deployment architecture with own approval and rollback path independent of monolith team",
+      "agent": "microservices-advocate",
+      "kind": "deliverable"
+    },
+    {
+      "text": "Notification system must remain on existing team's on-call rotation with no new paging surfaces",
+      "agent": "monolith-advocate",
+      "kind": "constraint"
+    },
+    {
+      "text": "Cannot introduce new standalone infrastructure (datastore, deploy pipeline, alerting system) the team must operate",
+      "agent": "monolith-advocate",
+      "kind": "constraint"
+    },
+    {
+      "text": "Must ship within current quarter (Q4 2026) using existing tooling and patterns already in production",
+      "agent": "monolith-advocate",
+      "kind": "constraint"
+    },
+    {
+      "text": "Existing team must retain emergency kill-switch or rollback capability independent of owning service's deployment cycle",
+      "agent": "monolith-advocate",
+      "kind": "constraint"
+    },
+    {
+      "text": "Integrate user opt-in and preferences for email/push/SMS notifications across event subsystems",
+      "agent": "monolith-advocate",
+      "kind": "objective"
+    },
+    {
+      "text": "Minimize number of moving parts (services, queues, datastores) on-call engineer must reason about",
+      "agent": "monolith-advocate",
+      "kind": "objective"
+    },
+    {
+      "text": "Code can live in monolith or separate repo if operational surface (infra, on-call, monitoring) remains unchanged",
+      "agent": "monolith-advocate",
+      "kind": "assumption"
+    },
+    {
+      "text": "Event subsystems can be instrumented to trigger notification logic without major refactoring",
+      "agent": "monolith-advocate",
+      "kind": "assumption"
+    },
+    {
+      "text": "Design clean internal interface to allow potential future service extraction without requiring split now",
+      "agent": "monolith-advocate",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Operational runbook, alerting, and monitoring integrated into existing team's toolchain",
+      "agent": "monolith-advocate",
+      "kind": "deliverable"
+    },
+    {
+      "text": "Deliver user opt-in notification delivery across email, push, and SMS channels integrated with multiple existing subsystems",
+      "agent": "pragmatist",
+      "kind": "objective"
+    },
+    {
+      "text": "Solution must ship within current quarter using existing team tooling",
+      "agent": "pragmatist",
+      "kind": "constraint"
+    },
+    {
+      "text": "One team owns the notification system post-launch with no ambiguity",
+      "agent": "pragmatist",
+      "kind": "constraint"
+    },
+    {
+      "text": "Any new always-on infrastructure must be justified by current or projected event volume and SLA requirements",
+      "agent": "pragmatist",
+      "kind": "constraint"
+    },
+    {
+      "text": "On-call burden (alert sources, dashboards, runbooks) is a primary decision criterion",
+      "agent": "pragmatist",
+      "kind": "objective"
+    },
+    {
+      "text": "Identify whether monolith module or standalone service minimizes operational cost and on-call load",
+      "agent": "pragmatist",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Define operational runbook and monitoring strategy before architecture lock-in",
+      "agent": "pragmatist",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Architecture decision document with clear owner, cost model, and on-call plan",
+      "agent": "pragmatist",
+      "kind": "deliverable"
+    },
+    {
+      "text": "Multi-region failover and geographic distribution are out of scope; notification system operates within single region using existing team's production tooling",
+      "agent": "microservices-advocate",
+      "kind": "assumption"
+    },
+    {
+      "text": "Notification service instance coordination and consensus (if required for stateful delivery or deduplication) must not introduce new orchestration infrastructure beyond existing queue technology",
+      "agent": "microservices-advocate",
+      "kind": "constraint"
+    },
+    {
+      "text": "Event sourcing from multiple subsystems requires idempotent notification logic and deduplication strategy to tolerate queue redelivery and retry across service restarts",
+      "agent": "microservices-advocate",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Decision gate: evaluate whether monolith module with versioned event interface achieves required decoupling and independent scalability with lower on-call burden than standalone service",
+      "agent": "microservices-advocate",
+      "kind": "objective"
+    },
+    {
+      "text": "Organizational preference for independent deployment is not a technical necessity\u2014must validate against actual event volume and SLA requirements before architecture lock-in",
+      "agent": "monolith-advocate",
+      "kind": "assumption"
+    },
+    {
+      "text": "Separate datastore isolation is justified only if operational complexity actually decreases, not as architectural purity",
+      "agent": "monolith-advocate",
+      "kind": "constraint"
+    },
+    {
+      "text": "Validate that independent deployment cadence reduces on-call burden rather than increasing coordination complexity between monolith and notification service",
+      "agent": "monolith-advocate",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Compare cost, MTTR, and on-call scope: integrated notification module with clean internal interface vs. separate service deployment\u2014before locking architecture",
+      "agent": "monolith-advocate",
+      "kind": "deliverable"
+    },
+    {
+      "text": "Explore feature-flag approach shipping notification logic inside monolith this quarter with clean internal boundaries, enabling service extraction later without rewrite",
+      "agent": "monolith-advocate",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Message queue/event bus integration between subsystems is technical requirement, not organizational preference\u2014quantify synchronization overhead vs. in-process coupling",
+      "agent": "monolith-advocate",
+      "kind": "assumption"
+    },
+    {
+      "text": "If separate service is chosen: deployment coordination cadence must not require new runbooks, alerts, or paging flows beyond what team currently operates",
+      "agent": "monolith-advocate",
+      "kind": "constraint"
+    },
+    {
+      "text": "Quantify on-call alert volume budget and implement alert fatigue prevention mechanisms",
+      "agent": "pragmatist",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Define SLA and recovery time targets for each critical failure mode (queue overflow, external API failure, event source outage)",
+      "agent": "pragmatist",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Establish cost model per notification with explicit volume thresholds for cost escalation review",
+      "agent": "pragmatist",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Implement configuration safety controls and rate limits to prevent user notification storms or on-call incidents",
+      "agent": "pragmatist",
+      "kind": "constraint"
+    },
+    {
+      "text": "Map notification delivery SLA dependencies on each event source's reliability and identify acceptable reliability gaps",
+      "agent": "pragmatist",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Define data consistency and rollback semantics for in-flight and partially-delivered notifications",
+      "agent": "pragmatist",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Create pre-launch validation scenario checklist with failure mode testing and go/no-go criteria for Q4 shipping",
+      "agent": "pragmatist",
+      "kind": "deliverable"
+    },
+    {
+      "text": "Assess instrumentation complexity per event source and validate Q4 shipping timeline within existing team capacity",
+      "agent": "pragmatist",
+      "kind": "sub_goal"
+    },
+    {
+      "text": "Develop operational runbook content and training handoff acceptance criteria for existing team to operate post-launch",
+      "agent": "pragmatist",
+      "kind": "deliverable"
+    }
+  ],
+  "frame": [
+    {
+      "id": "s1",
+      "text": "Notification service must be independently deployable with its own datastore and release cadence, decoupled from monolith deploy pipeline and risk",
+      "type": "objective",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s2",
+      "text": "Notification logic must not require monolith team review or approval for changes",
+      "type": "objective",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s3",
+      "text": "Notification delivery volume must be independently scalable from rest of product",
+      "type": "objective",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s4",
+      "text": "Event sources must integrate via clean versioned interface (event bus or message queue), never in-process function calls",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s5",
+      "text": "Notification service must not live inside monolith module or share in-process code with it",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s6",
+      "text": "Event sources span multiple existing subsystems, requiring coordinated but asynchronous integration",
+      "type": "assumption",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s7",
+      "text": "Notification service owns its own user preference and opt-in datastore, not shared monolith tables",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s8",
+      "text": "Event interface contract (schema, versioning, delivery guarantees) between subsystems and notification service",
+      "type": "deliverable",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s9",
+      "text": "Notification service deployment architecture with own approval and rollback path independent of monolith team",
+      "type": "deliverable",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s10",
+      "text": "Notification system must remain on existing team's on-call rotation with no new paging surfaces",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s11",
+      "text": "Cannot introduce new standalone infrastructure (datastore, deploy pipeline, alerting system) the team must operate",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s12",
+      "text": "Must ship within current quarter (Q4 2026) using existing tooling and patterns already in production",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s13",
+      "text": "Existing team must retain emergency kill-switch or rollback capability independent of owning service's deployment cycle",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s14",
+      "text": "Integrate user opt-in and preferences for email/push/SMS notifications across event subsystems",
+      "type": "objective",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s15",
+      "text": "Minimize number of moving parts (services, queues, datastores) on-call engineer must reason about",
+      "type": "objective",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s16",
+      "text": "Code can live in monolith or separate repo if operational surface (infra, on-call, monitoring) remains unchanged",
+      "type": "assumption",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s17",
+      "text": "Event subsystems can be instrumented to trigger notification logic without major refactoring",
+      "type": "assumption",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s18",
+      "text": "Design clean internal interface to allow potential future service extraction without requiring split now",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s19",
+      "text": "Operational runbook, alerting, and monitoring integrated into existing team's toolchain",
+      "type": "deliverable",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s20",
+      "text": "Deliver user opt-in notification delivery across email, push, and SMS channels integrated with multiple existing subsystems",
+      "type": "objective",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s21",
+      "text": "Solution must ship within current quarter using existing team tooling",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s22",
+      "text": "One team owns the notification system post-launch with no ambiguity",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s23",
+      "text": "Any new always-on infrastructure must be justified by current or projected event volume and SLA requirements",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s24",
+      "text": "On-call burden (alert sources, dashboards, runbooks) is a primary decision criterion",
+      "type": "objective",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s25",
+      "text": "Identify whether monolith module or standalone service minimizes operational cost and on-call load",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s26",
+      "text": "Define operational runbook and monitoring strategy before architecture lock-in",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s27",
+      "text": "Architecture decision document with clear owner, cost model, and on-call plan",
+      "type": "deliverable",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s28",
+      "text": "Multi-region failover and geographic distribution are out of scope; notification system operates within single region using existing team's production tooling",
+      "type": "assumption",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s29",
+      "text": "Notification service instance coordination and consensus (if required for stateful delivery or deduplication) must not introduce new orchestration infrastructure beyond existing queue technology",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s30",
+      "text": "Event sourcing from multiple subsystems requires idempotent notification logic and deduplication strategy to tolerate queue redelivery and retry across service restarts",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s31",
+      "text": "Decision gate: evaluate whether monolith module with versioned event interface achieves required decoupling and independent scalability with lower on-call burden than standalone service",
+      "type": "objective",
+      "support": 1,
+      "agents": [
+        "microservices-advocate"
+      ]
+    },
+    {
+      "id": "s32",
+      "text": "Organizational preference for independent deployment is not a technical necessity\u2014must validate against actual event volume and SLA requirements before architecture lock-in",
+      "type": "assumption",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s33",
+      "text": "Separate datastore isolation is justified only if operational complexity actually decreases, not as architectural purity",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s34",
+      "text": "Validate that independent deployment cadence reduces on-call burden rather than increasing coordination complexity between monolith and notification service",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s35",
+      "text": "Compare cost, MTTR, and on-call scope: integrated notification module with clean internal interface vs. separate service deployment\u2014before locking architecture",
+      "type": "deliverable",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s36",
+      "text": "Explore feature-flag approach shipping notification logic inside monolith this quarter with clean internal boundaries, enabling service extraction later without rewrite",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s37",
+      "text": "Message queue/event bus integration between subsystems is technical requirement, not organizational preference\u2014quantify synchronization overhead vs. in-process coupling",
+      "type": "assumption",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s38",
+      "text": "If separate service is chosen: deployment coordination cadence must not require new runbooks, alerts, or paging flows beyond what team currently operates",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "monolith-advocate"
+      ]
+    },
+    {
+      "id": "s39",
+      "text": "Quantify on-call alert volume budget and implement alert fatigue prevention mechanisms",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s40",
+      "text": "Define SLA and recovery time targets for each critical failure mode (queue overflow, external API failure, event source outage)",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s41",
+      "text": "Establish cost model per notification with explicit volume thresholds for cost escalation review",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s42",
+      "text": "Implement configuration safety controls and rate limits to prevent user notification storms or on-call incidents",
+      "type": "constraint",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s43",
+      "text": "Map notification delivery SLA dependencies on each event source's reliability and identify acceptable reliability gaps",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s44",
+      "text": "Define data consistency and rollback semantics for in-flight and partially-delivered notifications",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s45",
+      "text": "Create pre-launch validation scenario checklist with failure mode testing and go/no-go criteria for Q4 shipping",
+      "type": "deliverable",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s46",
+      "text": "Assess instrumentation complexity per event source and validate Q4 shipping timeline within existing team capacity",
+      "type": "sub_goal",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    },
+    {
+      "id": "s47",
+      "text": "Develop operational runbook content and training handoff acceptance criteria for existing team to operate post-launch",
+      "type": "deliverable",
+      "support": 1,
+      "agents": [
+        "pragmatist"
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "term": "service",
+      "status": "flagged",
+      "variants": [
+        {
+          "agent": "claude-haiku-4-5-20251001",
+          "definition": "isolated network node: standalone container with own web server, database, CI/CD pipeline, reached via API contract (gRPC/REST)"
+        },
+        {
+          "agent": "claude-haiku-4-5-20251001",
+          "definition": "class, module, or package inside monolith codebase; local in-process method call"
+        },
+        {
+          "agent": "pragmatist",
+          "definition": "managed cloud primitive or third-party SaaS (AWS SNS, SendGrid, Twilio) \u2014 no infrastructure code, no on-call"
+        }
+      ]
+    },
+    {
+      "term": "deployment",
+      "status": "flagged",
+      "variants": [
+        {
+          "agent": "claude-haiku-4-5-20251001",
+          "definition": "container image rollout (push to registry, roll pod) \u2014 ~10 minutes"
+        },
+        {
+          "agent": "claude-haiku-4-5-20251001",
+          "definition": "release of whole monolith: full test suite, database schema migration, blue-green release of entire app; ~45 minutes"
+        },
+        {
+          "agent": "pragmatist",
+          "definition": "Terraform apply wiring managed event bus to external API \u2014 no server patching, no container build"
+        }
+      ]
+    },
+    {
+      "term": "outage",
+      "status": "flagged",
+      "variants": [
+        {
+          "agent": "claude-haiku-4-5-20251001",
+          "definition": "network timeout, circuit breaker trip, or message queue backlog from inter-service partition"
+        },
+        {
+          "agent": "claude-haiku-4-5-20251001",
+          "definition": "unhandled exception or memory leak taking down entire application due to shared runtime"
+        },
+        {
+          "agent": "pragmatist",
+          "definition": "external vendor outage, misconfigured IAM permission, or alert avalanche needing rate limiting"
+        }
+      ]
+    }
+  ],
+  "owned": {
+    "haiku-verify-notifications": [
+      "Team capacity and timeline for Q4 2026 implementation",
+      "Existing infrastructure and tooling already operational",
+      "Event source capabilities and reliability SLAs",
+      "Customer expectations for notification delivery guarantees"
+    ],
+    "claude-haiku-4-5": [
+      "Current event volume and growth projections across the event sources"
+    ],
+    "pragmatist": [
+      "On-call rotation capacity and constraints"
+    ]
+  },
+  "uncovered": [
+    "External vendor options (SNS, SendGrid, Twilio) and their integration cost"
+  ],
+  "checks": [
+    {
+      "atom": "Architecture decouples monolith risk and",
+      "criterion": "Architecture decouples monolith risk and owns delivery",
+      "assigned_to": "haiku-verify-notifications",
+      "covers": [
+        "Achieve decoupling from monolith deployment risk if architectural separation chosen",
+        "Establish clear ownership and accountability for post-launch operations"
+      ]
+    },
+    {
+      "atom": "Delivery SLA meets customer expectations",
+      "criterion": "Delivery SLA meets customer expectations within constraints",
+      "assigned_to": "claude-haiku-4-5",
+      "covers": [
+        "Notify users reliably according to event source capabilities and delivery SLA",
+        "Ship notification capability within Q4 2026"
+      ]
+    },
+    {
+      "atom": "On-call and ops burden stays with existi",
+      "criterion": "On-call and ops burden stays with existing team",
+      "assigned_to": "claude-haiku-4-5",
+      "covers": [
+        "Minimize on-call burden and operational complexity",
+        "Achieve decoupling from monolith deployment risk if architectural separation chosen"
+      ]
+    }
+  ],
+  "defects": [],
+  "frame_rounds": 2
+}

@@ -1,0 +1,24 @@
+<concord-certificate>
+  <state rounds="4" budget="8" satisfaction-threshold="0.6"/>
+  <outcome>SUCCESS</outcome>
+  <winner id="r4-microservices" proposer="microservices" round="4">
+<![CDATA[name: owned-notifier-with-publish-side-killswitch
+description: One notifications container in its own repo and image, instantiated from the platform golden-path template on the existing container platform, existing SNS to SQS bus, and its own logical DB and credentials on the existing managed cluster (no new engine, no new CI system). Subsystems publish versioned, schema-validated events asynchronously to the bus and never call the notifier synchronously, so a notifier outage is only a queue backing up (retention plus DLQ), never a monolith timeout. The monolith ships one tiny publisher helper that emits events and honors a per-event-type publish flag, so monolith on-call can stop all notification traffic from its own side with its existing flag tooling, with no access to or knowledge of notifier internals. Channels are adapters behind a versioned ChannelSender interface in this one service, so adding Slack touches exactly one place; a fourth source is one schema registration plus one topic subscription. User and auth data come only via the monolith network API.
+ownership: A named notifications owner group owns the container, schema, approval gate, rollback path, and the single alert set (queue age, DLQ depth, provider error rate) with vendor runbooks. Alerts page only the notifier owners via the platform rotation. The monolith on-call is never paged and is not a reviewer of notification logic; its only duty is its own publish flag.
+rollout: Ship this quarter from the golden-path pipeline template with its own approval and rollback (about 10 minute image deployment), email first from one low-risk source behind a flag, then push and SMS, then other subsystems, on a small fixed footprint that autoscales on queue depth.]]>
+  </winner>
+  <final-scores>
+    <score agent="microservices" value="0.98" status="above-threshold"/>
+    <score agent="monolith" value="0.72" status="above-threshold"/>
+    <score agent="pragmatist" value="0.82" status="above-threshold"/>
+  </final-scores>
+  <certified>true</certified>
+  <log>
+    <round t="0" incumbent="seed-pragmatist" floor="0.45" accepted="true" why="initial incumbent"/>
+    <round t="1" incumbent="seed-pragmatist" floor="0.45" accepted="false" why="incumbent still best"/>
+    <round t="2" incumbent="seed-pragmatist" floor="0.45" accepted="false" why="incumbent still best"/>
+    <round t="3" incumbent="seed-pragmatist" floor="0.45" accepted="false" why="incumbent still best"/>
+    <round t="4" incumbent="r4-microservices" floor="0.72" accepted="true" why="leximin position 0 gained &gt;= 0.05"/>
+  </log>
+  <cost rounds="4" rounds-cap="8" candidates="7" candidates-bound="11" evaluations="21" evaluations-bound="33"/>
+</concord-certificate>

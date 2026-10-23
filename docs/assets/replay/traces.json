@@ -1,0 +1,85 @@
+{
+ "traces": [
+  {
+   "label": "AgentBridge \u00b7 Architecture decision \u00b7 Baseline (no protocol) \u00b7 Sonnet 5.5",
+   "dir": "traces/2026-10-07-1117/",
+   "has": [
+    "exchange.jsonl",
+    "logs/initiator.log",
+    "logs/run-pipeline.log"
+   ]
+  },
+  {
+   "label": "AgentBridge \u00b7 Architecture decision \u00b7 Baseline (no protocol) \u00b7 Haiku 4.5",
+   "dir": "traces/2026-10-07-1430/",
+   "has": [
+    "exchange.jsonl",
+    "logs/initiator.log",
+    "logs/run-pipeline.log"
+   ]
+  },
+  {
+   "label": "AgentBridge \u00b7 Architecture decision \u00b7 Baseline + decision (no protocol) \u00b7 Sonnet 5.5",
+   "dir": "traces/2026-10-07-1220/",
+   "has": [
+    "exchange.jsonl",
+    "logs/initiator.log",
+    "logs/run-pipeline.log"
+   ]
+  },
+  {
+   "label": "AgentBridge \u00b7 Architecture decision \u00b7 Baseline + decision (no protocol) \u00b7 Haiku 4.5",
+   "dir": "traces/2026-10-07-1431/",
+   "has": [
+    "exchange.jsonl",
+    "logs/initiator.log",
+    "logs/run-pipeline.log"
+   ]
+  },
+  {
+   "label": "AgentBridge \u00b7 Architecture decision \u00b7 CONCORD \u00b7 Sonnet 5.5",
+   "dir": "traces/2026-10-07-1124/",
+   "has": [
+    "exchange.jsonl",
+    "state/certificate.txt",
+    "logs/initiator.log",
+    "logs/run-pipeline.log"
+   ]
+  },
+  {
+   "label": "AgentBridge \u00b7 Architecture decision \u00b7 CONCORD \u00b7 Haiku 4.5",
+   "dir": "traces/2026-10-07-1436/",
+   "has": [
+    "exchange.jsonl",
+    "logs/initiator.log",
+    "logs/run-pipeline.log"
+   ]
+  },
+  {
+   "label": "AgentBridge \u00b7 Architecture decision \u00b7 ACCORD + CONCORD \u00b7 Sonnet 5.5",
+   "dir": "traces/2026-10-07-0938/",
+   "has": [
+    "exchange.jsonl",
+    "state/accord-state.json",
+    "state/intent_contract.json",
+    "state/certificate.txt",
+    "logs/initiator.log",
+    "logs/run-pipeline.log",
+    "state/frame1_out.json",
+    "state/frame2_out.json",
+    "state/frame3_out.json"
+   ]
+  },
+  {
+   "label": "AgentBridge \u00b7 Architecture decision \u00b7 ACCORD + CONCORD \u00b7 Haiku 4.5",
+   "dir": "traces/2026-10-07-1445/",
+   "has": [
+    "exchange.jsonl",
+    "state/accord-state.json",
+    "state/intent_contract.json",
+    "logs/initiator.log",
+    "logs/run-pipeline.log"
+   ]
+  }
+ ]
+}

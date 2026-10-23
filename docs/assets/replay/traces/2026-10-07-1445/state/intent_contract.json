@@ -1,0 +1,67 @@
+{
+  "status": "INTENT-LOCKED",
+  "roster": [
+    {
+      "identity": "claude-haiku-4.5",
+      "roles": ["microservices-advocate", "architecture-evaluator"],
+      "capabilities": ["evaluate notification-service architecture against microservices criteria", "assess monolith coupling and service-isolation tradeoffs", "analyze event-bus and message-queue patterns", "review deploy-risk and organizational-review independence", "identify clean versioned interfaces for event sources and channels", "evaluate independent scaling requirements"],
+      "accessScopes": ["project codebase at /home/user/repos/ioc-core-l9-main/concord/testing/agentbridge/agents/microservices", "git history and code inspection", "CLAUDE.md role definition and evaluation criteria", "existing monolith architecture patterns"],
+      "holdingsSummary": "Microservices criteria for notification-delivery: isolated service with own datastore/release cadence, clean versioned event interfaces, independent scaling, and deploy/review independence from monolith—not in-process coupling."
+    },
+    {
+      "identity": "monolith-advocate-primary",
+      "roles": ["notification-architecture-reviewer", "operational-burden-assessor", "infrastructure-reuse-advocate"],
+      "capabilities": ["evaluate notification-delivery design proposals against operational criteria", "assess infrastructure footprint and on-call surface", "identify shipping blockers and timeline risks", "audit team operational burden and escalation paths"],
+      "accessScopes": ["codebase structure and monolith architecture", "existing infrastructure and deployment pipelines", "team on-call rotations and operational patterns", "current subsystems raising events"],
+      "holdingsSummary": "Deep operational perspective on monolith architecture, team on-call burden, and infrastructure reuse; skeptical of standalone services without proven scaling need; can evaluate whether notification design keeps operational surface small and ships within current patterns."
+    },
+    {
+      "identity": "claude-haiku-4-5-pragmatist",
+      "roles": ["pragmatist", "on-call-burden-evaluator", "cost-owner"],
+      "capabilities": ["on-call-burden-assessment", "cost-analysis", "ownership-clarity-review", "time-to-ship-estimation", "monolith-vs-microservice-tradeoff-analysis"],
+      "accessScopes": ["codebase", "project-documentation", "architecture-decisions", "team-structure", "infrastructure-code"],
+      "holdingsSummary": "I evaluate notification-service designs purely on operational reality: on-call burden, time-to-ship feasibility, clear ownership, and infrastructure cost justification—no architectural bias."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "service",
+      "status": "flagged",
+      "variants": [
+        {"agent": "microservices", "definition": "isolated network node: standalone container with own web server, database, CI/CD pipeline, reached via API contract (gRPC/REST)"},
+        {"agent": "monolith", "definition": "class, module, or package inside monolith codebase; local in-process method call"},
+        {"agent": "pragmatist", "definition": "managed cloud primitive or third-party SaaS (AWS SNS, SendGrid, Twilio) — no infrastructure code, no on-call"}
+      ]
+    },
+    {
+      "term": "deployment",
+      "status": "flagged",
+      "variants": [
+        {"agent": "microservices", "definition": "container image rollout (push to registry, roll pod) — ~10 minutes"},
+        {"agent": "monolith", "definition": "release of whole monolith: full test suite, database schema migration, blue-green release of entire app; ~45 minutes"},
+        {"agent": "pragmatist", "definition": "Terraform apply wiring managed event bus to external API — no server patching, no container build"}
+      ]
+    },
+    {
+      "term": "outage",
+      "status": "flagged",
+      "variants": [
+        {"agent": "microservices", "definition": "network timeout, circuit breaker trip, or message queue backlog from inter-service partition"},
+        {"agent": "monolith", "definition": "unhandled exception or memory leak taking down entire application due to shared runtime"},
+        {"agent": "pragmatist", "definition": "external vendor outage, misconfigured IAM permission, or alert avalanche needing rate limiting"}
+      ]
+    }
+  ],
+  "acceptance_checks": [
+    {"criterion": "Architecture decouples monolith risk and owns delivery", "assigned_to": "microservices"},
+    {"criterion": "Delivery SLA meets customer expectations within constraints", "assigned_to": "monolith"},
+    {"criterion": "On-call and ops burden stays with existing team", "assigned_to": "monolith"}
+  ],
+  "flagged_items": [
+    "fragile_frame: all 47 atoms are unverified singletons",
+    "ambiguous_term: service",
+    "ambiguous_term: deployment",
+    "ambiguous_term: outage",
+    "uncovered_atom: External vendor options (SNS, SendGrid, Twilio) and their integration cost"
+  ]
+}

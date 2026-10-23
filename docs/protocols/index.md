@@ -22,3 +22,5 @@
     identifies the agent whose floor was not met and the size of the shortfall.
 
 </div>
+
+Want to see them work? [Replay recorded runs](replay.md) without running anything.
