@@ -11,10 +11,11 @@ message bus. It is used purely as process launcher and transport: the protocol i
 and the initiator uses `agentbridge delegate` as its delegation primitive, where an in-process
 orchestrator would use its sub-agent tool.
 
-Any Cognition Protocol can run this way. The example below uses four independent Claude Code
-processes: one initiator and three receivers with different roles (`microservices`, `monolith`,
-`pragmatist`) that must reach a decision on how to build a notification service. It uses the
-SLIM transport; the node and identity steps are specific to it.
+Any Cognition Protocol can run this way, on any [scenario](../scenarios/index.md). The tutorial
+uses independent Claude Code processes: one initiator and one receiver per specialist of the
+scenario. The diagram shows the [Coding Agent Team](../scenarios/coding-agent-team/index.md)
+scenario, with three specialists. It uses the SLIM transport; the node and identity steps are
+specific to it.
 
 ```mermaid
 flowchart LR
@@ -60,17 +61,26 @@ flowchart LR
     The commands above are for macOS. On another system, follow the installation instructions
     in the [`agntcy/shadi`](https://github.com/agntcy/shadi) repository instead.
 
-## 1. Create the project directory
+## 1. Choose the scenario
 
-Everything below happens in one directory. Create it, with a directory per agent, one for the
-AgentBridge profiles and one for the certificates of the SLIM node:
+A [scenario](../scenarios/index.md) provides the task, the specialists and their role
+definitions. Point `SCENARIO` at the scenario page, for example the
+[Coding Agent Team](../scenarios/coding-agent-team/index.md), and create the project directory:
 
 ```bash
-mkdir -p ~/coding-agent-team && cd ~/coding-agent-team
-mkdir -p agents/{initiator,microservices,monolith,pragmatist} profiles .tmp
+SCENARIO=https://ioc-project.github.io/cognition-protocols/scenarios/coding-agent-team   # a scenario page
+
+mkdir -p ~/agent-team && cd ~/agent-team
+curl -fsSL $SCENARIO/scenario.env -o scenario.env && source scenario.env
+curl -fsSL $SCENARIO/task.txt -o task.txt
+
+mkdir -p profiles .tmp
+for role in initiator $(echo $SPECIALISTS); do mkdir -p agents/$role; done
 ```
 
-Run every command from this directory unless stated otherwise.
+`scenario.env` defines `SPECIALISTS`, the ids of the scenario's agents, and the identities used
+in [step 6](#6-define-the-identities-and-the-environment). Run every command from this
+directory unless stated otherwise.
 
 ## 2. Install the protocol in each agent
 
@@ -82,7 +92,7 @@ in each agent's directory with project scope, so that it is enabled for that age
 claude plugin marketplace add ioc-project/cognition-protocols
 
 PROTOCOL=concord   # or accord
-for role in initiator microservices monolith pragmatist; do
+for role in initiator $(echo $SPECIALISTS); do
   (cd agents/$role && claude plugin install $PROTOCOL@cognition-protocols --scope project)
 done
 ```
@@ -93,26 +103,43 @@ the receiver skill on the agents that receive its messages.
 
 ## 3. Write the role definitions
 
-Each agent's `CLAUDE.md` holds its [role definition](index.md#role-descriptions). Download the
-four role files from this documentation site and save each as `CLAUDE.md` in the agent's directory:
+Each agent's `CLAUDE.md` holds its role definition. The initiator's file only sets working rules,
+and is the same in every scenario:
 
 ```bash
-for role in initiator microservices monolith pragmatist; do
-  curl -fsSL https://ioc-project.github.io/cognition-protocols/tutorials/coding-agent-team/roles/$role.txt \
-    -o agents/$role/CLAUDE.md
-  grep -q '^# Role' agents/$role/CLAUDE.md || echo "download failed for $role"
+cat > agents/initiator/CLAUDE.md <<'EOF'
+# Role: initiator
+
+- Keep every file you write under `./run/` (create it with `mkdir -p run`), never in the
+  top level of this directory.
+- The task is given to you inline in the message that starts the run. Work from that
+  message; do not look for it in a file.
+- When the protocol ends, report its final output verbatim, not your own summary of it.
+EOF
+```
+
+Download one role definition per specialist from the scenario, and save each as `CLAUDE.md` in
+the agent's directory:
+
+```bash
+for role in $(echo $SPECIALISTS); do
+  curl -fsSL $SCENARIO/roles/$role.txt -o agents/$role/CLAUDE.md
+done
+
+for f in task.txt agents/*/CLAUDE.md; do
+  grep -qi '<html' $f && echo "download failed for $f"
 done
 ```
 
 ## 4. Create the AgentBridge profiles
 
 Each role needs an AgentBridge profile (`--tool <role>`) that launches Claude Code in print mode
-and sets the agent id. The four profiles differ only in their `id`, so generate them in a loop.
+and sets the agent id. The profiles differ only in their `id`, so generate them in a loop.
 The in-process `Task` tool is disallowed, so that agents can only work with each other over the
 network:
 
 ```bash
-for role in initiator microservices monolith pragmatist; do
+for role in initiator $(echo $SPECIALISTS); do
   cat > profiles/$role.json <<EOF
 {
   "id": "$role",
@@ -165,16 +192,16 @@ native SLIM node, as shown in [step 7](#7-start-the-mesh).
 
 ## 6. Define the identities and the environment
 
-AgentBridge authenticates members of the bus with DIDs. `env.sh` lists the DID of every
-participant and exports everything the agents and your terminal need. The DIDs are derived
-deterministically from a fixed seed and the participant's name, so the list below is valid for the
-seed in the file. The participants are:
+AgentBridge authenticates members of the bus with DIDs. The DIDs are derived deterministically
+from a fixed seed and the participant's name, and the scenario's `scenario.env` already exports
+them (`SLIM_HUMAN_SEED` and `SLIM_MEMBER_DIDS`). `env.sh` exports everything else the agents and
+your terminal need. The participants are:
 
 | Identity | Used for |
 |---|---|
 | `avatar` | You: the kickoff `agentbridge delegate` call from your terminal |
 | `driver` | The initiator's own outbound calls to the receivers (the bus allows one active session per identity, so it cannot reuse `avatar` or `initiator`) |
-| `initiator`, `microservices`, `monolith`, `pragmatist` | The four registered agents |
+| `initiator` and the scenario's specialists | The registered agents |
 
 ```bash
 cat > env.sh <<'EOF'
@@ -187,23 +214,14 @@ export SHADI_TMP_DIR="$PWD/.tmp"
 export SLIM_TLS_CERT="$PWD/.tmp/shadi-slim-mtls/client-avatar.crt"
 export SLIM_TLS_KEY="$PWD/.tmp/shadi-slim-mtls/client-avatar.key"
 
-# DID authentication. The seed must be the same in every shell that sources this file.
+# DID authentication. The scenario provides the seed and the member DIDs.
 export SHADI_SLIM_AUTH=did
-export SLIM_HUMAN_SEED=coding-agent-team-seed
-# avatar, driver, initiator, microservices, monolith, pragmatist (in this order)
-export SLIM_MEMBER_DIDS="\
-did:key:z6MkrwDycXhXu1aDTh1kMgWse1WASaVBafYqexFbgDpBv9rj,\
-did:key:z6Mkh2XWaEodAMoBACwrFy3BodoeV4MVkVJyKPRE8BXJyWrf,\
-did:key:z6MkvV4eUQnckWh9VUpiRkZjzfpcCKwk7noJMxsPhVUqdqc1,\
-did:key:z6MkksXGC6CKifw4Y3BT8YMqFmmVLR9GSocFs1xx8n68pVHA,\
-did:key:z6MkkH363q9zKAxaHkbns6UCjZep8SBXWFfpeMxzfhJy2FsT,\
-did:key:z6MkoEeRE61KwHVpJp1G2UbsegLTjhdYYSGNo47rnGhUnvw1"
+source "$PWD/scenario.env"
 EOF
 ```
 
-To use another seed, derive the new DIDs with
-`shadictl derive-agent-identity --source seed --in <seed file> -n <name>`, one per participant.
-On macOS, this also stores the derived keys in the keychain.
+For your own scenario, derive the identities as described in
+[Adding a scenario](../scenarios/index.md#adding-a-scenario).
 
 Next, a script that registers one agent. It runs `agentbridge register` for a role under
 `shadictl`, from the agent's own directory:
@@ -264,13 +282,15 @@ chmod +x register-agent.sh
 
 ### Resulting layout
 
-The project directory now looks like this:
+For the Coding Agent Team scenario, the project directory now looks like this:
 
 ```text
-coding-agent-team/
+agent-team/
+├── scenario.env              # the specialists' ids and identities
+├── task.txt                  # the task
 ├── env.sh                    # endpoint, certificates, DID identities
 ├── register-agent.sh         # registers one agent under the sandbox
-├── profiles/                 # AgentBridge profiles
+├── profiles/                 # AgentBridge profiles, one per agent
 │   ├── initiator.json
 │   ├── microservices.json
 │   ├── monolith.json
@@ -307,31 +327,30 @@ cannot read your keychain login.
 source env.sh
 shadictl slim start-node
 
-# terminals 2 to 5: one per agent
+# one more terminal per agent: the initiator and each specialist of the scenario
 ./register-agent.sh initiator
-./register-agent.sh microservices
-./register-agent.sh monolith
-./register-agent.sh pragmatist
+./register-agent.sh <specialist id>   # for each id in $SPECIALISTS
 ```
 
 Wait until every agent prints `ready — listening on ...`.
 
 ## 8. Run the protocol
 
-Write the kickoff message, in the shell where you set `PROTOCOL` and sourced `env.sh`. Give the initiator the task **inline**: a registered Claude Code
-instance cannot read files outside its own directory. The task is the one on the
-[Coding Agent Team scenario](index.md#the-task) page.
+Write the kickoff message, in the shell where you set `PROTOCOL` and sourced `env.sh`. Give the
+initiator the task **inline**: a registered Claude Code instance cannot read files outside its
+own directory.
+
+This message is the only part that depends on the scenario, and it takes everything from the
+files downloaded in step 1: to run another scenario, change `SCENARIO` there and write it again.
 
 ```bash
-cat > kickoff.md <<EOF
-You coordinate a team of three specialists (agent ids: microservices, monolith, pragmatist).
-You cannot read files outside this directory; everything you need is below. Put every file
-you write in ./run/.
+NAMES="$(echo $SPECIALISTS | sed 's/ /, /g')"
 
-TASK FOR THE TEAM: "We are adding a new notification-delivery capability to the product (a
-notification service): users can opt in to email / push / SMS notifications for events raised
-across several existing subsystems. Your team must develop it, and the team needs one decision
-on how to build it that everyone can live with."
+cat > kickoff.md <<EOF
+You coordinate a team of specialists (agent ids: $NAMES). You cannot read files outside this
+directory; everything you need is below. Put every file you write in ./run/.
+
+TASK FOR THE TEAM: "$(cat task.txt)"
 
 Load the $PROTOCOL-initiator skill and follow it to the end. Reach each specialist with
 'agentbridge delegate "<message>" --to <agent id> --agent-id driver --endpoint $SLIM_ENDPOINT'.

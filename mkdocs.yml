@@ -92,10 +92,11 @@ nav:
           - Specification: protocols/concord/specification.md
   - Tutorials:
       - tutorials/index.md
-      - Coding Agent Team:
-          - tutorials/coding-agent-team/index.md
-          - Claude Agent Teams: tutorials/coding-agent-team/agent-teams.md
-          - AgentBridge: tutorials/coding-agent-team/agentbridge.md
+      - Claude Agent Teams: tutorials/agent-teams.md
+      - AgentBridge: tutorials/agentbridge.md
+  - Scenarios:
+      - scenarios/index.md
+      - Coding Agent Team: scenarios/coding-agent-team/index.md
   - Evaluation:
       - evaluation/index.md
       - ACCORD: evaluation/accord.md
