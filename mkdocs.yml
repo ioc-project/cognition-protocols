@@ -92,10 +92,18 @@ nav:
           - Specification: protocols/concord/specification.md
   - Tutorials:
       - tutorials/index.md
-      - Coding Agent Team:
-          - tutorials/coding-agent-team/index.md
-          - Claude Agent Teams: tutorials/coding-agent-team/agent-teams.md
-          - AgentBridge: tutorials/coding-agent-team/agentbridge.md
+      - Claude Agent Teams:
+          - tutorials/agent-teams/index.md
+          - Examples:
+              - tutorials/agent-teams/examples/index.md
+              - Coding Agent Team: tutorials/agent-teams/examples/coding-agent-team/index.md
+      - AgentBridge:
+          - tutorials/agentbridge/index.md
+          - Examples:
+              - tutorials/agentbridge/examples/index.md
+              - Coding Agent Team: tutorials/agentbridge/examples/coding-agent-team/index.md
+      - MAS Lab:
+          - tutorials/mas-lab/index.md
   - Evaluation:
       - evaluation/index.md
       - ACCORD: evaluation/accord.md
