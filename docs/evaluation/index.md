@@ -50,7 +50,10 @@ rather than only reporting it, which an outcome-only comparison would not do.
 
 Certified and correct are reported separately wherever a ground truth exists.
 
-Full results: [ACCORD](accord.md) · [CONCORD](concord.md)
+## Full results
+
+- [ACCORD](accord.md)
+- [CONCORD](concord.md)
 
 ## Source
 
