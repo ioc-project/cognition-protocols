@@ -93,8 +93,8 @@ nav:
           - Specification: protocols/concord/specification.md
   - Tutorials:
       - tutorials/index.md
-      - CONCORD over AgentBridge: tutorials/agentbridge.md
-      - CONCORD with agent teams: tutorials/agent-teams.md
+      - AgentBridge: tutorials/agentbridge.md
+      - Agent Teams: tutorials/agent-teams.md
   - Evaluation:
       - evaluation/index.md
       - ACCORD: evaluation/accord.md

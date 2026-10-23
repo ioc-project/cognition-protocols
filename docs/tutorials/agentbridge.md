@@ -1,4 +1,4 @@
-# Tutorial: CONCORD over AgentBridge
+# Tutorial: running a protocol over AgentBridge
 
 [AgentBridge](https://github.com/agntcy/shadi) (`agentbridge` and `shadictl`, from the
 `agntcy/shadi` repository) registers each coding harness instance as a live agent and lets
@@ -8,10 +8,10 @@ message bus. It is used purely as process launcher and transport: the protocol i
 and the initiator uses `agentbridge delegate` as its delegation primitive, where an in-process
 orchestrator would use its sub-agent tool.
 
-The example below runs CONCORD across four independent Claude Code processes: one
-initiator and three receivers with conflicting criteria (`microservices`, `monolith`,
-`pragmatist`) that must agree on how to build a notification service. It uses the SLIM
-transport; the node and identity steps are specific to it.
+Any Cognition Protocol can run this way. The example below uses four independent Claude Code
+processes: one initiator and three receivers with different roles (`microservices`, `monolith`,
+`pragmatist`) that must reach a decision on how to build a notification service. It uses the
+SLIM transport; the node and identity steps are specific to it.
 
 ```mermaid
 flowchart LR
@@ -19,21 +19,21 @@ flowchart LR
 
     subgraph init ["Initiator"]
         direction TB
-        I["<b>initiator</b><br/>concord-initiator"]
+        I["<b>initiator</b><br/>&lt;protocol&gt;-initiator"]
     end
 
-    subgraph recv ["Receivers · concord-receiver + persona"]
+    subgraph recv ["Receivers · &lt;protocol&gt;-receiver + persona"]
         direction TB
         M["<b>microservices</b>"]
         O["<b>monolith</b>"]
         P["<b>pragmatist</b>"]
     end
 
-    you -- "scenario + kickoff" --> I
-    I -- "ANCHOR · PROPOSE · SCORE · REPAIR" --> M
+    you -- "task + kickoff" --> I
+    I -- "protocol messages" --> M
     I --> O
     I --> P
-    I -. "certificate" .-> you
+    I -. "final outcome" .-> you
 ```
 
 ## Prerequisites
@@ -58,21 +58,22 @@ flowchart LR
 
 `claude` discovers skills and personas from its working directory, so each agent gets its own
 directory. The skills come from [Getting the skills](../protocols/getting-started.md#getting-the-skills); the persona is a
-`CLAUDE.md` that holds the criteria that agent rates candidates against.
+`CLAUDE.md` that describes the role that agent plays.
 
 ```bash
 for role in initiator microservices monolith pragmatist; do
   mkdir -p agents/$role/.claude/skills
 done
 
-SKILLS=~/repos/cognition-protocols/protocols/concord/skills
-ln -s $SKILLS/concord-initiator agents/initiator/.claude/skills/
+PROTOCOL=<protocol>   # name of a directory under protocols/
+SKILLS=~/repos/cognition-protocols/protocols/$PROTOCOL/skills
+ln -s $SKILLS/$PROTOCOL-initiator agents/initiator/.claude/skills/
 for role in microservices monolith pragmatist; do
-  ln -s $SKILLS/concord-receiver agents/$role/.claude/skills/
+  ln -s $SKILLS/$PROTOCOL-receiver agents/$role/.claude/skills/
 done
 ```
 
-Write each role's criteria in `agents/<role>/CLAUDE.md`. The initiator's `CLAUDE.md` should
+Write each role's description in `agents/<role>/CLAUDE.md`. The initiator's `CLAUDE.md` should
 tell it to keep every file it writes under `./run/`.
 
 ## Identity and profiles
@@ -85,7 +86,7 @@ Include these identities:
 | Identity | Used for |
 |---|---|
 | `avatar` | You: the kickoff `agentbridge delegate` call from your terminal |
-| `concord-driver` | The initiator's own outbound calls to the receivers (the bus allows one active session per identity, so it cannot reuse `avatar` or `initiator`) |
+| `driver` | The initiator's own outbound calls to the receivers (the bus allows one active session per identity, so it cannot reuse `avatar` or `initiator`) |
 | `initiator`, `microservices`, `monolith`, `pragmatist` | The four registered agents |
 
 Each role also needs an AgentBridge profile (`--tool <role>`) that launches `claude` in
@@ -140,7 +141,7 @@ slimctl slim start -c slim-node.yaml
 # 2. the four agents, each from its own directory, inside the sandbox
 cd agents/initiator && shadictl \
   --allow . --allow ~/.claude --allow ~/.claude.json \
-  --read /path/to/protocols/concord/skills \
+  --read /path/to/protocols/$PROTOCOL/skills \
   --net-block --net-allow api.anthropic.com --net-allow 127.0.0.1:47560 \
   -- agentbridge register --tool initiator \
   --command "$PWD" --slim-endpoint 127.0.0.1:47560
@@ -159,17 +160,15 @@ agentbridge delegate "$(cat kickoff.md)" \
   --to initiator --agent-id avatar --endpoint 127.0.0.1:47560
 ```
 
-`kickoff.md` contains the scenario (the candidate schema and the anchors for the decision), and
-tells the initiator to load `concord-initiator`, initialise it with
-`--agents microservices,monolith,pragmatist`, and drive it to a certificate, reporting the
-certificate verbatim. The initiator runs the skill's script itself. Every message the script
-asks for is a real `agentbridge delegate` call to a live receiver, so a run takes minutes
-rather than seconds: the call budget printed by `init` is `3N + (N+1)·B` (up to 41 calls at
-`N=3` agents and `B=8` rounds).
+`kickoff.md` contains the task, with everything the initiator needs inline, and tells it to
+load the `<protocol>-initiator` skill, name the three receivers, follow the skill to the end,
+and report its final output verbatim. The initiator runs the skill's script itself. Every
+message the script asks for is a real `agentbridge delegate` call to a live receiver, so a run
+takes minutes rather than seconds. The protocol's own call budget, where it declares one, is
+printed when the initiator starts the run.
 
-The initiator's state file in `./run/` holds the authoritative certificate: `COMMIT` with
-every agent at or above the satisfaction threshold, or `BEST_EFFORT` with the agent that
-fell short.
+The initiator's state file in `./run/` holds the authoritative record of the run, in the
+format defined by the protocol.
 
 !!! tip "Reference setup"
     The ready-made scripts for all of the above (certificate generation, one script per
