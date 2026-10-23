@@ -25,6 +25,17 @@ deal at a price nobody would pay.
 
     [:octicons-download-24: Agreeing on Purpose, Deciding Under Conflict — extended version (PDF, 26 pages)](../protocols/blogs/accord-concord-extended.pdf)
 
+## How this is measured per protocol
+
+| Dimension | ACCORD | CONCORD |
+|---|---|---|
+| Convergence / compliance | A valid locked contract was produced | Every protocol step executed, all candidates scored, run reached a decision |
+| Correctness | Precision — locked terms that were genuinely contested; utilization — locked terms actually used afterwards | Outcome satisfaction per agent; score consistency against each agent's own stated reasoning |
+| Cost | Tokens against the matched baseline, init plus carried context | Tokens and cost by phase and by token kind |
+| Benefit | Goal success against expected remediation; glossary uptake; influence on reasoning | Worst-off agent's satisfaction; repair rounds actually run |
+
+Certified and correct are reported separately wherever a ground truth exists.
+
 ## Results
 
 | Dimension | ACCORD | CONCORD |
@@ -38,17 +49,6 @@ CONCORD meets all four. ACCORD meets three; the benefit dimension is unresolved,
 that the contract is constructed and used but goal success is flat against the
 baseline. Measuring dimension by dimension is what [locates that gap](accord.md#benefit)
 rather than only reporting it, which an outcome-only comparison would not do.
-
-## What each run reports
-
-| Dimension | ACCORD | CONCORD |
-|---|---|---|
-| Convergence / compliance | A valid locked contract was produced | Every protocol step executed, all candidates scored, run reached a decision |
-| Correctness | Precision — locked terms that were genuinely contested; utilization — locked terms actually used afterwards | Outcome satisfaction per agent; score consistency against each agent's own stated reasoning |
-| Cost | Tokens against the matched baseline, init plus carried context | Tokens and cost by phase and by token kind |
-| Benefit | Goal success against expected remediation; glossary uptake; influence on reasoning | Worst-off agent's satisfaction; repair rounds actually run |
-
-Certified and correct are reported separately wherever a ground truth exists.
 
 ## Full results
 
