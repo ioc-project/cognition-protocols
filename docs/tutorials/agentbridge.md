@@ -46,13 +46,29 @@ flowchart LR
 - Claude Code, with `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_AUTH_TOKEN`
   set in the shell that registers the agents. The sandbox that wraps each agent cannot
   read your keychain login.
-- `agentbridge` and `shadictl` from [`agntcy/shadi`](https://github.com/agntcy/shadi), and
-  `slimctl` for the SLIM node (SLIM transport only), on your `PATH`:
+- `agentbridge` and `shadictl` from [`agntcy/shadi`](https://github.com/agntcy/shadi), on your `PATH`:
 
     ```bash
     brew tap agntcy/shadi https://github.com/agntcy/shadi.git
     brew install shadictl agentbridge
     ```
+
+- For the SLIM transport only, `slimctl` from [`agntcy/slim`](https://github.com/agntcy/slim),
+  which starts the SLIM node. Download the archive for your platform from the
+  [releases page](https://github.com/agntcy/slim/releases?q=slimctl-v&expanded=true) and put
+  the binary on your `PATH`. On an Apple Silicon Mac:
+
+    ```bash
+    TAG=$(gh release list --repo agntcy/slim --limit 50 --json tagName --jq '[.[].tagName | select(startswith("slimctl-v"))][0]')
+    gh release download "$TAG" --repo agntcy/slim --pattern 'slimctl-darwin-arm64.tar.gz'
+    tar -xzf slimctl-darwin-arm64.tar.gz
+    install slimctl ~/.local/bin/
+    slimctl version
+    ```
+
+    Other platforms use the matching archive (`slimctl-darwin-amd64`, `slimctl-linux-amd64-gnu`,
+    `slimctl-linux-arm64-gnu`, ...). See the [SLIM documentation](https://docs.agntcy.org/slim/slim-howto/)
+    for the other ways to install and run SLIM.
 
 ## One directory per agent
 
