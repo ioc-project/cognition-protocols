@@ -24,4 +24,11 @@ follow a tutorial with an example of your own.
     each sandboxed. Agents can live in separate processes, containers or harnesses.
     [Examples](agentbridge/examples/index.md)
 
+-   **[Running a protocol with MAS Lab](mas-lab/index.md)**
+
+    ---
+
+    Agents defined as YAML manifests (`kind: Agent`, `kind: MAS`) and run with `mas-ctl`.
+    No coding harness required.
+
 </div>
