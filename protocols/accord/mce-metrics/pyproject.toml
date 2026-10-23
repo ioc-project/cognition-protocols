@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ioc-accord-mce-metrics"
+version = "0.1.0"
+description = "ACCORD convergence/correctness/benefit evaluations and ACCORD token cost as MCE metric plugins."
+requires-python = ">=3.13"
+license = { text = "Apache-2.0" }
+dependencies = ["oxp-mce-core"]
+
+[project.scripts]
+accord-convergence-trace = "accord_mce_metrics.trace_cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+# The LLM judge (the benefit metrics): MCE's LLM service needs the openai client, which oxp-mce-core does not install.
+judge = ["openai"]
+
+# One entry per metric: MCE instantiates each class with no arguments.
+[project.entry-points."metrics_computation_engine.plugins"]
+AccordConverged = "accord_mce_metrics.convergence:AccordConverged"
+AccordPhaseCoverage = "accord_mce_metrics.convergence:AccordPhaseCoverage"
+AccordCanonicalValid = "accord_mce_metrics.convergence:AccordCanonicalValid"
+AccordRelayedValid = "accord_mce_metrics.convergence:AccordRelayedValid"
+AccordFabricatedLock = "accord_mce_metrics.convergence:AccordFabricatedLock"
+AccordContractWarnings = "accord_mce_metrics.convergence:AccordContractWarnings"
+AccordLockPrecision = "accord_mce_metrics.correctness:AccordLockPrecision"
+AccordLockRecall = "accord_mce_metrics.correctness:AccordLockRecall"
+AccordTermUtilization = "accord_mce_metrics.correctness:AccordTermUtilization"
+AccordLockedTerms = "accord_mce_metrics.correctness:AccordLockedTerms"
+AccordOverSelected = "accord_mce_metrics.correctness:AccordOverSelected"
+AccordUnderSelected = "accord_mce_metrics.correctness:AccordUnderSelected"
+AccordProtocolPromptTokens = "accord_mce_metrics.protocolcost:AccordProtocolPromptTokens"
+AccordProtocolCachedTokens = "accord_mce_metrics.protocolcost:AccordProtocolCachedTokens"
+AccordProtocolFreshTokens = "accord_mce_metrics.protocolcost:AccordProtocolFreshTokens"
+AccordProtocolCompletionTokens = "accord_mce_metrics.protocolcost:AccordProtocolCompletionTokens"
+AccordContractOverheadTokens = "accord_mce_metrics.protocolcost:AccordContractOverheadTokens"
+AccordContractOverheadPerCall = "accord_mce_metrics.protocolcost:AccordContractOverheadPerCall"
+AccordContractOverheadShare = "accord_mce_metrics.protocolcost:AccordContractOverheadShare"
+AccordGlossaryUptake = "accord_mce_metrics.benefit:AccordGlossaryUptake"
+AccordGlossaryInfluence = "accord_mce_metrics.benefit:AccordGlossaryInfluence"
+
+[tool.uv.sources]
+oxp-mce-core = { git = "https://github.com/outshift-open/observe-and-explain-platform.git", subdirectory = "backend/mce/mce-core", branch = "main" }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/accord_mce_metrics"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -49,7 +49,7 @@ ConcordProtocolShare = "concord_mce_metrics.protocolcost:ConcordProtocolShare"
 
 [tool.uv.sources]
 # Temporary, until we release the scope pypi packages
-oxp-mce-core = { git = "ssh://git@github.com/outshift-open/observe-and-explain-platform.git", subdirectory = "backend/mce/mce-core", branch = "main" }
+oxp-mce-core = { git = "https://github.com/outshift-open/observe-and-explain-platform.git", subdirectory = "backend/mce/mce-core", branch = "main" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/concord_mce_metrics"]
