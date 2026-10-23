@@ -78,40 +78,36 @@ agents/
 └── ...
 ```
 
-### Pick a harness
+- **Pick a harness.** Pick one for each agent. The harness is the program AgentBridge launches
+    whenever the agent receives a message.
 
-Pick one for each agent. The harness is the program AgentBridge launches whenever the agent
-receives a message.
+- **Install the protocol's skills.** The harness discovers skills from its project directory, so
+    install the protocol there, in each agent, as described in
+    [Installing a skill](../../getting-started.md#installing-a-skill). With Claude Code, install
+    the plugin in the agent's directory with project scope:
 
-### Install the protocol's skills
+    ```bash
+    claude plugin marketplace add ioc-project/cognition-protocols
+    cd agents/<agent id> && claude plugin install <protocol>@cognition-protocols --scope project
+    ```
 
-The harness discovers skills from its project directory, so install the protocol there, in each
-agent, as described in [Installing a skill](../../getting-started.md#installing-a-skill). With
-Claude Code, install the plugin in the agent's directory with project scope:
+    Each agent gets both the initiator and the receiver skill. Their activation conditions are
+    precise, so the initiator skill only activates on the agent that starts the protocol and the
+    receiver skill on the agents that receive its messages.
 
-```bash
-claude plugin marketplace add ioc-project/cognition-protocols
-cd agents/<agent id> && claude plugin install <protocol>@cognition-protocols --scope project
-```
+- **Define the instruction file.** The harness reads the agent's role from the instruction file
+    of its project directory:
 
-Each agent gets both the initiator and the receiver skill. Their activation conditions are
-precise, so the initiator skill only activates on the agent that starts the protocol and the
-receiver skill on the agents that receive its messages.
+    | Harness | Instruction file |
+    |---|---|
+    | Claude Code | `CLAUDE.md` |
+    | Codex, opencode | `AGENTS.md` |
+    | Others | `AGENTS.md`, or the file the harness documents for project instructions |
 
-### Define the instruction file
-
-The harness reads the agent's role from the instruction file of its project directory:
-
-| Harness | Instruction file |
-|---|---|
-| Claude Code | `CLAUDE.md` |
-| Codex, opencode | `AGENTS.md` |
-| Others | `AGENTS.md`, or the file the harness documents for project instructions |
-
-For a specialist, the file is its role: what it cares about, and what it will and will not
-accept. A specialist without a position has nothing to contribute to a decision. For the
-initiator, the file only sets working rules, such as where to write its files and to report the
-protocol's final output verbatim.
+    For a specialist, the file is its role: what it cares about, and what it will and will not
+    accept. A specialist without a position has nothing to contribute to a decision. For the
+    initiator, the file only sets working rules, such as where to write its files and to report
+    the protocol's final output verbatim.
 
 ## 3. Create the AgentBridge profiles
 
