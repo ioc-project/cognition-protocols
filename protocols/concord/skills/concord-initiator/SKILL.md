@@ -1,7 +1,8 @@
 ---
 name: concord-initiator
 description: >
-  Use when you need a single outcome that satisfies multiple agents with
+  Use when you are participating in, coordinating or facilitating a task that
+  needs a single outcome that satisfies multiple agents with
   different, potentially conflicting criteria — a unilateral choice is not
   enough. Activate on confirmed conflict (agents returned divergent outputs),
   anticipated conflict (distinct roles on a shared decision make divergence
@@ -186,8 +187,7 @@ scripts/concord_initiator.py init \
   --schema  "the shared candidate format, inline — multi-line is fine" \
   --context "the problem statement, inline" \
   --x-reject "an outcome the shared context calls unacceptable" \
-  --x-ideal  "an outcome the shared context calls fully satisfying" \
-  --known-proposals "a position an agent has actually stated, quoted verbatim, one per line or paragraph; omit if none"
+  --x-ideal  "an outcome the shared context calls fully satisfying"
 ```
 
 Pass each of these as a plain argument value — multi-line text is fine,
@@ -219,11 +219,7 @@ So set `satisfaction_threshold` at the standard the outcome genuinely has to mee
 you are confident is reachable. `0.6` is a starting point, not a safe default —
 on a well-aligned roster the seeds often clear it. A run that commits at `t = 0`
 is one where no `Repair` phase was ever printed: the commit message does not flag it, so check for it
-yourself. Whether that is a real success or a sign the bar
-was too low depends on whether `--known-proposals` was used: if seeds were
-informed by prior positions and one genuinely satisfied every agent, that is a
-legitimate outcome; if no prior positions existed and seeds still cleared the
-threshold without any negotiation, `satisfaction_threshold` was set below what the
+yourself. If seeds clear the threshold without any negotiation, `satisfaction_threshold` was set below what the
 agents naturally agree on and should be raised. Raising it is cheap: the anchors
 and existing scores stay valid, so a rerun costs only the rounds it actually needs.
 
@@ -241,38 +237,6 @@ Self-check: if an anchor could pass as something an agent might genuinely
 propose, rewrite it one level up. (A decision with almost no real alternatives
 can still make the answer easy to infer even worded this way — an inherent
 limit, not a sign to add more words.)
-
-**Only pass `--known-proposals` for positions an agent has really stated.** Each entry must be a reply you
-actually received from that agent before this call (for example its answer to a question you asked it earlier),
-quoted as closely as you can. Never write, summarise or infer a position for an agent that has not spoken, however
-obvious it seems what a role would propose. That is answering on the agent's behalf, which this protocol forbids,
-and it puts your guess in front of every other agent as if it were theirs. If no agent has spoken yet, leave the
-flag out: the first Seed round then collects each role's view directly.
-
-**`--known-proposals` is a mechanical backstop for that same rule.** If an
-agent's position already exists as a real reply before this call (often the reason you're
-invoking CONCORD at all), pass it — one distinct proposal per paragraph,
-quoting each as closely as you can; leave it empty if nothing has been
-proposed yet. When given, `init` rejects `--x-reject`/`--x-ideal` if either
-reads as a description of one of these proposals rather than the state it's
-chasing, naming which proposal it matched so you can rewrite and retry. It's
-a similarity check on vocabulary, not a proof — it catches the obvious case,
-not every paraphrase, so the self-check above still matters even when this
-passes.
-
-**Prefix each proposal with the agent's exact id** (as passed to `--agents`)
-followed by a colon — e.g. `agent_1: <that agent's existing position,
-verbatim>` — not a display name or role label like "Agent 1:" or "Telemetry:".
-Write one proposal per paragraph, or one per line: every line that starts with
-an agent id and a colon begins a new proposal, and any other line continues the
-proposal above it. This prefix is used for the `--x-reject`/`--x-ideal` similarity check (to
-reject anchors that read as a description of one of these proposals). In
-`PROPOSE_SEED`, all prior proposals are stripped of their prefixes and sent to
-every agent as an anonymized `<prior_proposals>` block — agents see the full
-set of prior positions without knowing which belonged to whom. Check that block
-in the first `Seed` message: it must hold one `<proposal>` per position and no agent id.
-A paragraph whose prefix doesn't match any agent id is still passed through to
-the similarity check above.
 
 ### 2. record-reply
 
@@ -396,7 +360,7 @@ changes the agent's scale for the whole run). Instead:
 
 | Command | Flags |
 |---|---|
-| `init` | `--agents --satisfaction-threshold --eps -B/--B/--budget --schema --context --x-reject --x-ideal --known-proposals` |
+| `init` | `--agents --satisfaction-threshold --eps -B/--B/--budget --schema --context --x-reject --x-ideal` |
 | `record-reply` | `agent` (positional) `text` (positional, optional — stdin if omitted) `--overwrite` |
 | `mark-missing` | `agent` (positional) `candidate` (positional) |
 | `status` | no flags beyond `--state` |

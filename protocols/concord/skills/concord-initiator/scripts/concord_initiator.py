@@ -149,59 +149,6 @@ def _non_numeric(tokens):
     return {t for t in tokens if not any(c.isdigit() for c in t)}
 
 
-def _agent_prefix_re(agent_ids):
-    """Matches a leading `<agent-id>:` (case-insensitive, optional spaces) for any of the given agent ids."""
-    ids = sorted((a for a in agent_ids if a), key=len, reverse=True)
-    if not ids:
-        return None
-    return re.compile(r"^\s*(?:" + "|".join(re.escape(a) for a in ids) + r")\s*:", re.IGNORECASE)
-
-
-def _split_proposals(raw, agent_ids=()):
-    """Split --known-proposals into one entry per proposal.
-
-    A new proposal starts at every blank line, and also at every line that begins with `<agent-id>:` (so
-    proposals written one per line, with no blank line between them, are not merged into one). Any other line
-    continues the proposal above it.
-    """
-    prefix = _agent_prefix_re(agent_ids)
-    out = []
-    for para in re.split(r"\n\s*\n", raw or ""):
-        cur = None
-        for line in para.splitlines():
-            if not line.strip():
-                continue
-            if cur is None or (prefix and prefix.match(line)):
-                if cur is not None:
-                    out.append(cur)
-                cur = line.strip()
-            else:
-                cur += "\n" + line.rstrip()
-        if cur is not None:
-            out.append(cur)
-    return [p for p in out if p]
-
-
-def _strip_agent_prefix(text, agent_ids):
-    """Drop a leading `<agent-id>:` so a prior proposal is passed on anonymously."""
-    prefix = _agent_prefix_re(agent_ids)
-    m = prefix.match(text) if prefix else None
-    return text[m.end():].strip() if m else text
-
-
-def _anchor_leak(anchor_text, proposals, context, min_overlap=3, min_ratio=0.15):
-    anchor_tokens = _tokens(anchor_text)
-    context_tokens = _tokens(context)
-    if not anchor_tokens:
-        return None
-    for proposal in proposals:
-        distinctive = _non_numeric(_tokens(proposal) - context_tokens)
-        if len(distinctive) < min_overlap:
-            continue
-        overlap = distinctive & anchor_tokens
-        if len(overlap) >= min_overlap and len(overlap) / len(distinctive) >= min_ratio:
-            return proposal
-    return None
 
 
 # --------------------------------------------------------------------------
@@ -349,21 +296,12 @@ def build_anchor_msg(st):
 
 
 def build_seed_msg(st):
-    known = st.get("known_proposals", [])
-
-    prior = [_strip_agent_prefix(p, st["agents"]) for p in known]
-
     lines = [
         "<concord-propose-seed>",
         f"  <candidate_schema>{esc(st['schema'])}</candidate_schema>",
         f"  <satisfaction_threshold>{esc(st['params']['satisfaction_threshold'])}</satisfaction_threshold>",
         f"  <context>{esc(st['context'])}</context>",
     ]
-    if prior:
-        lines.append("  <prior_proposals>")
-        for p in prior:
-            lines.append(f"    <proposal>{esc(p)}</proposal>")
-        lines.append("  </prior_proposals>")
     lines.append(instructions_line("seed"))
     lines.append("</concord-propose-seed>")
     return "\n".join(lines)
@@ -857,21 +795,6 @@ def cmd_init(args):
     x_reject = textarg(args.x_reject)
     x_ideal = textarg(args.x_ideal)
     schema = textarg(args.schema)
-    proposals = _split_proposals(
-        "\n\n".join(textarg(v) for v in args.known_proposals)
-        if args.known_proposals else None,
-        agents,
-    )
-
-    for label, anchor_text in (("x_ideal", x_ideal), ("x_reject", x_reject)):
-        hit = _anchor_leak(anchor_text, proposals, context)
-        if hit:
-            die(
-                f"{label} reads like a description of one specific proposal "
-                f"already on the table:\n  {label}: {anchor_text}\n"
-                f"  resembles: {hit}\n"
-                f"Rewrite {label} to describe the outcome state, not the proposal."
-            )
 
     st = {
         "version": 2,
@@ -886,7 +809,6 @@ def cmd_init(args):
         "context": context,
         "x_reject": x_reject,
         "x_ideal": x_ideal,
-        "known_proposals": proposals,
         "anchors": {},
         "pool": [],
         "raw": {a: {} for a in agents},
@@ -1143,9 +1065,6 @@ def main():
                    help="reject anchor — outcome that fails all criteria (or @file)")
     p.add_argument("--x-ideal", required=True, dest="x_ideal",
                    help="ideal anchor — outcome that fully satisfies all criteria (or @file)")
-    p.add_argument("--known-proposals", default=None, nargs="+",
-                   help="prior proposals: one per argument (or @file), per paragraph, or per line starting with "
-                        "<agent-id>:")
     p.set_defaults(fn=cmd_init)
 
     # record-reply
