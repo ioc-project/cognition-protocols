@@ -15,6 +15,31 @@ Any Cognition Protocol can run this way, on any [scenario](scenarios/index.md). 
 uses independent Claude Code processes: one initiator and one receiver per specialist of the
 scenario. It uses the SLIM transport; the node and identity steps are specific to it.
 
+```mermaid
+flowchart LR
+    you(["<b>You</b><br/>agentbridge delegate"])
+    slim{{"<b>SLIM node</b><br/>127.0.0.1"}}
+
+    subgraph init ["Initiator process"]
+        direction TB
+        I["<b>initiator</b><br/>&lt;protocol&gt;-initiator"]
+    end
+
+    subgraph spec ["Specialist processes · &lt;protocol&gt;-receiver + role"]
+        direction TB
+        S1["<b>specialist 1</b>"]
+        S2["<b>specialist 2</b>"]
+        S3["<b>specialist …</b>"]
+    end
+
+    you -- "task + kickoff" --> I
+    I -- "agentbridge delegate" --> slim
+    slim --> S1
+    slim --> S2
+    slim --> S3
+    I -. "final outcome" .-> you
+```
+
 !!! note "Local setup"
     The agents could run on different systems, each reaching the others over the network. To keep
     this tutorial simple, everything runs on one machine, and the SLIM node listens on the
