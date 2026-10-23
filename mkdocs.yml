@@ -102,6 +102,8 @@ nav:
           - Examples:
               - tutorials/agentbridge/examples/index.md
               - Coding Agent Team: tutorials/agentbridge/examples/coding-agent-team/index.md
+      - MAS Lab:
+          - tutorials/mas-lab/index.md
   - Evaluation:
       - evaluation/index.md
       - ACCORD: evaluation/accord.md
