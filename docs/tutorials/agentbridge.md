@@ -1,5 +1,7 @@
 # Tutorial: running a protocol over AgentBridge
 
+<p class="eyebrow">Agents on separate processes, joined by AgentBridge</p>
+
 [AgentBridge](https://github.com/agntcy/shadi) (`agentbridge` and `shadictl`, from the
 `agntcy/shadi` repository) registers each coding harness instance as a live agent and lets
 one instance send a prompt to another with `agentbridge delegate`. Agents talk

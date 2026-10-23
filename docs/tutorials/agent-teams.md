@@ -1,5 +1,7 @@
 # Tutorial: running a protocol with Claude Code agent teams
 
+<p class="eyebrow">Agents in one local Claude Code session</p>
+
 To try a protocol on your own machine without a message bus, use the experimental
 agent teams feature of Claude Code. A lead
 agent creates a team of teammates and exchanges messages with them using `SendMessage`.
