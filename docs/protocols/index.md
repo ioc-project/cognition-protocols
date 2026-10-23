@@ -1,16 +1,5 @@
----
-icon: material/head-cog-outline
----
 
 # Cognition Protocols
-
-All Cognition Protocols share a common set of [design requirements](design-requirements.md)
-— convergence, certified benefit, and bounded cost — that each protocol satisfies by
-construction rather than by observation.
-
-Adding a protocol to an existing multi-agent system requires no application changes.
-See the [installation guide](installation.md) for how skills are packaged and deployed
-across different agent harnesses.
 
 ## Current protocols
 

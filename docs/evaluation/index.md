@@ -1,6 +1,3 @@
----
-icon: material/flask-outline
----
 
 # Benchmarks
 

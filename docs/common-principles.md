@@ -1,4 +1,8 @@
-# Design Requirements
+---
+icon: material/list-box-outline
+---
+
+# Common Principles
 
 <p class="eyebrow">What makes a specification a protocol</p>
 

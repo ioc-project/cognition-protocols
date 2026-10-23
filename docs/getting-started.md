@@ -1,4 +1,8 @@
-# Installation
+---
+icon: material/rocket-launch-outline
+---
+
+# Getting Started
 
 <p class="eyebrow">Adding a Cognition Protocol to an existing multi-agent system</p>
 

@@ -1,8 +1,5 @@
 ---
 title: IoC Cognition Protocols
-hide:
-  - navigation
-  - toc
 ---
 
 # IoC Cognition Protocols
@@ -18,45 +15,38 @@ that occupy it. Each one satisfies three requirements by construction: the excha
 **converges** provably, emits a **certified record** of what was achieved, and runs
 within a **cost bound** declared at the start.
 
-<div class="grid cards" markdown>
+## Common Principles
 
--   :material-handshake:{ .lg .middle } **Protocols**
+All Cognition Protocols share a common set of [common principles](common-principles.md)
+— convergence, certified benefit, and bounded cost — that each protocol satisfies by
+construction rather than by observation.
 
-    ---
+## Getting Started
 
-    ACCORD establishes shared intent before work begins. CONCORD reconciles
-    divergent-but-correct specialist outputs into a verifiable decision.
+Adding a protocol to an existing multi-agent system requires no application changes.
+See the [getting started guide](getting-started.md) for how skills are packaged and deployed
+across different agent harnesses.
 
-    [:octicons-arrow-right-24: Cognition Protocols](protocols/index.md)
+## Protocols
 
--   :material-chart-bar:{ .lg .middle } **Evaluation**
+ACCORD establishes shared intent before work begins. CONCORD reconciles
+divergent-but-correct specialist outputs into a verifiable decision.
+See the [Cognition Protocols](protocols/index.md) section for full details.
 
-    ---
+## Evaluation
 
-    Both protocols evaluated across 500 runs on four independent dimensions:
-    convergence, correctness, cost, and benefit.
+Both protocols evaluated across 500 runs on four independent dimensions:
+convergence, correctness, cost, and benefit. See the [evaluation overview](evaluation/index.md).
 
-    [:octicons-arrow-right-24: Evaluation overview](evaluation/index.md)
+## Demos
 
--   :material-play-circle:{ .lg .middle } **Demos**
+Recorded end-to-end demos across SRE triage, e-commerce, and multi-agent
+coding teams — with and without each protocol. See the [demos](demos/index.md) section.
 
-    ---
+## Get Involved
 
-    Recorded end-to-end demos across SRE triage, e-commerce, and multi-agent
-    coding teams — with and without each protocol.
-
-    [:octicons-arrow-right-24: Demos](demos/index.md)
-
--   :material-github:{ .lg .middle } **Get Involved**
-
-    ---
-
-    Specifications, skill packages, evaluation harness, and demo recordings
-    are all open. Issues and contributions welcome.
-
-    [:octicons-arrow-right-24: GitHub](https://github.com/ioc-project/cognition-protocols)
-
-</div>
+Specifications, skill packages, evaluation harness, and demo recordings
+are all open. Issues and contributions welcome on [GitHub](https://github.com/ioc-project/cognition-protocols).
 
 ## Background reading
 

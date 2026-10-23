@@ -74,11 +74,12 @@ extra_javascript:
   - assets/header-breadcrumb.js
 
 nav:
-  - Home: index.md
+  - Overview:
+      - index.md
+      - Common Principles: common-principles.md
+      - Getting Started: getting-started.md
   - Protocols:
       - protocols/index.md
-      - Design Requirements: protocols/design-requirements.md
-      - Installation: protocols/installation.md
       - ACCORD:
           - protocols/accord/index.md
           - Design: protocols/accord/design.md
