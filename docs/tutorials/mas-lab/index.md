@@ -6,7 +6,7 @@
 multi-agent system as a set of YAML manifests and run it with one command. Adding a Cognition
 Protocol to a MAS Lab system means installing the protocol skills and listing them in the
 agents that will use them. The protocol's own activation conditions determine which skill fires
-for each agent — no changes to the MAS structure are needed.
+for each agent — no changes to the MAS topology are needed.
 
 ## Prerequisites
 
@@ -23,9 +23,17 @@ for each agent — no changes to the MAS structure are needed.
     !!! note "Other installation paths"
         Docker and developer-workspace installs also work. See [Tutorial 0](https://outshift-open.github.io/mas-lab/tutorials/00-environment-setup/) for those paths. Prefix every `mas-ctl` command with `docker compose --profile tools run --rm --no-deps cli` when using Docker.
 
-- An existing MAS: a `kind: MAS` manifest and the `kind: Agent` manifests it references.
+## 1. Create the project directory
 
-## 1. Install the protocol skills
+Create an empty directory for the MAS:
+
+```bash
+mkdir -p ~/mas-lab-run && cd ~/mas-lab-run
+```
+
+Run every command from this directory.
+
+## 2. Install the protocol skills
 
 MAS Lab discovers skills by name from the `skills/` directory next to the manifests. The
 protocol skills follow the [agentskills.io](https://agentskills.io/) format: each skill is a
@@ -55,25 +63,94 @@ skills/
     └── SKILL.md
 ```
 
-## 2. Add the skills to your agents
+## 3. Define the agents
 
-Add both skills to the `skills` list of each agent that participates in the protocol. The
-protocol's activation conditions determine which skill fires for a given agent:
+Each agent is a `kind: Agent` manifest. Add both protocol skills to the `skills` list of each
+agent that participates in the protocol — the protocol's activation conditions determine which
+skill fires for a given agent at runtime.
 
 ```yaml
-# In each participating agent's agent.yaml
+# agents/<agent-id>/agent.yaml
+apiVersion: mas/v1
+kind: Agent
+metadata:
+  name: <agent-id>
 spec:
+  description: >
+    <one-line description of this agent's role>
   skills:
     - concord-initiator
     - concord-receiver
+  context:
+    role: |
+      <the agent's full role description>
 ```
 
-If an agent will only ever initiate or only ever receive, you can list just the one skill it
-needs. When in doubt, list both.
+Create one manifest per agent in `agents/`:
 
-## 3. Validate the manifests
+```text
+agents/
+├── <agent-1>/
+│   └── agent.yaml
+├── <agent-2>/
+│   └── agent.yaml
+└── <agent-3>/
+    └── agent.yaml
+```
 
-Check all manifests are well-formed before running them:
+## 4. Write the MAS manifest
+
+The `kind: MAS` manifest declares all agents and the workflow topology. `spec.agency.agents`
+lists agent identities and their manifest paths. `spec.workflow` names the entry agent and the
+delegation graph:
+
+```yaml
+# mas.yaml
+apiVersion: mas/v1
+kind: MAS
+metadata:
+  name: <your-mas-name>
+  version: 1.0.0
+spec:
+  agency:
+    agents:
+      - id: <agent-1>
+        ref: agents/<agent-1>/agent.yaml
+      - id: <agent-2>
+        ref: agents/<agent-2>/agent.yaml
+      - id: <agent-3>
+        ref: agents/<agent-3>/agent.yaml
+  workflow:
+    entry: <agent-1>
+    nodes:
+      - id: <agent-1>
+        delegates_to:
+          - <agent-2>
+          - <agent-3>
+      - id: <agent-2>
+      - id: <agent-3>
+```
+
+### Resulting layout
+
+```text
+mas-lab-run/
+├── mas.yaml
+├── skills/
+│   ├── concord-initiator/
+│   └── concord-receiver/
+└── agents/
+    ├── <agent-1>/
+    │   └── agent.yaml
+    ├── <agent-2>/
+    │   └── agent.yaml
+    └── <agent-3>/
+        └── agent.yaml
+```
+
+## 5. Validate the manifests
+
+Check all manifests are well-formed before running:
 
 ```bash
 mas-ctl validate mas.yaml
@@ -81,7 +158,7 @@ mas-ctl validate mas.yaml
 
 You should see `OK` for the MAS and for each agent.
 
-## 4. Run the protocol
+## 6. Run the protocol
 
 Run the MAS and pass the task as the query:
 
