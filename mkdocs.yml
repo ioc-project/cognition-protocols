@@ -8,6 +8,7 @@ edit_uri: edit/main/docs/
 # Toolchain files that live beside the content must not be published
 exclude_docs: |
   mkdocs/
+  README.md
 copyright: Internet of Cognition Project. Open specification.
 
 theme:
