@@ -16,7 +16,7 @@ notification service, and the skills from the [Getting Started](../protocols/get
 
     ---
 
-    Four independent Claude Code processes joined by AgentBridge and a SLIM message bus,
+    Four independent Claude Code processes joined by AgentBridge (A2A, here over a SLIM message bus),
     each sandboxed. Agents can live in separate processes, containers or harnesses.
 
 -   **[CONCORD with Claude Code agent teams](agent-teams.md)**

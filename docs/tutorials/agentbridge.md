@@ -1,27 +1,39 @@
 # Tutorial: CONCORD over AgentBridge
 
 [AgentBridge](https://github.com/agntcy/shadi) (`agentbridge` and `shadictl`, from the
-`agntcy/shadi` repository) registers each coding harness instance as a live service on a
-[SLIM](https://github.com/agntcy/slim) message bus and lets one instance send a prompt to
-another with `agentbridge delegate`. It is used purely as process launcher and transport:
-the protocol is unchanged, and the initiator uses `agentbridge delegate` as its delegation
-primitive, where an in-process orchestrator would use its sub-agent tool.
+`agntcy/shadi` repository) registers each coding harness instance as a live agent and lets
+one instance send a prompt to another with `agentbridge delegate`. Agents talk
+[A2A](https://a2a-protocol.org), either natively or over a [SLIM](https://github.com/agntcy/slim)
+message bus. It is used purely as process launcher and transport: the protocol is unchanged,
+and the initiator uses `agentbridge delegate` as its delegation primitive, where an in-process
+orchestrator would use its sub-agent tool.
 
 The example below runs CONCORD across four independent Claude Code processes: one
 initiator and three receivers with conflicting criteria (`microservices`, `monolith`,
-`pragmatist`) that must agree on how to build a notification service.
+`pragmatist`) that must agree on how to build a notification service. It uses the SLIM
+transport; the node and identity steps are specific to it.
 
 ```mermaid
-flowchart TB
-    SLIM["SLIM node<br/>127.0.0.1:47560"]
-    SLIM --- I["initiator<br/>concord-initiator"]
-    SLIM --- M["microservices<br/>concord-receiver + persona"]
-    SLIM --- O["monolith<br/>concord-receiver + persona"]
-    SLIM --- P["pragmatist<br/>concord-receiver + persona"]
-    You(["you (avatar)<br/>agentbridge delegate"]) --> I
-    I -. "agentbridge delegate<br/>(as concord-driver)" .-> M
-    I -.-> O
-    I -.-> P
+flowchart LR
+    you(["<b>You</b><br/>agentbridge delegate"])
+
+    subgraph init ["Initiator"]
+        direction TB
+        I["<b>initiator</b><br/>concord-initiator"]
+    end
+
+    subgraph recv ["Receivers · concord-receiver + persona"]
+        direction TB
+        M["<b>microservices</b>"]
+        O["<b>monolith</b>"]
+        P["<b>pragmatist</b>"]
+    end
+
+    you -- "scenario + kickoff" --> I
+    I -- "ANCHOR · PROPOSE · SCORE · REPAIR" --> M
+    I --> O
+    I --> P
+    I -. "certificate" .-> you
 ```
 
 ## Prerequisites
@@ -29,7 +41,7 @@ flowchart TB
 - Claude Code, with `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_AUTH_TOKEN`
   set in the shell that registers the agents. The sandbox that wraps each agent cannot
   read your keychain login.
-- `agentbridge` and `shadictl`, and `slimctl` for the SLIM node, on your `PATH`:
+- `agentbridge` and `shadictl`, and `slimctl` for the SLIM node (SLIM transport only), on your `PATH`:
 
     ```bash
     brew tap agntcy/shadi https://github.com/agntcy/shadi.git
@@ -122,7 +134,7 @@ Use one terminal per process so that each agent's traffic is visible. Every term
 exported environment above.
 
 ```bash
-# 1. the message bus (needs mTLS certificates for the SLIM node)
+# 1. the SLIM node (needs mTLS certificates)
 slimctl slim start -c slim-node.yaml
 
 # 2. the four agents, each from its own directory, inside the sandbox
