@@ -23,4 +23,4 @@ results report from.
 - The satisfaction floor rising round by round rather than a vote being taken.
 - The committed plan being authored mid-run by the agent that was worst off.
 
-[:octicons-arrow-right-24: The measured run](../protocols/concord/design.md#worked-example)
+[:octicons-arrow-right-24: The measured run](../protocols/concord/index.md#worked-example)
