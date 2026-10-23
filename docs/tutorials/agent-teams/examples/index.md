@@ -1,9 +1,10 @@
 # Examples
 
-<p class="eyebrow">What the Claude Agent Teams tutorial runs</p>
+<p class="eyebrow">Real prompts for the Claude Agent Teams tutorial</p>
 
-The [tutorial](../index.md) runs any example: a team of agents with a task. To run another
-example, you only change the files below and the prompt that starts the run.
+The [tutorial](../index.md) describes the steps to run a protocol on a team of agents, with a
+generic prompt template. An example is a complete implementation of it: a team, its task, and
+the real prompt, ready to run.
 
 <div class="grid cards" markdown>
 
@@ -18,18 +19,11 @@ example, you only change the files below and the prompt that starts the run.
 
 ## Anatomy of an example
 
-An example page describes the task and the agents, and publishes these files next to it:
-
-| File | Content |
-|---|---|
-| `task.txt` | The task the initiator hands to the team |
-| `roles/<id>.txt` | The role description of each specialist, one file per agent id |
-| `scenario.env` | `SPECIALISTS`, the agent ids separated by spaces |
-
-The initiator is not a specialist: it needs no role file, and is the same in every example.
+An example page describes the task and the agents, and publishes the prompt next to it as
+`prompt.md`. The prompt is the tutorial's template, filled in with the task, the id and the role
+description of each specialist, and the protocol skill.
 
 ## Adding an example
 
-1. Create `docs/tutorials/agent-teams/examples/<name>/` with `index.md`, `task.txt`,
-   `scenario.env` and a role file for each specialist.
+1. Create `docs/tutorials/agent-teams/examples/<name>/` with `index.md` and `prompt.md`.
 2. Add the page to the navigation in `mkdocs.yml` and to the cards above.

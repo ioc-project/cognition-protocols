@@ -48,46 +48,30 @@ flowchart LR
 The three specialists also use the words *service*, *deployment* and *outage* in different
 senses, which is what a protocol has to bring to the surface before it can reconcile them.
 
-## Role descriptions
+## The prompt
 
-Each description is a plain-text file you can download, or copy from the tab.
+The prompt is the whole implementation of this example. It gives the initiator the task and
+the role of each specialist, tells it which protocol skill to use, and sets up the team and the
+messaging rules. It follows the [template](../../index.md#4-prompt-the-initiator-with-a-template)
+of the tutorial, filled in for this example and for the `concord` protocol; for `accord`,
+replace `concord-initiator` with `accord-initiator`.
 
-=== "microservices"
+[:material-download: Download prompt.md](prompt.md){ download="prompt.md" }
 
-    [:material-download: Download](roles/microservices.txt){ download="microservices.txt" }
+??? example "prompt.md"
 
-    ```markdown
-    --8<-- "tutorials/agent-teams/examples/coding-agent-team/roles/microservices.txt"
+    ```text
+    --8<-- "tutorials/agent-teams/examples/coding-agent-team/prompt.md"
     ```
 
-=== "monolith"
+## Running it
 
-    [:material-download: Download](roles/monolith.txt){ download="monolith.txt" }
-
-    ```markdown
-    --8<-- "tutorials/agent-teams/examples/coding-agent-team/roles/monolith.txt"
-    ```
-
-=== "pragmatist"
-
-    [:material-download: Download](roles/pragmatist.txt){ download="pragmatist.txt" }
-
-    ```markdown
-    --8<-- "tutorials/agent-teams/examples/coding-agent-team/roles/pragmatist.txt"
-    ```
-
-## Using this example in the tutorial
-
-The tutorial takes an example from its address. For this one, set:
+Follow the [tutorial](../../index.md) with this prompt: install the protocol plugin, then start
+Claude Code with the prompt.
 
 ```bash
-SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/agent-teams/examples/coding-agent-team
+mkdir -p ~/agent-team/run && cd ~/agent-team
+curl -fsSL https://ioc-project.github.io/cognition-protocols/tutorials/agent-teams/examples/coding-agent-team/prompt.md -o prompt.md
+claude plugin install concord@cognition-protocols --scope project
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude "$(cat prompt.md)"
 ```
-
-The files the tutorial downloads from it:
-
-| File | Content |
-|---|---|
-| [`task.txt`](task.txt) | The task, as given above |
-| `roles/<id>.txt` | The role description of each specialist, listed above |
-| [`scenario.env`](scenario.env) | The specialists' ids |

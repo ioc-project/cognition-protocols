@@ -45,117 +45,112 @@ harnesses.
     claude plugin marketplace add ioc-project/cognition-protocols
     ```
 
-## 1. Create the project directory
+## 1. Install the protocol plugin
 
-Create an empty directory outside any repository, with a directory for the initiator's files:
+Create a directory for the run, and install the protocol's plugin in it with project scope, so
+that the skills are enabled for the initiator and its teammates only:
 
 ```bash
 mkdir -p ~/agent-team/run && cd ~/agent-team
-```
-
-Run every command from this directory.
-
-## 2. Install the protocol
-
-Install the protocol's plugin in this directory with project scope, so that it is enabled for the
-initiator and its teammates only:
-
-```bash
 PROTOCOL=concord   # or accord
 claude plugin install $PROTOCOL@cognition-protocols --scope project
 ```
 
-## 3. Choose the example
+The plugin carries both the initiator and the receiver skill. The initiator skill is the one
+this tutorial uses.
 
-An [example](examples/index.md) provides the task, the specialists and their role
-definitions. Point `SCENARIO` at the example page, for example the
-[Coding Agent Team](examples/coding-agent-team/index.md), and download its files from this
-documentation site.
+## 2. Run Claude Code with agent teams enabled
+
+Agent teams are experimental, and enabled by an environment variable. Start Claude Code in the
+project directory with it set:
 
 ```bash
-SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/agent-teams/examples/coding-agent-team   # an example page
-
-curl -fsSL $SCENARIO/scenario.env -o scenario.env && source scenario.env
-curl -fsSL $SCENARIO/task.txt -o task.txt
-
-ROLES="$(for role in $(echo $SPECIALISTS); do
-  printf '=== %s ===\n' "$role"
-  curl -fsSL $SCENARIO/roles/$role.txt
-  printf '\n'
-done)"
-
-echo "$ROLES" | grep -qi '<html' && echo "download failed"
-grep -qi '<html' task.txt && echo "download failed"
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude
 ```
 
-### Resulting layout
+## 3. Decide what the team is
+
+A run needs three things, all of them specific to your use case:
+
+- **A task**: the decision or piece of work the team has to deliver.
+- **Specialists**: the agents that take part, each with an id.
+- **A role for each specialist**: what it cares about, and how it judges a result.
+
+The initiator is the lead of the team and is the same in every use case: it coordinates the
+specialists with the protocol and has no stake in the outcome.
+
+## 4. Prompt the initiator with a template
+
+Write the three things above into one prompt, using this template. The initiator creates the
+team from it: it spawns one teammate per specialist, directly with its role description, so the
+specialists need no files of their own. Replace what is in angle brackets, and save it as
+`prompt.md`.
 
 ```text
-agent-team/
-├── .claude/
-│   └── settings.json         # enables the protocol plugin (project scope)
-├── scenario.env              # the specialists' ids
-├── task.txt                  # the task
-├── kickoff.md                # the initiator's prompt, written in the next step
-└── run/                      # the initiator's files, including the protocol's state file
-```
+You coordinate a team of specialists (agent ids: <SPECIALIST IDS, COMMA-SEPARATED>). Put every
+file you write in ./run/.
 
-## 4. Write the initiator's prompt
-
-The initiator gets one prompt, which is a template with four parts: the task, the role of each
-specialist, the protocol to use, and the team setup with the messaging rules. The initiator
-spawns each teammate directly with its role description, so the specialists need no files.
-Wherever the protocol says to send a message to an agent, the initiator sends it with
-`SendMessage` to the teammate of that name, one teammate at a time, waits for the reply, and
-uses that reply text as the agent's answer.
-
-The template takes everything from the example: to run another example, change `SCENARIO` in the
-previous step and fill it in again.
-
-```bash
-source scenario.env
-PROTOCOL=concord             # the protocol you installed in step 2
-: "${SPECIALISTS:?}" "${PROTOCOL:?}"   # stop if one is empty
-
-NAMES="$(echo $SPECIALISTS | sed 's/ /, /g')"
-
-cat > kickoff.md <<EOF
-You coordinate a team of specialists (agent ids: $NAMES). Put every file you write in ./run/.
-
-TASK FOR THE TEAM: "$(cat task.txt)"
+TASK FOR THE TEAM: "<TASK>"
 
 SPECIALISTS. The role of each specialist is described below, one block per agent id.
 
-$ROLES
+=== <specialist id> ===
+<role description of this specialist>
 
-PROTOCOL. Use the $PROTOCOL-initiator skill and follow it to the end, with --state
-./run/<name>.json on every call of its script. The specialists are named exactly $NAMES.
+(one block per specialist)
+
+PROTOCOL. Use the <PROTOCOL>-initiator skill and follow it to the end, with --state
+./run/<name>.json on every call of its script. The specialists are named exactly
+<SPECIALIST IDS, COMMA-SEPARATED>.
 
 TEAM SETUP (do this first). You are the initiator of an agent team. Create a team with one
-teammate per specialist, named exactly $NAMES. Spawn each one with this instruction, replacing
-ROLE with its name and DESCRIPTION with its block from the SPECIALISTS section, verbatim: "You
-are the ROLE specialist of a team working on a task. Act as this role: DESCRIPTION. Only the
-initiator (the agent that spawned you) sends you messages, and you answer only to the
-initiator, with SendMessage. Never message another teammate. Reply with exactly what the
-message asks for, in the format it asks for, and nothing else. Skills in .claude/skills/ are
-yours to load when a message calls for them." Use the descriptions only to spawn the
-teammates: never use them to write, predict or judge a specialist's reply.
+teammate per specialist, named exactly <SPECIALIST IDS, COMMA-SEPARATED>. Spawn each one with
+this instruction, replacing ROLE with its name and DESCRIPTION with its block from the
+SPECIALISTS section, verbatim: "You are the ROLE specialist of a team working on a task. Act as
+this role: DESCRIPTION. Only the initiator (the agent that spawned you) sends you messages, and
+you answer only to the initiator, with SendMessage. Never message another teammate. Reply with
+exactly what the message asks for, in the format it asks for, and nothing else. Skills in
+.claude/skills/ are yours to load when a message calls for them." Use the descriptions only to
+spawn the teammates: never use them to write, predict or judge a specialist's reply.
 
 MESSAGING RULES. Where the skill says to send a message to an agent, send it with SendMessage
 to the teammate of that name, one specialist at a time, and wait for that specialist's reply
 before the next message. Never write a specialist's reply yourself and record only real replies.
 
 FINAL REPORT: the skill's final output, exactly as its script prints it.
-EOF
 ```
 
-## 5. Run it
-
-Start Claude Code in the project directory with the kickoff message:
+Send the prompt as the first message of the session, or save it as `prompt.md` and start
+the session with it:
 
 ```bash
-CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude "$(cat kickoff.md)"
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude "$(cat prompt.md)"
 ```
 
-The session stays open, so you can follow the team while the protocol runs. The initiator ends with
-the protocol's final output, and its files, including the script's state file, are in `run/`.
+The session stays open, so you can follow the team while the protocol runs.
+
+The team setup and the messaging rules are the same for every use case. Wherever the protocol
+says to send a message to an agent, the initiator sends it with `SendMessage` to the teammate
+of that name, one teammate at a time, waits for the reply, and uses that reply text as the
+agent's answer.
+
+## 5. Look at the examples
+
+The [examples](examples/index.md) are complete implementations with the real prompts. Use them
+as inspiration for adapting the template to your own use case:
+
+- [Coding Agent Team](examples/coding-agent-team/index.md): three specialists that must decide
+  how to build a notification service.
+
+## Result
+
+When the protocol ends, the initiator reports the protocol's final output. Its files, including
+the protocol's state file, are in `run/`.
+
+```text
+agent-team/
+├── .claude/
+│   └── settings.json         # enables the protocol plugin (project scope)
+├── prompt.md                 # the initiator's prompt, if you saved it
+└── run/                      # the initiator's files, including the protocol's state file
+```
