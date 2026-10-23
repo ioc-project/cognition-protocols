@@ -1,4 +1,4 @@
-# Tutorial: running a protocol with MAS Lab
+# Tutorial: running Cognition Protocols with MAS Lab
 
 <p class="eyebrow">Agents defined as YAML manifests, run with mas-ctl</p>
 

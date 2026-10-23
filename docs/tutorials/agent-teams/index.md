@@ -1,4 +1,4 @@
-# Tutorial: running a protocol with Claude Agent Teams
+# Tutorial: running Cognition Protocols with Claude Agent Teams
 
 <p class="eyebrow">Agents in one local Claude Code session</p>
 

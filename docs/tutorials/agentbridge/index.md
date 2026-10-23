@@ -1,4 +1,4 @@
-# Tutorial: running a protocol over AgentBridge
+# Tutorial: running Cognition Protocols over AgentBridge
 
 <p class="eyebrow">Agents on separate processes, joined by AgentBridge</p>
 
