@@ -13,32 +13,7 @@ orchestrator would use its sub-agent tool.
 
 Any Cognition Protocol can run this way, on any [scenario](scenarios/index.md). The tutorial
 uses independent Claude Code processes: one initiator and one receiver per specialist of the
-scenario. The diagram shows the [Coding Agent Team](scenarios/coding-agent-team/index.md)
-scenario, with three specialists. It uses the SLIM transport; the node and identity steps are
-specific to it.
-
-```mermaid
-flowchart LR
-    you(["<b>You</b><br/>agentbridge delegate"])
-
-    subgraph init ["Initiator"]
-        direction TB
-        I["<b>initiator</b><br/>&lt;protocol&gt;-initiator"]
-    end
-
-    subgraph recv ["Receivers · &lt;protocol&gt;-receiver + persona"]
-        direction TB
-        M["<b>microservices</b>"]
-        O["<b>monolith</b>"]
-        P["<b>pragmatist</b>"]
-    end
-
-    you -- "task + kickoff" --> I
-    I -- "protocol messages" --> M
-    I --> O
-    I --> P
-    I -. "final outcome" .-> you
-```
+scenario. It uses the SLIM transport; the node and identity steps are specific to it.
 
 !!! note "Local setup"
     The agents could run on different systems, each reaching the others over the network. To keep
