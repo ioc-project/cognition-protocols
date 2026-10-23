@@ -34,8 +34,10 @@ deal at a price nobody would pay.
 | **Cost** | 379K prompt tokens per run, 86.5% cache-eligible | 876K tokens per run, 78% served from cache, against a published ceiling |
 | **Benefit** | Not established — uptake +17.9 pp and utilization 99.5%, but goal success flat against baseline | Met — every agent above the floor on all four decisions |
 
-Measuring dimension by dimension is what [locates that gap](accord.md#benefit) rather
-than only reporting it, which an outcome-only comparison would not do.
+CONCORD meets all four. ACCORD meets three; the benefit dimension is unresolved, in
+that the contract is constructed and used but goal success is flat against the
+baseline. Measuring dimension by dimension is what [locates that gap](accord.md#benefit)
+rather than only reporting it, which an outcome-only comparison would not do.
 
 ## What each run reports
 
