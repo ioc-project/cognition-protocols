@@ -8,6 +8,29 @@ teammates and exchanges messages with them using `SendMessage`. The teammates pl
 receivers, and the protocol is unchanged.
 It works with any Cognition Protocol and any [scenario](scenarios/index.md).
 
+```mermaid
+flowchart LR
+    you(["<b>You</b><br/>claude &quot;kickoff&quot;"])
+
+    subgraph session ["One Claude Code session"]
+        direction LR
+        I["<b>initiator</b> (team lead)<br/>&lt;protocol&gt;-initiator"]
+
+        subgraph team ["Teammates · role file in personas/"]
+            direction TB
+            S1["<b>specialist 1</b>"]
+            S2["<b>specialist 2</b>"]
+            S3["<b>specialist …</b>"]
+        end
+    end
+
+    you -- "task + kickoff" --> I
+    I -- "SendMessage" --> S1
+    I --> S2
+    I --> S3
+    I -. "final outcome" .-> you
+```
+
 Agent teams work only on a single machine, with no network between the agents, and only
 with Claude Code. Use AgentBridge when agents must run in separate processes, containers or
 harnesses.
