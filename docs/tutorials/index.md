@@ -15,4 +15,11 @@ from the [Getting Started](../getting-started.md) page.
     decide how to build a notification service. The scenario, its task and its roles are
     shared by the tutorials of this section.
 
+-   **[Running a protocol with Claude Agent Teams](coding-agent-team/agent-teams.md)**
+
+    ---
+
+    The quickest way to try a protocol: a lead and three teammates in your local Claude
+    Code, with no message bus.
+
 </div>
