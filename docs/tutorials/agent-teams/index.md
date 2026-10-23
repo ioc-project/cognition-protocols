@@ -79,9 +79,8 @@ specialists with the protocol and has no stake in the outcome.
 ## 4. Prompt the initiator with a template
 
 Write the three things above into one prompt, using this template. The initiator creates the
-team from it: it spawns one teammate per specialist, directly with its role description, so the
-specialists need no files of their own. Replace what is in angle brackets, and save it as
-`prompt.md`.
+team from it: it spawns one teammate per specialist, directly with its role description.
+Replace what is in angle brackets, and save it as `prompt.md`.
 
 ```text
 You coordinate a team of specialists (agent ids: <SPECIALIST IDS, COMMA-SEPARATED>). Put every
