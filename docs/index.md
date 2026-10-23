@@ -47,11 +47,10 @@ evaluated against independent dimensions — convergence, correctness, cost, and
 so claims about behaviour are measurable, not asserted. See the [evaluation overview](evaluation/index.md)
 for results and methodology.
 
-## See protocols in action
+## Guided tour
 
-Replay recorded AgentBridge runs of ACCORD and CONCORD in the browser, without running anything,
-and follow a guided tour of the difference a protocol makes. See
-[See protocols in action](demos/replay.md).
+See ACCORD and CONCORD work without running anything: a step-by-step tour of recorded
+AgentBridge runs, with and without a protocol. See the [guided tour](demos/guided-tour.md).
 
 ## Demos
 
