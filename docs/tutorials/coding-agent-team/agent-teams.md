@@ -46,7 +46,7 @@ claude plugin install $PROTOCOL@cognition-protocols --scope project
 
 ## 3. Write the role definitions
 
-Save the text of each role from the [Coding Agent Team scenario](index.md#role-descriptions) as:
+Download or copy the text of each role from the [Coding Agent Team scenario](index.md#role-descriptions) as:
 
 - `personas/microservices.md`
 - `personas/monolith.md`

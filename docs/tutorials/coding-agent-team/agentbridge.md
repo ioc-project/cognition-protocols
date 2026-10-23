@@ -102,7 +102,7 @@ the receiver skill on the agents that receive its messages.
 
 ## 3. Write the role definitions
 
-Each agent's `CLAUDE.md` holds its [role definition](index.md#role-descriptions). Save the text
+Each agent's `CLAUDE.md` holds its [role definition](index.md#role-descriptions). Download or copy the text
 of each role from the [Coding Agent Team scenario](index.md#role-descriptions) as:
 
 - `agents/initiator/CLAUDE.md`
