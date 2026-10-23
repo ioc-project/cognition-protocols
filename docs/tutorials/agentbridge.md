@@ -69,24 +69,23 @@ flowchart LR
 ## One directory per agent
 
 `claude` discovers skills and personas from its working directory, so each agent gets its own
-directory. Install the protocol's skills once with the AI Catalog or GitHub releases option
-of [Getting the skills](../protocols/getting-started.md#getting-the-skills), into
-`~/.claude/skills/`, then link them into each agent's directory. (The marketplace option
-installs the skills as a plugin, not as a folder you can link per agent.) The persona is a
-`CLAUDE.md` that describes the role that agent plays.
+directory. Register the Cognition Protocols marketplace once, then install the protocol's plugin
+in each agent's directory with project scope, so that it is enabled for that agent only. The
+persona is a `CLAUDE.md` that describes the role that agent plays.
 
 ```bash
-for role in initiator microservices monolith pragmatist; do
-  mkdir -p agents/$role/.claude/skills
-done
+claude plugin marketplace add ioc-project/cognition-protocols
 
-PROTOCOL=<protocol>   # name of a directory under protocols/
-SKILLS=~/.claude/skills   # where you installed the skills
-ln -s $SKILLS/$PROTOCOL-initiator agents/initiator/.claude/skills/
-for role in microservices monolith pragmatist; do
-  ln -s $SKILLS/$PROTOCOL-receiver agents/$role/.claude/skills/
+PROTOCOL=<protocol>   # a protocol plugin, e.g. accord or concord
+for role in initiator microservices monolith pragmatist; do
+  mkdir -p agents/$role
+  (cd agents/$role && claude plugin install $PROTOCOL@cognition-protocols --scope project)
 done
 ```
+
+Each plugin carries both the initiator and the receiver skill. Their activation conditions
+are precise, so the initiator skill only activates on the agent that starts the protocol and
+the receiver skill on the agents that receive its messages.
 
 Write each role's description in `agents/<role>/CLAUDE.md`. The initiator's `CLAUDE.md` should
 tell it to keep every file it writes under `./run/`.
@@ -156,7 +155,6 @@ slimctl slim start -c slim-node.yaml
 # 2. the four agents, each from its own directory, inside the sandbox
 cd agents/initiator && shadictl \
   --allow . --allow ~/.claude --allow ~/.claude.json \
-  --read "$SKILLS" \
   --net-block --net-allow api.anthropic.com --net-allow 127.0.0.1:47560 \
   -- agentbridge register --tool initiator \
   --command "$PWD" --slim-endpoint 127.0.0.1:47560

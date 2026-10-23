@@ -18,21 +18,23 @@ harnesses.
 
 - Claude Code, logged in, with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in the environment
   of the session that acts as the lead.
-- The protocol's skills, installed into `~/.claude/skills/` with the AI Catalog or GitHub releases
-  option of [Getting the skills](../protocols/getting-started.md#getting-the-skills).
+- The Cognition Protocols marketplace, added once:
+
+    ```bash
+    claude plugin marketplace add ioc-project/cognition-protocols
+    ```
 
 ## Set up the working directory
 
-Create an empty directory outside any repository, with the skills in `.claude/skills/`, one persona
-file per teammate in `personas/` (the same role descriptions you would put in each AgentBridge
-`CLAUDE.md`), and an empty `run/` for the lead's files:
+Create an empty directory outside any repository, with one persona file per teammate in
+`personas/` (the same role descriptions you would put in each AgentBridge `CLAUDE.md`) and an
+empty `run/` for the lead's files, and install the protocol's plugin there with project scope:
 
 ```bash
-PROTOCOL=<protocol>   # name of a directory under protocols/
+PROTOCOL=<protocol>   # a protocol plugin, e.g. accord or concord
 WORK=/tmp/teams-$PROTOCOL
-mkdir -p $WORK/.claude/skills $WORK/personas $WORK/run
-SKILLS=~/.claude/skills   # where you installed the skills
-cp -R $SKILLS/$PROTOCOL-initiator $SKILLS/$PROTOCOL-receiver $WORK/.claude/skills/
+mkdir -p $WORK/personas $WORK/run
+(cd $WORK && claude plugin install $PROTOCOL@cognition-protocols --scope project)
 # write personas/microservices.md, personas/monolith.md, personas/pragmatist.md
 ```
 
