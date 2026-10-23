@@ -130,5 +130,5 @@ Cisco, October 2026.
 
 ## Next steps
 
-- [Getting Started](../../getting-started.md)
-- [Evaluation](../../evaluation/accord.md)
+- [Getting Started](../../getting-started.md) — how to add ACCORD to an existing multi-agent system
+- [Evaluation](../../evaluation/accord.md) — measured results across 150 scenarios: convergence, correctness, cost, and benefit

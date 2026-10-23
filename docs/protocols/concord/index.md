@@ -187,7 +187,7 @@ Cisco, October 2026.
 
 ## Next steps
 
-- [Getting Started](../../getting-started.md)
-- [Configuration](configuration.md)
-- [Specification](specification.md)
-- [Evaluation](../../evaluation/concord.md)
+- [Getting Started](../../getting-started.md) — how to add CONCORD to an existing multi-agent system
+- [Configuration](configuration.md) — the two user-level inputs CONCORD takes at runtime
+- [Specification](specification.md) — formal protocol definition in W3C ReSpec format
+- [Evaluation](../../evaluation/concord.md) — measured results across 350 runs: compliance, correctness, cost, and threshold calibration
