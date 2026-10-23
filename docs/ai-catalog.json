@@ -31,6 +31,19 @@
       ],
       "url": "https://github.com/ioc-project/cognition-protocols/releases/download/accord-initiator-v0.1.0/accord-initiator.zip",
       "updatedAt": "2026-10-23T14:36:31Z"
+    },
+    {
+      "identifier": "urn:air:ioc-project:skill:concord-receiver",
+      "displayName": "concord-receiver",
+      "version": "0.1.0",
+      "type": "application/agent-skills+zip",
+      "description": "Handles incoming CONCORD protocol messages for a sub-agent participating in a multi-agent consensus round. Activate this skill immediately whenever you receive a CONCORD protocol message: one whose root XML tag is concord-anchor, concord-propose-seed, concord-score, concord-repair or concord-commit, or one that names a CONCORD anchor, seed, score or repair round and asks you to rate outcomes or candidates or to propose one, even if the XML is wrapped in other text. Each message type requires a specific XML response: this skill tells you exactly what to return. Run the forge script and reply with its output, never with your own prose or hand-written XML. Do not apply general judgement about whether to participate; if the message matches, follow this skill precisely.",
+      "tags": [
+        "skill",
+        "claude-code"
+      ],
+      "url": "https://github.com/ioc-project/cognition-protocols/releases/download/concord-receiver-v0.1.0/concord-receiver.zip",
+      "updatedAt": "2026-10-23T14:36:31Z"
     }
   ]
 }
