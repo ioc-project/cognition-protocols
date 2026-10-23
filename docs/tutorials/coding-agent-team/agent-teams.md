@@ -6,7 +6,7 @@ To try a protocol on your own machine without a message bus, use the experimenta
 agent teams feature of Claude Code. A lead
 agent creates a team of teammates and exchanges messages with them using `SendMessage`.
 The lead plays the initiator, the teammates play the receivers, and the protocol is unchanged.
-It works with any Cognition Protocol, and the example is the same notification-service decision as in the [AgentBridge tutorial](agentbridge.md).
+It works with any Cognition Protocol.
 
 Agent teams work only on a single machine, with no network between the agents, and only
 with Claude Code. Use AgentBridge when agents must run in separate processes, containers or
