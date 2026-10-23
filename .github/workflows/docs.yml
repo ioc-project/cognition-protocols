@@ -37,20 +37,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Setup Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.12'
+      - name: Setup uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       - name: Configure Pages
         if: github.event_name != 'pull_request' && github.event_name != 'schedule'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
-      - name: Install MkDocs
-        run: pip install --requirement docs/requirements.txt
+      - name: Install MkDocs (locked)
+        run: uv sync --project docs/mkdocs --frozen
 
       - name: Build docs site
-        run: mkdocs build --strict --site-dir _site
+        run: uv run --project docs/mkdocs --frozen mkdocs build --strict --site-dir _site
 
       - name: Check links
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0

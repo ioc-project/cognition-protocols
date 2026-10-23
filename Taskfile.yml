@@ -1,0 +1,17 @@
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task -l
+
+  build:
+    desc: Build the documentation site into .build/site
+    cmds:
+      - uv run --project docs/mkdocs mkdocs build --strict --config-file mkdocs.yml --site-dir .build/site
+      - echo "Docs available at file://{{.ROOT_DIR}}/.build/site/index.html"
+
+  run:
+    desc: Serve the documentation site with live reload
+    cmds:
+      - uv run --project docs/mkdocs mkdocs serve --config-file mkdocs.yml

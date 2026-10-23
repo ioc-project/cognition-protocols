@@ -1,0 +1,8 @@
+[project]
+name = "cognition-protocols-docs"
+version = "0.1.0"
+description = "Toolchain for the Cognition Protocols documentation site"
+requires-python = ">=3.12"
+dependencies = [
+    "mkdocs-material==9.7.7",
+]

@@ -4,6 +4,10 @@ site_url: https://ioc-project.github.io/cognition-protocols/
 repo_url: https://github.com/ioc-project/cognition-protocols
 repo_name: ioc-project/cognition-protocols
 edit_uri: edit/main/docs/
+
+# Toolchain files that live beside the content must not be published
+exclude_docs: |
+  mkdocs/
 copyright: Internet of Cognition Project. Open specification.
 
 theme:

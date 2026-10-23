@@ -53,3 +53,17 @@ you can do:
 Thanks again for your interest on contributing to `cognition-protocols`!
 
 :heart:
+
+## Building the Documentation Locally
+
+The docs toolchain is pinned in [`docs/mkdocs/pyproject.toml`](/docs/mkdocs/pyproject.toml) and
+[`docs/mkdocs/uv.lock`](/docs/mkdocs/uv.lock). Install [`uv`](https://docs.astral.sh/uv/) and
+[`task`](https://taskfile.dev), then run, without installing anything by hand:
+
+```bash
+task build   # strict build into .build/site
+task run     # live-reload server
+```
+
+To change a dependency, edit `docs/mkdocs/pyproject.toml`, run `uv lock --project docs/mkdocs`, and
+commit both files.
