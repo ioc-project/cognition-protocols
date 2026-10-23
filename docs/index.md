@@ -31,8 +31,12 @@ across different agent harnesses.
 
 The current protocols are:
 
-- **ACCORD** — establishes shared intent before work begins
-- **CONCORD** — resolves conflict between divergent-but-correct specialist outputs
+- **ACCORD** — addresses *absence of shared intent*: misaligned terms, incompatible task models,
+  and outputs produced without an agreed verification step. Establishes who is participating,
+  what the problem is, what the terms mean, and how correctness is checked — before work begins.
+- **CONCORD** — addresses *unreconciled disagreement*: divergent-but-correct specialist outputs
+  that converge on an action without consensus. Reconciles differing positions into a certified
+  decision.
 
 For full design details see the [Protocols](protocols/index.md) section.
 
