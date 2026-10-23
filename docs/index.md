@@ -1,47 +1,52 @@
 ---
-title: IoC Cognition Protocols
+title: Cognition Protocols
 ---
 
-# IoC Cognition Protocols
+# Cognition Protocols
 
 
-Cognition Protocols occupy the agent cognitive layer, **L9**, above the L8 agent
-transports. L8 standardises message envelopes, performatives and interaction patterns.
-It does not define a verifiable shared meaning for the content those messages carry,
-nor primitives for coordination and consensus across a population of agents.
+Cognition Protocols occupy the agent cognitive layer, **L9**, above the L8 agent transports.
 
-That is the function of L9. Cognition Protocols are open, measurable specifications
-that occupy it. Each one satisfies three requirements by construction: the exchange
-**converges** provably, emits a **certified record** of what was achieved, and runs
-within a **cost bound** declared at the start.
+L8 standardises message envelopes, performatives and interaction patterns, but does not define
+a verifiable shared meaning for the content those messages carry, nor primitives for coordination
+and consensus across a population of agents.
+
+Cognition Protocols are open, measurable specifications that fill that gap — each one satisfies
+three requirements by construction: the exchange **converges** provably, emits a **certified
+record** of what was achieved, and runs within a **cost bound** declared at the start.
 
 ## Common Principles
 
-All Cognition Protocols share a common set of [common principles](common-principles.md)
-— convergence, certified benefit, and bounded cost — that each protocol satisfies by
-construction rather than by observation.
+Each Cognition Protocol satisfies the same three guarantees by construction — convergence,
+certified benefit, and bounded cost — rather than leaving them as emergent properties to be
+observed. See [Common Principles](common-principles.md) for the full requirements.
 
 ## Getting Started
 
-Adding a protocol to an existing multi-agent system requires no application changes.
+Adding a protocol to an existing multi-agent system requires no application code changes.
 See the [getting started guide](getting-started.md) for how skills are packaged and deployed
 across different agent harnesses.
 
 ## Protocols
 
-ACCORD establishes shared intent before work begins. CONCORD reconciles
-divergent-but-correct specialist outputs into a verifiable decision.
-See the [Cognition Protocols](protocols/index.md) section for full details.
+The current protocols are:
+
+- **ACCORD** — establishes shared intent before work begins
+- **CONCORD** — resolves conflict between divergent-but-correct specialist outputs
+
+For full design details see the [Protocols](protocols/index.md) section.
 
 ## Evaluation
 
-Both protocols evaluated across 500 runs on four independent dimensions:
-convergence, correctness, cost, and benefit. See the [evaluation overview](evaluation/index.md).
+A protocol specification is only as useful as its evidence. Each Cognition Protocol is
+evaluated against independent dimensions — convergence, correctness, cost, and benefit —
+so claims about behaviour are measurable, not asserted. See the [evaluation overview](evaluation/index.md)
+for results and methodology.
 
 ## Demos
 
 Recorded end-to-end demos across SRE triage, e-commerce, and multi-agent
-coding teams — with and without each protocol. See the [demos](demos/index.md) section.
+coding teams — with and without cognition protocols. See the [demos](demos/index.md) section.
 
 ## Get Involved
 
