@@ -46,22 +46,25 @@ flowchart LR
 - Claude Code, with `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_AUTH_TOKEN`
   set in the shell that registers the agents. The sandbox that wraps each agent cannot
   read your keychain login.
-- `agentbridge` and `shadictl` from [`agntcy/shadi`](https://github.com/agntcy/shadi), on your `PATH`:
+- `agentbridge` and `shadictl` from [`agntcy/shadi`](https://github.com/agntcy/shadi), on your `PATH`. On macOS:
 
     ```bash
     brew tap agntcy/shadi https://github.com/agntcy/shadi.git
     brew install shadictl agentbridge
     ```
 
-- `slimctl` from [`agntcy/slim`](https://github.com/agntcy/slim), which starts the SLIM node:
+- `slimctl` from [`agntcy/slim`](https://github.com/agntcy/slim), which starts the SLIM node. On macOS:
 
     ```bash
     brew tap agntcy/slim https://github.com/agntcy/slim.git
     brew install slimctl
     ```
 
-    See the [SLIM documentation](https://docs.agntcy.org/slim/slim-howto/) for other platforms
-    and other ways to install and run SLIM.
+!!! note "Other operating systems"
+    The commands above are for macOS. On another system, follow the installation instructions
+    in each repository instead: [`agntcy/shadi`](https://github.com/agntcy/shadi) for
+    `agentbridge` and `shadictl`, and [`agntcy/slim`](https://github.com/agntcy/slim)
+    (see also the [SLIM documentation](https://docs.agntcy.org/slim/slim-howto/)) for `slimctl`.
 
 ## One directory per agent
 
