@@ -244,7 +244,7 @@ cd "agents/$ROLE"
 
 shadictl \
   --allow . --read ~/.claude \
-  --allow "$ROOT/.tmp" --allow /tmp --allow /private/tmp \
+  --allow "$ROOT/.tmp" --read "$ROOT/profiles" --allow /tmp --allow /private/tmp \
   --net-block --net-allow api.anthropic.com --net-allow "$SLIM_ENDPOINT" \
   -- agentbridge register --tool "$ROLE" --command "$PWD" \
   --slim-endpoint "$SLIM_ENDPOINT"
