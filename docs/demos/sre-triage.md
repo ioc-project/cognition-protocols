@@ -1,3 +1,7 @@
+---
+icon: material/alert-circle-outline
+---
+
 # SRE Triage
 
 <p class="eyebrow">Four subsystem owners, one remediation</p>

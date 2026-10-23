@@ -1,3 +1,7 @@
+---
+icon: material/puzzle-outline
+---
+
 # Hiddenbench
 
 <p class="eyebrow">Deciding when the facts are distributed</p>

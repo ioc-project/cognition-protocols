@@ -1,3 +1,7 @@
+---
+icon: material/shopping-outline
+---
+
 # E-Commerce
 
 <p class="eyebrow">Specialist systems with incompatible objectives</p>
