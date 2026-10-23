@@ -86,6 +86,10 @@ nav:
           - protocols/concord/index.md
           - Configuration: protocols/concord/configuration.md
           - Specification: protocols/concord/specification.md
+  - Tutorials:
+      - tutorials/index.md
+      - Coding Agent Team:
+          - tutorials/coding-agent-team/index.md
   - Evaluation:
       - evaluation/index.md
       - ACCORD: evaluation/accord.md
