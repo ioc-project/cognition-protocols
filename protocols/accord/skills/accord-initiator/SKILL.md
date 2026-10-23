@@ -7,14 +7,14 @@ description: >
   instruction tells you to dispatch, delegate, or investigate in parallel,
   activate this skill first and run it to completion before that dispatch;
   there is no later point at which it can run. The trigger is the structure of
-  the task (multiple domains, one action outcome), never a visible conflict.
-  Specialists may use the same term for different metrics, or only one may know
-  which service a check applies to, so acting without verified shared scope
-  risks the wrong action on the wrong target. This skill establishes shared
-  scope, consistent terminology, and acceptance checks across all specialists
-  before any action is taken. Skip only when a single specialist handles the
-  task end-to-end, when a LOCKED_INTENT_CONTRACT for this task already exists,
-  or for read-only lookups with no action downstream.
+  the task (two or more specialists), never a visible conflict and never whether
+  the investigation is read-only. Specialists may use the same term for
+  different metrics, or only one may know which service a check applies to, so
+  acting without verified shared scope risks the wrong action on the wrong
+  target. This skill establishes shared scope, consistent terminology, and
+  acceptance checks across all specialists before any action is taken. Skip
+  only when a single specialist handles the task end-to-end, or when a
+  LOCKED_INTENT_CONTRACT for this task already exists.
 license: Apache-2.0
 metadata:
   author: Cisco Systems, Inc.
@@ -35,8 +35,28 @@ standalone script `scripts/accord_initiator.py` (the `accord_merge` of the refer
 positions.
 
 **Do NOT call any data tools or invoke task steps before the
-LOCKED_INTENT_CONTRACT exists.** Run Phases 0–3 now, then resume your normal
-workflow.
+LOCKED_INTENT_CONTRACT exists.**
+
+Critical protocol failures:
+- Writing a final answer, vote, recommendation, remediation, settlement, or
+  mission summary before `locked_intent_contract.status == "INTENT-LOCKED"`.
+- Treating delegate replies as phase results instead of raw inputs to `$ACCORD`.
+- Calling app/action tools before `execution-message` has been rendered and
+  delivered to the specialists.
+- Summarizing specialist replies instead of running the required merge command.
+
+Before `locked_intent_contract.status == "INTENT-LOCKED"`, the only legal
+actions are:
+
+| State | Legal next action |
+|---|---|
+| Last `$ACCORD` result includes `next_command` | Run that command's required delegation/merge path next. |
+| Need phase input | Delegate `CONVENE_REQUEST`, `FRAME_REQUEST`, `GROUND_REQUEST`, `CLARIFY_REQUEST`, or `VERIFY_REQUEST`. |
+| Have phase replies | Pass the raw replies to the matching `$ACCORD` merge command. |
+| VERIFY produced lock | Call `$ACCORD execution-message` for each specialist assignment. |
+
+Any app-native action before lock — final vote, recommendation, settlement,
+remediation, final answer, or action tool — is forbidden.
 
 ---
 
@@ -50,6 +70,28 @@ can run as a separate process. Every command prints one JSON object
 `{"ok": true, "phase": ..., "data": {...}}`; on failure `ok` is false with an `error`.
 Never compute a merge yourself.
 
+Until `verify` returns a `locked_intent_contract`, each merge result carries
+protocol control fields: `next_command`, `protocol_status`,
+`locked_contract_exists`, `normal_execution_allowed`, and
+`app_execution_allowed`. Treat these as authoritative. If
+`app_execution_allowed` is false, do not summarize, vote, recommend, remediate,
+settle, or call app/action tools.
+
+Responsibility matrix:
+
+| Actor | Responsibility |
+|---|---|
+| Moderator | Route phases, delegate phase requests, and call `$ACCORD` merge commands. |
+| Specialists | Return only the requested phase payload. |
+| `accord_initiator.py` | Produce the only valid merged phase artifacts. |
+| Delegate replies | Raw inputs only; never final phase results. |
+| App/action workflow | Runs only after lock and execution-message delivery. |
+
+After every `$ACCORD` merge, anchor on only the operational state:
+`current_phase`, `next_required_action`, `locked_contract_exists`, and
+`app_execution_allowed`. Do not write a substantive summary from intermediate
+phase artifacts.
+
 | Reference tool call | Standalone equivalent |
 |---|---|
 | `accord_merge(phase="init")` | `$ACCORD init --specialists a,b,c --key-terms t1,t2 --action-tool <name>` |
@@ -58,6 +100,7 @@ Never compute a merge yourself.
 | `accord_merge(phase="glossary", responses=[...], key_terms=...)` | `$ACCORD glossary --responses <file>` |
 | `accord_merge(phase="verify", responses=[...], required_knowledge=[...], objective_clauses=[...])` | `$ACCORD verify --responses <file> --required-knowledge <file> --objective-clauses <file>` |
 | `accord_merge(phase="lock", responses=[])` | `$ACCORD lock` — takes no arguments; do not pass `--responses` |
+| execution delegation | `$ACCORD execution-message --agent <id> --assignment-file <file>` |
 
 `--responses` (and the other file arguments) take a path to a JSON array file, or
 `-` for stdin. Put each specialist's raw reply, unmodified, as one element of the
@@ -87,7 +130,7 @@ differ between them, and the name of the final action step (`action_tool`).
 
 **The phase labels above are not subcommand names.** The complete set of
 subcommands is `init`, `roster`, `frame`, `glossary`, `verify`, `lock`,
-`status` — nothing else exists. In particular GROUND and CLARIFY both run as
+`execution-message`, `status` — nothing else exists. In particular GROUND and CLARIFY both run as
 `glossary`, and there is no `ground` and no `synthesis` subcommand.
 
 Output — **LOCKED_INTENT_CONTRACT** assembled via `$ACCORD lock`.
@@ -96,19 +139,17 @@ Output — **LOCKED_INTENT_CONTRACT** assembled via `$ACCORD lock`.
 
 ## When to activate
 
-All three must be true:
+Both must be true:
 
-1. You will coordinate **two or more specialists whose domain coverage differs** —
-   each brings knowledge or access the others lack.
+1. You will coordinate **two or more specialists**.
 2. You can name the **specialist set**: the specific sub-agents you will call on
    for this task.
-3. A **downstream action** depends on what the specialists collectively know —
-   proceeding without verified scope, shared terminology, and assigned checks
-   risks acting on the wrong service, with the wrong parameters, or missing a
-   critical failure mode.
+
+A read-only investigation is not a reason to skip. Activate whenever that
+specialist set will be called, including when no remediation follows.
 
 **Activate before the first delegation, not after.** The signal is the
-*structure* of the task — multiple domains, one action outcome — not a visible
+*structure* of the task — two or more specialists — not a visible
 disagreement. Do not wait for a specialist to return an ambiguous result before
 running ACCORD.
 
@@ -121,8 +162,6 @@ Do not activate when:
 - A single specialist can handle the task end-to-end (no shared scope needed).
 - You have already locked intent for this incident — a `LOCKED_INTENT_CONTRACT`
   with `status: "INTENT-LOCKED"` exists and covers the current task.
-- The task is a read-only query or lookup with no multi-domain action decision
-  downstream.
 
 ---
 
@@ -160,6 +199,11 @@ Call each specialist with this exact task structure:
 ```
 CONVENE_REQUEST
 
+ACCORD_PHASE: CONVENE
+LOCKED_CONTRACT_EXISTS: false
+APP_EXECUTION_ALLOWED: false
+PURPOSE: raw input for `$ACCORD roster`, not mission execution
+
 INCIDENT: <paste the full incident report verbatim>
 
 Without using any tools, return a JSON object:
@@ -179,28 +223,40 @@ Return ONLY the JSON. No preamble. No tools. No code fences.
 $ACCORD roster --responses <file with a JSON array: raw output from each delegate_to_<specialist>, one per specialist>
 ```
 
+The next action after these replies is `$ACCORD roster`; do not summarize,
+decide, vote, remediate, or write a status update from them.
+
 Pass each delegate output string exactly as received — the script handles all parsing internally.
 
 The script result contains the merged `roster` list and any `flagged_items`
-(duplicate roles → DC-4 defect). Store the roster. Proceed to Phase 1.
+(duplicate roles). Store the roster. Proceed to Phase 1.
 
 ---
 
-## Phase 1 — FRAME (up to 3 rounds)
+## Phase 1 — FRAME (exactly 2 rounds)
 
 **TOOL CALLS — execute NOW, in parallel:**
 
-Call `delegate_to_<specialist>` for every specialist from the init result, with this task structure:
+Call `delegate_to_<specialist>` for every specialist from the init result.
+Each specialist may return at most 6 atoms. The script keeps the first 6 and
+reports any cut in `truncated`.
+
+Round 1 — initial atoms:
 
 ```
 FRAME_REQUEST
 
+ACCORD_PHASE: FRAME
+LOCKED_CONTRACT_EXISTS: false
+APP_EXECUTION_ALLOWED: false
+PURPOSE: raw input for `$ACCORD frame`, not mission execution
+
 INCIDENT: <paste the full incident report verbatim>
-CURRENT_FRAME: <JSON array of atom texts already in M, or [] for round 1>
+CURRENT_FRAME: []
 
 Restate the task as the statements that matter for your domain — objective
-clauses, constraints, assumptions, sub-goals, deliverables. Return only atoms
-NOT already present in CURRENT_FRAME.
+clauses, constraints, assumptions, sub-goals, deliverables. Return at most
+6 atoms.
 
 Return a JSON object:
 {
@@ -212,22 +268,64 @@ Return a JSON object:
 Return ONLY the JSON. No tools. No code fences.
 ```
 
-**After receiving all specialist responses**, call:
+Round 2 — revision. This submission replaces that specialist's round-1 atoms.
+They may keep, rewrite, or delete. `YOUR_PREVIOUS_ATOMS` is that specialist's
+list from the round-1 `atoms_by_agent` result.
 
 ```
-$ACCORD frame --responses - --current-frame '<JSON array of atom texts already in M; [] on round 1>'
+FRAME_REQUEST
+
+ACCORD_PHASE: FRAME
+LOCKED_CONTRACT_EXISTS: false
+APP_EXECUTION_ALLOWED: false
+PURPOSE: raw input for `$ACCORD frame`, not mission execution
+
+INCIDENT: <paste the full incident report verbatim>
+CURRENT_FRAME: <JSON array of merged atom texts from round 1>
+YOUR_PREVIOUS_ATOMS: <that specialist's atom texts from atoms_by_agent>
+
+Return your full revised set of at most 6 atoms. This replaces your previous
+atoms. You may keep, rewrite, or delete. Return "atoms": [] to withdraw all
+of yours. Keep a fact only you know.
+
+Return a JSON object:
+{
+  "agent": "<your agent id>",
+  "atoms": [
+    { "text": "<statement>", "type": "objective|constraint|assumption|sub_goal|deliverable" }
+  ]
+}
+Return ONLY the JSON. No tools. No code fences.
 ```
 
-Send the raw specialist outputs on stdin and write `--current-frame` inline —
-`[]` on the first round, then the atom texts from the previous round.
+**After receiving all specialist responses for a round**, call:
+
+```
+$ACCORD frame --responses - --current-frame '<JSON array of merged atom texts; [] on round 1>'
+```
+
+The next action after these replies is `$ACCORD frame`; do not summarize,
+decide, vote, remediate, or write a status update from them.
+
+Send the raw specialist outputs on stdin and write `--current-frame` inline.
 
 Pass each delegate output string exactly as received — the script handles all parsing internally.
 
-The script result contains `atoms` (with `support` counts and `flagged_singleton`
-markers) and a `stop` flag. If `stop=True` or you have completed 3 rounds, proceed
-to Phase 2. Otherwise run another FRAME round using the new atom texts as
-`--current-frame`. **Atoms with `support == 1` are private knowledge now propagated
-— they remain in the frame; the `flagged_singleton` field marks them.**
+The script replaces each submitting agent's atoms with that response. A shorter
+list or `"atoms": []` deletes the atoms that agent left out. The result contains
+`atoms` (with `support` counts and `flagged_singleton` markers), `atoms_by_agent`,
+`truncated`, `next_command`, `protocol_status`, `locked_contract_exists`,
+`normal_execution_allowed`, and `app_execution_allowed`. `truncated` names each
+agent whose list was cut to 6 and how many atoms were dropped. There is no
+`stop` or `frame_complete` field.
+`next_command` is the only control signal:
+
+- `next_command: "frame"` — run another FRAME round.
+- `next_command: "glossary"` — framing rounds are done. Call
+  `glossary` in this same turn and continue through verify and execution.
+
+**Atoms with `support == 1` are private knowledge now propagated — they remain
+in the frame; the `flagged_singleton` field marks them.**
 
 ---
 
@@ -239,6 +337,11 @@ Call `delegate_to_<specialist>` for every specialist from the init result, with 
 
 ```
 GROUND_REQUEST
+
+ACCORD_PHASE: GROUND
+LOCKED_CONTRACT_EXISTS: false
+APP_EXECUTION_ALLOWED: false
+PURPOSE: raw input for `$ACCORD glossary`, not mission execution
 
 KEY_TERMS: <key_terms from init result>
 
@@ -261,6 +364,9 @@ Return ONLY the JSON. No tools. No code fences.
 $ACCORD glossary --responses <file: raw outputs, one per specialist>
 ```
 
+The next action after these replies is `$ACCORD glossary`; do not summarize,
+decide, vote, remediate, or write a status update from them.
+
 Pass each delegate output string exactly as received — the script handles all parsing internally.
 
 The script returns a `glossary` list and an `ambiguous` list. For each glossary entry,
@@ -269,19 +375,21 @@ the script provides:
   or `flagged` (they do not)
 - `variants` — `[{agent, definition}]`, what each agent reported (on a `flagged` entry)
 
+The script also returns protocol control fields. Follow `next_command`:
+`verify` means proceed to Phase 3; `glossary` means collect CLARIFY responses
+for the ambiguous terms and run `$ACCORD glossary` again. If
+`app_execution_allowed` is false, app-native completion is still forbidden.
+
 (The reference tool returns `canonical_unit` and an `aliases` map instead; the script
 has no external canonical-unit config, so `agreed` plays the part of "linked" and the
 `variants` list plays the part of `aliases`.)
 
-**Apply δ=0.75 comparison to each entry:**
-- For each agent's unit, compare it semantically to the other agents' units.
-- `sim > δ` (clearly the same concept) → linked: the entry is not ambiguous.
-- `sim < δ` (clearly different — e.g. `action = schema revert` vs `action = deploy revert`)
-  → split: keep every agent's variant in the entry and flag it as ambiguous.
-- `sim ≈ δ` (near-threshold, unsure) → add to AMBIGUOUS queue for Phase 2b.
+Use only the `ambiguous` list returned by the script. Do not run a separate
+similarity check and do not add pairs of your own. The script currently leaves
+that list empty: definitions that meet its merge score are `agreed`, and the
+rest stay `flagged` with their variants. Neither case is a clarify round.
 
-If the `ambiguous` list from the tool is non-empty, or if your δ comparison
-produces near-threshold pairs, proceed to Phase 2b. Otherwise skip to Phase 3.
+If the `ambiguous` list is non-empty, proceed to Phase 2b. Otherwise skip to Phase 3.
 
 ---
 
@@ -293,6 +401,11 @@ For each ambiguous term pair, call only the agents involved:
 
 ```
 CLARIFY_REQUEST
+
+ACCORD_PHASE: CLARIFY
+LOCKED_CONTRACT_EXISTS: false
+APP_EXECUTION_ALLOWED: false
+PURPOSE: raw input for `$ACCORD glossary`, not mission execution
 
 AMBIGUOUS_PAIR: { "term": "<term>", "agents": ["<agentA>", "<agentB>"] }
 DEFINITIONS_SO_FAR: <the two groundings that produced near-threshold similarity>
@@ -316,6 +429,9 @@ Return ONLY the JSON. No tools. No code fences.
 $ACCORD glossary --responses -
 ```
 
+The next action after these replies is `$ACCORD glossary`; do not summarize,
+decide, vote, remediate, or write a status update from them.
+
 Send only the clarification responses. The tool re-grounds the terms they name
 and leaves every other Glossary entry as GROUND left it, so there is no need to
 resend definitions that were never ambiguous. A term whose richer definitions
@@ -336,6 +452,11 @@ Call `delegate_to_<specialist>` for every specialist from the init result, with 
 
 ```
 VERIFY_REQUEST
+
+ACCORD_PHASE: VERIFY
+LOCKED_CONTRACT_EXISTS: false
+APP_EXECUTION_ALLOWED: false
+PURPOSE: raw input for `$ACCORD verify`, not mission execution
 
 REQUIRED_KNOWLEDGE: <JSON array of knowledge items the incident requires>
 OBJECTIVE_CLAUSES: <JSON array of Frame clauses that need to be verified>
@@ -362,30 +483,35 @@ Return ONLY the JSON. No tools. No code fences.
 $ACCORD verify --responses - --required-knowledge '<the REQUIRED_KNOWLEDGE array you sent>' --objective-clauses '<the OBJECTIVE_CLAUSES array you sent>'
 ```
 
+The next action after these replies is `$ACCORD verify`; do not summarize,
+decide, vote, remediate, or write a status update from them.
+
 Send the raw specialist outputs on stdin and write the other two arrays inline.
 **Always pass both.** Without `--required-knowledge` the knowledge universe
 collapses to whatever the specialists happened to report, so `gaps` can never be
 non-empty; without `--objective-clauses` there is nothing to check coverage
 against, so `unverifiable_clauses` is always empty. Omitting them yields a
 contract with `flagged_items: []` that looks clean no matter how poor the actual
-coverage is — the DE-1 and CE-1 defect classes simply stop being detectable.
+coverage is — knowledge gaps and unverifiable objectives simply stop being detectable.
 
 Pass each delegate output string exactly as received — the script handles all parsing internally.
 
 The script returns:
 - `knowledge_map` — union of all holdings with `held_by` lists; items with `gap:
-  true` are required knowledge no agent holds (**DE-1** defect)
+  true` are required knowledge no agent holds
 - `checks` — greedy set-cover selection with `assigned_to` per check
 - `gaps` — unfilled required knowledge items
-- `unverifiable_clauses` — objective clauses with no proposed check (**CE-1** defect)
+- `unverifiable_clauses` — objective clauses with no proposed check
 - **`locked_intent_contract`** — the complete LOCKED_INTENT_CONTRACT, pre-assembled
   and ready to use. This is the canonical contract for all downstream delegations.
+- `next` — the follow-up command and the agents still owed an execution message
 
 **PHASE 3 IS NOW COMPLETE. THE LOCKED_INTENT_CONTRACT IS IN THE VERIFY RESULT.**
 
 Read `data.locked_intent_contract` from the verify result. That object IS the
-final LOCKED_INTENT_CONTRACT. **Do NOT call any delegate_to_* tools.
-Do NOT run `accord_initiator.py` again. Your ONLY next action is to begin Phase 5 (EXECUTION).**
+final LOCKED_INTENT_CONTRACT, and the same object is now stored for
+`execution-message`. **Do NOT call any delegate_to_* tools yet. Do NOT run
+`verify` or `lock` again. Your next script call is `execution-message` in Phase 5.**
 
 The `locked_intent_contract` object has exactly **six keys**:
 
@@ -408,14 +534,18 @@ or, if `flagged_items` in the locked_intent_contract is non-empty:
 LOCKED_INTENT_CONTRACT: FLAGGED — <comma-separated flagged_items>
 ```
 
-**`LOCKED_INTENT_CONTRACT: COMPLETE` satisfies the verification gate.** Phase 3
-VERIFY established acceptance checks covering the task objective. A `COMPLETE`
-lock means shared intent is verified — no additional `VERIFICATION: APPROVED` signal
-is required before calling the action tool. A `FLAGGED` lock means gaps exist; still
-call the action tool but use a lower `confidence_level` and list the gap items in the
-call.
+**That line is a status marker, not an answer, and both values continue
+identically.** `FLAGGED` records that the contract carries defects; it does not
+pause, downgrade, or end the protocol. Emitting it never ends your turn.
 
-Then immediately call the first task delegation in the same turn.
+**Both statuses satisfy the verification gate.** Phase 3 VERIFY established
+acceptance checks covering the task objective, so no separate
+`VERIFICATION: APPROVED` signal is required at any later point. The action tool
+is called in Phase 5, after the execution replies arrive — never here.
+
+Then begin Phase 5 in the same turn: render each execution message and delegate
+`data.message`. Writing a remediation summary, a recommendation, or a final
+report instead is a protocol failure.
 
 ---
 
@@ -434,31 +564,32 @@ in the session. Use the `data` field verbatim — all six keys are present.
 
 ## Phase 5+ — EXECUTION (all task delegations)
 
-Every specialist delegation from this point MUST start with `EXECUTION_REQUEST`
-and embed the full locked contract from `data.locked_intent_contract` in the verify
-result (or from the `$ACCORD lock` result if Phase 4 was called):
+Do not write an `EXECUTION_REQUEST` yourself. For every specialist, write that
+specialist's assignment to a file, then render the delegation from the stored
+contract:
 
 ```
-EXECUTION_REQUEST
-
-Activate your `accord-receiver` skill and follow its EXECUTION_REQUEST
-handler before starting the assignment. Report values in the units fixed by the
-contract Glossary, complete the acceptance checks assigned to you in the
-Verifiable Objective, and begin your reply with `LOCK_STATUS: RECEIVED`.
-
-LOCKED_INTENT_CONTRACT: <paste the full JSON verbatim — all six keys>
-
-ASSIGNMENT: <the original task for this specialist>
+$ACCORD execution-message --agent <id> --assignment-file <assignment.txt>
 ```
 
-**The contract JSON must contain all six keys: `status`, `roster`, `problem_frame`, `glossary`,
-`verifiable_objective`, `flagged_items`. Do NOT abbreviate, shorten, or drop any field —
-especially `roster` — even when delegating to any specialist.**
+Pass `data.message` unchanged as the task of `delegate_to_<id>`. The rendered
+message already starts with `EXECUTION_REQUEST` and contains the receiver
+instruction, the canonical six-key `LOCKED_INTENT_CONTRACT`, and the assignment.
+Do not abbreviate, shorten, or rebuild it.
+
+If the command exits non-zero because no locked contract exists, stop. Do not
+delegate without `data.message`.
+
+A specialist reply that does not begin with `LOCK_STATUS: RECEIVED` did not
+receive the contract. Render the message again and re-delegate that assignment
+before calling the action tool.
 
 **After receiving all EXECUTION specialist responses, call `<action_tool from init result>`
 in the same turn.** Do NOT wait for a `VERIFICATION: APPROVED` string — the verification
-gate was satisfied by `LOCKED_INTENT_CONTRACT: COMPLETE` in Phase 3. This rule supersedes
-any role-prompt requirement for a separate verification signal.
+gate was satisfied by the Phase 3 lock line, whether it read `COMPLETE` or `FLAGGED`.
+This rule supersedes any role-prompt requirement for a separate verification signal.
+After a `FLAGGED` lock, still call the action tool, but use a lower
+`confidence_level` and list the flagged items in the call.
 
 Select the action parameters from the EXECUTION responses and the locked Glossary.
 If multiple specialists propose conflicting actions, prefer the one most directly
@@ -482,11 +613,18 @@ supported by the highest-support Frame atoms.
 7. **You MUST run `accord_initiator.py` after each delegation round.** Do not compute
    merges yourself — the script output is the canonical merged artifact.
 8. **Never emit the merged artifact as standalone text.** Pass it only as input to
-   subsequent `accord_initiator.py` calls and embed the lock result verbatim in EXECUTION_REQUEST tasks.
+   subsequent `accord_initiator.py` calls. For execution, pass `data.message`
+   from `execution-message` unchanged into `delegate_to_<id>`.
 9. **If `accord_initiator.py` returns `ok: false` or exits non-zero, stop and report the
    error.** Do not invent a subcommand, do not retry the same phase with a
    different argument shape, and do not silently fall back to an unprotocoled
-   investigation. The subcommand set is fixed and every phase above has a form
-   that needs only `--responses -`, so a failure means the arguments were wrong,
+   investigation. The subcommand set is fixed. `frame`, `glossary`, and `verify`
+   each have a form that needs only `--responses -`. `execution-message` takes
+   `--agent` and `--assignment-file`. A failure means the arguments were wrong,
    not that a different phase is needed. Rule 7 forbids computing the merge
    yourself; it does not authorise improvising a command.
+10. **The protocol ends with the action tool, never with a written summary.**
+    Phases 3 and 5 each end in a tool call. A `FLAGGED` lock, a knowledge gap, an
+    ambiguous term, or an uncovered atom is reported inside the action call with
+    a lower `confidence_level` — none of them is a reason to stop early and reply
+    with a recommendation, a report, or an instruction for someone else to act.

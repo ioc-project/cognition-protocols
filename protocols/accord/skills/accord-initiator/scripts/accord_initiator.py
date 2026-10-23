@@ -15,6 +15,7 @@ session state in a JSON file, so each phase can run as a separate process.
     accord_initiator.py glossary --responses r.json
     accord_initiator.py verify   --responses r.json --required-knowledge k.json --objective-clauses c.json
     accord_initiator.py lock
+    accord_initiator.py execution-message --agent <id> --assignment-file task.txt
     accord_initiator.py status
 
 ``--responses`` / ``--required-knowledge`` / ``--objective-clauses`` accept a
@@ -56,8 +57,12 @@ DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 DEFAULT_VERIFIER_ID = "verifier"
 GROUP_THRESHOLD = 0.72
 SIM_MERGE = 0.72
-SIM_CLARIFY = 0.55
+# Equal to SIM_MERGE so the near-match band [SIM_CLARIFY, SIM_MERGE) is empty.
+# Glossary pairs either agree or stay flagged. Nothing is sent to CLARIFY.
+SIM_CLARIFY = SIM_MERGE
 MAX_UNCOVERED_HOLDINGS = 1
+MAX_FRAME_ATOMS = 6
+MAX_FRAME_ROUNDS = 2
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 
@@ -167,15 +172,45 @@ def ingest_roster(raw: list[Any]) -> list[dict]:
     return cards
 
 
-def ingest_frame(raw: list[Any]) -> list[dict]:
-    obs = []
+def ingest_frame_round(raw: list[Any]) -> tuple[dict[str, list[dict]], list[dict], bool]:
+    """Latest atoms per agent, truncated to the first MAX_FRAME_ATOMS.
+
+    A response with an ``atoms`` list replaces that agent's previous atoms,
+    including an empty list. Returns ``(atoms_by_agent, truncated, saw_atoms)``.
+    ``truncated`` records agents whose list was cut, in submission order.
+    """
+    by_agent: dict[str, list[dict]] = {}
+    submitted: dict[str, int] = {}
+    saw_atoms = False
     for d in parse_responses(raw):
+        atoms = d.get("atoms")
+        if not isinstance(atoms, list):
+            continue
+        saw_atoms = True
         agent = str(d.get("agent") or "").strip()
-        for a in d.get("atoms") or []:
-            text = str(a.get("text") or "").strip() if isinstance(a, dict) else ""
+        parsed: list[dict] = []
+        for atom in atoms:
+            text = str(atom.get("text") or "").strip() if isinstance(atom, dict) else ""
             if text:
-                obs.append({"text": text, "agent": agent, "kind": str(a.get("type") or "term")})
-    return obs
+                parsed.append({
+                    "text": text,
+                    "agent": agent,
+                    "kind": str(atom.get("type") or "term"),
+                })
+        by_agent.setdefault(agent, []).extend(parsed)
+        submitted[agent] = submitted.get(agent, 0) + len(parsed)
+    truncated: list[dict] = []
+    for agent, atoms in by_agent.items():
+        total = submitted.get(agent, 0)
+        if total > MAX_FRAME_ATOMS:
+            truncated.append({
+                "agent": agent,
+                "submitted": total,
+                "kept": MAX_FRAME_ATOMS,
+                "dropped": total - MAX_FRAME_ATOMS,
+            })
+            by_agent[agent] = atoms[:MAX_FRAME_ATOMS]
+    return by_agent, truncated, saw_atoms
 
 
 def ingest_glossary(raw: list[Any], key_terms: list[str]) -> list[tuple[str, str, str]]:
@@ -439,7 +474,7 @@ def blank_state() -> dict:
         "specialists": [], "key_terms": [], "action_tool": "", "coverage_warnings": [],
         "roster": [], "obs": [], "frame": [], "glossary": [],
         "owned": {}, "uncovered": [], "checks": [], "defects": [],
-        "frame_rounds": 0,
+        "frame_rounds": 0, "locked_contract": None,
     }
 
 
@@ -476,9 +511,41 @@ def read_json(arg: str | None, default: Any = None) -> Any:
 def csv(value: str | None) -> list[str]:
     return [v.strip() for v in (value or "").split(",") if v.strip()]
 
+
+def read_text(arg: str) -> str:
+    """Read an assignment from a file path or from stdin when arg is '-'."""
+    text = sys.stdin.read() if arg == "-" else Path(arg).read_text()
+    return text.strip()
+
+
+def canonical_json(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def render_execution_message(agent: str, contract: dict, assignment: str) -> str:
+    return (
+        "EXECUTION_REQUEST\n\n"
+        "Activate your `accord-receiver` skill and follow its EXECUTION_REQUEST\n"
+        "handler before starting the assignment. Report values in the units fixed by the\n"
+        "contract Glossary, complete the acceptance checks assigned to you in the\n"
+        "Verifiable Objective, and begin your reply with `LOCK_STATUS: RECEIVED`.\n\n"
+        f"LOCKED_INTENT_CONTRACT: {canonical_json(contract)}\n\n"
+        f"ASSIGNMENT: {assignment}"
+    )
+
 # --------------------------------------------------------------------------
 # Commands
 # --------------------------------------------------------------------------
+
+
+def protocol_control(next_command: str) -> dict:
+    return {
+        "next_command": next_command,
+        "protocol_status": "IN_PROGRESS",
+        "locked_contract_exists": False,
+        "normal_execution_allowed": False,
+        "app_execution_allowed": False,
+    }
 
 
 def cmd_init(a: argparse.Namespace, st: dict) -> dict:
@@ -487,8 +554,12 @@ def cmd_init(a: argparse.Namespace, st: dict) -> dict:
     st["key_terms"] = csv(a.key_terms)
     st["action_tool"] = a.action_tool or ""
     a._state_out = st
-    return {"specialists": st["specialists"], "key_terms": st["key_terms"],
-            "action_tool": st["action_tool"]}
+    return {
+        "specialists": st["specialists"],
+        "key_terms": st["key_terms"],
+        "action_tool": st["action_tool"],
+        **protocol_control("roster"),
+    }
 
 
 def cmd_roster(a: argparse.Namespace, st: dict) -> dict:
@@ -497,33 +568,46 @@ def cmd_roster(a: argparse.Namespace, st: dict) -> dict:
     for c in st["roster"]:
         for role in c["roles"]:
             owners.setdefault(role.strip().lower(), []).append(c["identity"])
-    st["defects"] = [f"DC-4: duplicate exclusive role '{r}' claimed by {o}"
+    st["defects"] = [f"duplicate exclusive role '{r}' claimed by {o}"
                      for r, o in owners.items() if len(o) > 1]
-    return {"roster": st["roster"], "flagged_items": st["defects"]}
+    return {
+        "roster": st["roster"],
+        "flagged_items": st["defects"],
+        **protocol_control("frame"),
+    }
 
 
 def cmd_frame(a: argparse.Namespace, st: dict) -> dict:
-    current = read_json(a.current_frame, [])
+    # Accepted so an explicit current frame still has to be valid JSON. The
+    # live atoms come from session state, replaced per agent on each round.
+    read_json(a.current_frame, [])
     raw = read_json(a.responses, [])
-    new = ingest_frame(raw)
-    if raw and not new:
+    by_agent, truncated, saw_atoms = ingest_frame_round(raw)
+    if raw and not saw_atoms:
         raise SystemExit(
             "frame: none of the responses carried an 'atoms' list of "
-            "{\"text\": ...} objects. Refusing to record an empty round."
+            "{\"text\": ...} objects. Refusing to record an unparseable round."
         )
-    st["obs"].extend(new)
+    submitted = set(by_agent)
+    st["obs"] = [obs for obs in st["obs"] if obs["agent"] not in submitted]
+    for atoms in by_agent.values():
+        st["obs"].extend(atoms)
     st["frame_rounds"] += 1
-    if not st["obs"]:
-        st["frame"] = []
-        return {"atoms": list(current), "new_this_round": 0, "stop": True}
-    st["frame"] = group_atoms(st["obs"])
+    st["frame"] = group_atoms(st["obs"]) if st["obs"] else []
+    atoms_by_agent = {agent: [] for agent in submitted}
+    for obs in st["obs"]:
+        atoms_by_agent.setdefault(obs["agent"], []).append(obs["text"])
     support = [s["support"] for s in st["frame"]]
     mm = good_turing_missing_mass(support)
+    frame_rounds_done = st["frame_rounds"] >= MAX_FRAME_ROUNDS
+    next_command = "glossary" if frame_rounds_done else "frame"
     return {
         "atoms": [{**s, "flagged_singleton": s["support"] == 1} for s in st["frame"]],
-        "new_this_round": len(new),
+        "new_this_round": sum(len(atoms) for atoms in by_agent.values()),
         "round": st["frame_rounds"],
-        "stop": len(new) == 0 or st["frame_rounds"] >= 3,
+        **protocol_control(next_command),
+        "atoms_by_agent": atoms_by_agent,
+        "truncated": truncated,
         "coverage": {"good_turing_missing_mass": round(mm, 4),
                      "chao1": round(chao1(support), 4),
                      "coverage": round(max(0.0, 1.0 - mm), 4)},
@@ -546,7 +630,12 @@ def cmd_glossary(a: argparse.Namespace, st: dict) -> dict:
     # this call did not speak to instead of replacing the whole glossary.
     revised = {e["term"] for e in entries}
     st["glossary"] = [e for e in st["glossary"] if e["term"] not in revised] + entries
-    return {"glossary": st["glossary"], "ambiguous": ambiguous}
+    next_command = "glossary" if ambiguous else "verify"
+    return {
+        "glossary": st["glossary"],
+        "ambiguous": ambiguous,
+        **protocol_control(next_command),
+    }
 
 
 def cmd_verify(a: argparse.Namespace, st: dict) -> dict:
@@ -555,7 +644,7 @@ def cmd_verify(a: argparse.Namespace, st: dict) -> dict:
     covers, checks_raw, all_holds = ingest_verify(read_json(a.responses, []))
     # Without the required-knowledge universe the knowledge map collapses to
     # what the specialists happened to report, so every item is held by
-    # definition and no DE-1 gap can ever appear. Falling back is still useful,
+    # definition and no knowledge gap can ever appear. Falling back is still useful,
     # but the contract has to say the coverage was never actually tested.
     # Replaced, not appended, so re-running verify with the arguments supplied
     # clears the warning rather than inheriting it from an earlier attempt.
@@ -563,12 +652,12 @@ def cmd_verify(a: argparse.Namespace, st: dict) -> dict:
     if not required:
         warnings.append(
             "coverage_untested: verify ran without --required-knowledge, so "
-            "knowledge gaps (DE-1) could not be detected"
+            "knowledge gaps could not be detected"
         )
     if not clauses:
         warnings.append(
             "coverage_untested: verify ran without --objective-clauses, so "
-            "unverifiable objectives (CE-1) could not be detected"
+            "unverifiable objectives could not be detected"
         )
     st["coverage_warnings"] = warnings
     universe = required or all_holds
@@ -587,12 +676,52 @@ def cmd_verify(a: argparse.Namespace, st: dict) -> dict:
         "checks": st["checks"],
         "gaps": list(st["uncovered"]),
         "unverifiable_clauses": [cl for i, cl in enumerate(clauses) if i not in covered],
-        "locked_intent_contract": assemble_lock(st),
+        "locked_intent_contract": _store_contract(st),
+        "next": _next_step(st),
     }
 
 
+def _next_step(st: dict) -> dict:
+    """Spell out Phase 5 in the verify payload.
+
+    A contract with flagged items reads like a conclusion, and orchestrators
+    have ended the run there with a written recommendation. Fresh tool output
+    outranks skill text recalled from many turns ago, so the follow-up command
+    ships with the contract itself.
+    """
+    action_tool = st["action_tool"] or "the action tool"
+    return {
+        "command": "execution-message",
+        "agents": list(st["specialists"]),
+        "note": (
+            "flagged_items do not end the protocol: render one execution message "
+            "per agent, delegate data.message unchanged, then call "
+            f"{action_tool} once the replies arrive"
+        ),
+    }
+
+
+def _store_contract(st: dict) -> dict:
+    contract = assemble_lock(st)
+    st["locked_contract"] = contract
+    return contract
+
+
 def cmd_lock(a: argparse.Namespace, st: dict) -> dict:
-    return assemble_lock(st)
+    return _store_contract(st)
+
+
+def cmd_execution_message(a: argparse.Namespace, st: dict) -> dict:
+    contract = st.get("locked_contract")
+    if not contract:
+        raise SystemExit("execution-message: no locked contract exists")
+    if contract.get("status") != "INTENT-LOCKED":
+        raise SystemExit("execution-message: contract is not INTENT-LOCKED")
+    assignment = read_text(a.assignment_file)
+    return {
+        "agent": a.agent,
+        "message": render_execution_message(a.agent, contract, assignment),
+    }
 
 
 def cmd_status(a: argparse.Namespace, st: dict) -> dict:
@@ -645,6 +774,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("lock", help="Phase 4 LOCK: assemble contract from saved state")
     s.set_defaults(fn=cmd_lock)
+
+    s = sub.add_parser(
+        "execution-message",
+        help="render an EXECUTION_REQUEST containing the stored locked contract",
+    )
+    s.add_argument("--agent", required=True, help="specialist id this message is for")
+    s.add_argument(
+        "--assignment-file",
+        required=True,
+        help="assignment text file, or '-' for stdin",
+    )
+    s.set_defaults(fn=cmd_execution_message)
 
     s = sub.add_parser("status", help="show session progress")
     s.set_defaults(fn=cmd_status)
