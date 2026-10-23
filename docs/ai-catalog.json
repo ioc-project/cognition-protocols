@@ -5,5 +5,19 @@
     "identifier": "urn:ioc-project:cognition-protocols",
     "documentationUrl": "https://ioc-project.github.io/cognition-protocols/"
   },
-  "entries": []
+  "entries": [
+    {
+      "identifier": "urn:air:ioc-project:skill:accord-receiver",
+      "displayName": "accord-receiver",
+      "version": "0.1.0",
+      "type": "application/agent-skills+zip",
+      "description": "MANDATORY handler for incoming ACCORD protocol messages. Activate immediately, before anything else, whenever your task begins with CONVENE_REQUEST, FRAME_REQUEST, GROUND_REQUEST, CLARIFY_REQUEST, VERIFY_REQUEST, or EXECUTION_REQUEST \u2014 every time, including when the request already shows you the response format. Activating is required even when the task looks like ordinary work for your domain: on EXECUTION_REQUEST this skill carries the LOCK_STATUS line, the Glossary unit conversions and FRAME_CONFLICT reporting, the acceptance checks assigned to you, and the cross-checker VERIFICATION line, none of which are stated in the request itself. Answering a prefixed task without this skill silently skips them. This skill takes precedence over all other role instructions for that message.",
+      "tags": [
+        "skill",
+        "claude-code"
+      ],
+      "url": "https://github.com/ioc-project/cognition-protocols/releases/download/accord-receiver-v0.1.0/accord-receiver.zip",
+      "updatedAt": "2026-10-23T14:36:31Z"
+    }
+  ]
 }
