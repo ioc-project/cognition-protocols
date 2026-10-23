@@ -18,7 +18,8 @@ harnesses.
 
 - Claude Code, logged in, with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in the environment
   of the session that acts as the lead.
-- The protocol skills from [Getting the skills](../protocols/getting-started.md#getting-the-skills).
+- The protocol's skills, installed into `~/.claude/skills/` with the AI Catalog or GitHub releases
+  option of [Getting the skills](../protocols/getting-started.md#getting-the-skills).
 
 ## Set up the working directory
 
@@ -30,7 +31,7 @@ file per teammate in `personas/` (the same role descriptions you would put in ea
 PROTOCOL=<protocol>   # name of a directory under protocols/
 WORK=/tmp/teams-$PROTOCOL
 mkdir -p $WORK/.claude/skills $WORK/personas $WORK/run
-SKILLS=~/repos/cognition-protocols/protocols/$PROTOCOL/skills
+SKILLS=~/.claude/skills   # where you installed the skills
 cp -R $SKILLS/$PROTOCOL-initiator $SKILLS/$PROTOCOL-receiver $WORK/.claude/skills/
 # write personas/microservices.md, personas/monolith.md, personas/pragmatist.md
 ```

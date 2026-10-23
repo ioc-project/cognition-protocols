@@ -69,7 +69,10 @@ flowchart LR
 ## One directory per agent
 
 `claude` discovers skills and personas from its working directory, so each agent gets its own
-directory. The skills come from [Getting the skills](../protocols/getting-started.md#getting-the-skills); the persona is a
+directory. Install the protocol's skills once with the AI Catalog or GitHub releases option
+of [Getting the skills](../protocols/getting-started.md#getting-the-skills), into
+`~/.claude/skills/`, then link them into each agent's directory. (The marketplace option
+installs the skills as a plugin, not as a folder you can link per agent.) The persona is a
 `CLAUDE.md` that describes the role that agent plays.
 
 ```bash
@@ -78,7 +81,7 @@ for role in initiator microservices monolith pragmatist; do
 done
 
 PROTOCOL=<protocol>   # name of a directory under protocols/
-SKILLS=~/repos/cognition-protocols/protocols/$PROTOCOL/skills
+SKILLS=~/.claude/skills   # where you installed the skills
 ln -s $SKILLS/$PROTOCOL-initiator agents/initiator/.claude/skills/
 for role in microservices monolith pragmatist; do
   ln -s $SKILLS/$PROTOCOL-receiver agents/$role/.claude/skills/
@@ -153,7 +156,7 @@ slimctl slim start -c slim-node.yaml
 # 2. the four agents, each from its own directory, inside the sandbox
 cd agents/initiator && shadictl \
   --allow . --allow ~/.claude --allow ~/.claude.json \
-  --read /path/to/protocols/$PROTOCOL/skills \
+  --read "$SKILLS" \
   --net-block --net-allow api.anthropic.com --net-allow 127.0.0.1:47560 \
   -- agentbridge register --tool initiator \
   --command "$PWD" --slim-endpoint 127.0.0.1:47560
