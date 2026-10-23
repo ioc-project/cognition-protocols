@@ -40,6 +40,20 @@ mkdir -p $WORK/personas $WORK/run
 
 The role descriptions are on the [Coding Agent Team scenario](index.md) page.
 
+The working directory then looks like this:
+
+```text
+/tmp/teams-<protocol>/
+├── .claude/
+│   └── settings.json         # enables the protocol plugin (project scope)
+├── kickoff.md                # the lead's prompt, written in the next step
+├── personas/
+│   ├── microservices.md
+│   ├── monolith.md
+│   └── pragmatist.md
+└── run/                      # the lead's files, including the protocol's state file
+```
+
 ## Kick off the lead
 
 Start Claude Code in that directory with a prompt that has three parts:

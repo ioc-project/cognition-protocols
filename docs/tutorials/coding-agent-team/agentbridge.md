@@ -144,6 +144,37 @@ with session handling and temp-directory pinning, are in the reference setup lin
     fail. If that happens on a loopback-only bus, you can run `agentbridge register` without
     `shadictl`. Do not do this once the bus endpoint is reachable beyond `127.0.0.1`.
 
+### Resulting layout
+
+Once every agent has its role file and plugin, and the profiles are in place, the working
+directory looks like this:
+
+```text
+.
+├── slim-node.yaml            # SLIM node configuration (SLIM transport only)
+├── kickoff.md                # the task, handed to the initiator in "Run the protocol"
+├── profiles/                 # AGENTBRIDGE_PROFILES_DIR
+│   ├── initiator.json
+│   ├── microservices.json
+│   ├── monolith.json
+│   └── pragmatist.json
+└── agents/
+    ├── initiator/
+    │   ├── CLAUDE.md         # working rules
+    │   ├── .claude/
+    │   │   └── settings.json # enables the protocol plugin (project scope)
+    │   └── run/              # created by the initiator during the run
+    ├── microservices/
+    │   ├── CLAUDE.md         # role definition
+    │   └── .claude/settings.json
+    ├── monolith/
+    │   ├── CLAUDE.md
+    │   └── .claude/settings.json
+    └── pragmatist/
+        ├── CLAUDE.md
+        └── .claude/settings.json
+```
+
 ## Start the mesh
 
 Use one terminal per process so that each agent's traffic is visible. Every terminal needs the
