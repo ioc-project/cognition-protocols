@@ -86,12 +86,12 @@ the specialists. It follows the [template](../../index.md#7-prompt-the-initiator
 filled in for this example and for the `concord` protocol; for `accord`, replace
 `concord-initiator` with `accord-initiator`.
 
-[:material-download: Download prompt.md](prompt.md){ download="prompt.md" }
+[:material-download: Download prompt.md](prompt.txt){ download="prompt.md" }
 
 ??? example "prompt.md"
 
     ```text
-    --8<-- "tutorials/agentbridge/examples/coding-agent-team/prompt.md"
+    --8<-- "tutorials/agentbridge/examples/coding-agent-team/prompt.txt"
     ```
 
 ## Running it
@@ -117,7 +117,7 @@ mkdir -p ~/agent-team && cd ~/agent-team
 EXAMPLE=https://ioc-project.github.io/cognition-protocols/tutorials/agentbridge/examples/coding-agent-team
 
 curl -fsSL $EXAMPLE/team.env -o team.env && source team.env
-curl -fsSL $EXAMPLE/prompt.md -o prompt.md
+curl -fsSL $EXAMPLE/prompt.txt -o prompt.md
 for id in initiator $(echo $SPECIALISTS); do mkdir -p agents/$id; done
 for id in $(echo $SPECIALISTS); do
   curl -fsSL $EXAMPLE/roles/$id.txt -o agents/$id/CLAUDE.md

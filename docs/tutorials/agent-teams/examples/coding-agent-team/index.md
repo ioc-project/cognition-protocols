@@ -56,12 +56,12 @@ messaging rules. It follows the [template](../../index.md#4-prompt-the-initiator
 of the tutorial, filled in for this example and for the `concord` protocol; for `accord`,
 replace `concord-initiator` with `accord-initiator`.
 
-[:material-download: Download prompt.md](prompt.md){ download="prompt.md" }
+[:material-download: Download prompt.md](prompt.txt){ download="prompt.md" }
 
 ??? example "prompt.md"
 
     ```text
-    --8<-- "tutorials/agent-teams/examples/coding-agent-team/prompt.md"
+    --8<-- "tutorials/agent-teams/examples/coding-agent-team/prompt.txt"
     ```
 
 ## Running it
@@ -71,7 +71,7 @@ Claude Code with the prompt.
 
 ```bash
 mkdir -p ~/agent-team/run && cd ~/agent-team
-curl -fsSL https://ioc-project.github.io/cognition-protocols/tutorials/agent-teams/examples/coding-agent-team/prompt.md -o prompt.md
+curl -fsSL https://ioc-project.github.io/cognition-protocols/tutorials/agent-teams/examples/coding-agent-team/prompt.txt -o prompt.md
 claude plugin install concord@cognition-protocols --scope project
 CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude "$(cat prompt.md)"
 ```

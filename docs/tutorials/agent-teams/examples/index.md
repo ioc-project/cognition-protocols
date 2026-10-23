@@ -20,5 +20,5 @@ the real prompt, ready to run.
 ## Anatomy of an example
 
 An example page describes the task and the agents, and publishes the prompt next to it as
-`prompt.md`. The prompt is the tutorial's template, filled in with the task, the id and the role
+`prompt.txt`. The prompt is the tutorial's template, filled in with the task, the id and the role
 description of each specialist, and the protocol skill.

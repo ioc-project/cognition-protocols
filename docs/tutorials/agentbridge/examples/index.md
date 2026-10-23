@@ -24,5 +24,5 @@ An example page describes the task and the agents, and publishes these files nex
 | File | Content |
 |---|---|
 | `roles/<id>.txt` | The role definition of each specialist, one file per agent id. It is saved as the instruction file of the agent's harness |
-| `prompt.md` | The initiator's prompt: the tutorial's template, filled in |
+| `prompt.txt` | The initiator's prompt: the tutorial's template, filled in. It is saved as `prompt.md` |
 | `team.env` | `SPECIALISTS`, the agent ids separated by spaces. Optionally `SLIM_HUMAN_SEED` and `SLIM_MEMBER_DIDS`, the identities of the agents, which skips deriving them |
