@@ -1,3 +1,7 @@
+---
+icon: material/target
+---
+
 # ACCORD — Evaluation
 
 <p class="eyebrow">150 scenarios against a matched baseline</p>

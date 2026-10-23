@@ -1,3 +1,7 @@
+---
+icon: material/tag-outline
+---
+
 # Customer renewal discount
 
 <p class="eyebrow">Four roles, each right, on one commercial decision</p>

@@ -1,3 +1,7 @@
+---
+icon: material/code-braces
+---
+
 # Coding Architect Team
 
 <p class="eyebrow">Architects reaching one design decision</p>
