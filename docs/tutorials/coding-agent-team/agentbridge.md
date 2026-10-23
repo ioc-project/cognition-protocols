@@ -179,9 +179,9 @@ cat > env.sh <<'EOF'
 # Source this from the project directory: source env.sh
 export SLIM_ENDPOINT=127.0.0.1:47560
 export AGENTBRIDGE_PROFILES_DIR="$PWD/profiles"
-export SHADI_TMP_DIR="$PWD/.tmp"
 
-export SLIM_TLS_CA="$PWD/.tmp/shadi-slim-mtls/ca.crt"
+# Where AgentBridge looks for the certificates (and the CA) generated in step 5
+export SHADI_TMP_DIR="$PWD/.tmp"
 export SLIM_TLS_CERT="$PWD/.tmp/shadi-slim-mtls/client-avatar.crt"
 export SLIM_TLS_KEY="$PWD/.tmp/shadi-slim-mtls/client-avatar.key"
 
