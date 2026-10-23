@@ -68,7 +68,7 @@ flowchart LR
 
 ## One directory per agent
 
-`claude` discovers skills and personas from its working directory, so each agent gets its own
+Claude Code discovers skills and personas from its working directory, so each agent gets its own
 directory. Register the Cognition Protocols marketplace once, then install the protocol's plugin
 in each agent's directory with project scope, so that it is enabled for that agent only. The
 persona is a `CLAUDE.md` that describes the role that agent plays.
@@ -104,7 +104,7 @@ Include these identities:
 | `driver` | The initiator's own outbound calls to the receivers (the bus allows one active session per identity, so it cannot reuse `avatar` or `initiator`) |
 | `initiator`, `microservices`, `monolith`, `pragmatist` | The four registered agents |
 
-Each role also needs an AgentBridge profile (`--tool <role>`) that launches `claude` in
+Each role also needs an AgentBridge profile (`--tool <role>`) that launches Claude Code in
 print mode and sets the agent id. For the initiator, disallow the in-process `Task` tool so
 that it can only delegate over the bus:
 
