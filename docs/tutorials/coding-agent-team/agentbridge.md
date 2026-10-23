@@ -71,7 +71,7 @@ flowchart LR
 Claude Code discovers skills and personas from its working directory, so each agent gets its own
 directory. Register the Cognition Protocols marketplace once, then install the protocol's plugin
 in each agent's directory with project scope, so that it is enabled for that agent only. The
-persona is a `CLAUDE.md` that describes the role that agent plays.
+persona is a `CLAUDE.md` that holds the [role definition](index.md#role-descriptions) of that agent.
 
 ```bash
 claude plugin marketplace add ioc-project/cognition-protocols
