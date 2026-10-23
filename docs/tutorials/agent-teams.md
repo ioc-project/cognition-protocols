@@ -6,7 +6,7 @@ To try a protocol on your own machine without a message bus, use the experimenta
 agent teams feature of Claude Code. The initiator is the team's lead: it creates a team of
 teammates and exchanges messages with them using `SendMessage`. The teammates play the
 receivers, and the protocol is unchanged.
-It works with any Cognition Protocol and any [scenario](../scenarios/index.md).
+It works with any Cognition Protocol and any [scenario](scenarios/index.md).
 
 Agent teams work only on a single machine, with no network between the agents, and only
 with Claude Code. Use AgentBridge when agents must run in separate processes, containers or
@@ -46,13 +46,13 @@ claude plugin install $PROTOCOL@cognition-protocols --scope project
 
 ## 3. Choose the scenario
 
-A [scenario](../scenarios/index.md) provides the task, the specialists and their role
+A [scenario](scenarios/index.md) provides the task, the specialists and their role
 definitions. Point `SCENARIO` at the scenario page, for example the
-[Coding Agent Team](../scenarios/coding-agent-team/index.md), and download its files from this
+[Coding Agent Team](scenarios/coding-agent-team/index.md), and download its files from this
 documentation site: the task, and one role definition per specialist, into `personas/`:
 
 ```bash
-SCENARIO=https://ioc-project.github.io/cognition-protocols/scenarios/coding-agent-team   # a scenario page
+SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/scenarios/coding-agent-team   # a scenario page
 
 curl -fsSL $SCENARIO/scenario.env -o scenario.env && source scenario.env
 curl -fsSL $SCENARIO/task.txt -o task.txt

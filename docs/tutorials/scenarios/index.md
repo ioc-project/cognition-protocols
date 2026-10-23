@@ -2,7 +2,7 @@
 
 <p class="eyebrow">What the tutorials run</p>
 
-A scenario is a team of agents with a task. The [tutorials](../tutorials/index.md) run any
+A scenario is a team of agents with a task. The [tutorials](../index.md) run any
 scenario: to change the scenario, you only change the files below and the prompt that starts
 the run.
 
@@ -31,7 +31,7 @@ The initiator is not a specialist: it needs no role file, and is the same in eve
 
 ## Adding a scenario
 
-1. Create `docs/scenarios/<name>/` with `index.md`, `task.txt`, `scenario.env` and a role file
+1. Create `docs/tutorials/scenarios/<name>/` with `index.md`, `task.txt`, `scenario.env` and a role file
    for each specialist.
 2. For AgentBridge, derive the identity of `avatar`, `driver`, `initiator` and each specialist
    from a seed and list them in `SLIM_MEMBER_DIDS`, in this order:
