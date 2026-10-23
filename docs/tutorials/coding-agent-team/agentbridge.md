@@ -56,18 +56,9 @@ flowchart LR
     brew install shadictl agentbridge
     ```
 
-- `slimctl` from [`agntcy/slim`](https://github.com/agntcy/slim), which starts the SLIM node. On macOS:
-
-    ```bash
-    brew tap agntcy/slim https://github.com/agntcy/slim.git
-    brew install slimctl
-    ```
-
 !!! note "Other operating systems"
     The commands above are for macOS. On another system, follow the installation instructions
-    in each repository instead: [`agntcy/shadi`](https://github.com/agntcy/shadi) for
-    `agentbridge` and `shadictl`, and [`agntcy/slim`](https://github.com/agntcy/slim)
-    (see also the [SLIM documentation](https://docs.agntcy.org/slim/slim-howto/)) for `slimctl`.
+    in the [`agntcy/shadi`](https://github.com/agntcy/shadi) repository instead.
 
 ## 1. Create the project directory
 
@@ -76,7 +67,7 @@ AgentBridge profiles and one for the certificates of the SLIM node:
 
 ```bash
 mkdir -p ~/coding-agent-team && cd ~/coding-agent-team
-mkdir -p agents/{initiator,microservices,monolith,pragmatist} profiles certs .tmp
+mkdir -p agents/{initiator,microservices,monolith,pragmatist} profiles .tmp
 ```
 
 Run every command from this directory unless stated otherwise.
@@ -155,48 +146,21 @@ EOF
 done
 ```
 
-## 5. Set up the SLIM node
+## 5. Generate the certificates
 
-The SLIM node authenticates every connection with mutual TLS. Generate a local certificate
-authority, a server certificate for the node, and a client certificate for your own terminal:
-
-```bash
-cd certs
-openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.crt -days 365 \
-  -subj "/CN=coding-agent-team CA"
-
-printf 'basicConstraints=CA:FALSE\nkeyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\nsubjectAltName=DNS:localhost,IP:127.0.0.1\n' > server.ext
-openssl req -newkey rsa:2048 -nodes -keyout server.key -out server.csr -subj "/CN=localhost"
-openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
-  -out server.crt -days 365 -extfile server.ext
-
-printf 'basicConstraints=CA:FALSE\nkeyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth\n' > client.ext
-openssl req -newkey rsa:2048 -nodes -keyout client.key -out client.csr -subj "/CN=avatar"
-openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
-  -out client.crt -days 365 -extfile client.ext
-cd ..
-```
-
-Then write the node configuration:
+The SLIM node and every agent authenticate each other with mutual TLS. AgentBridge refuses to
+connect without it, even on the loopback address. The `agntcy/shadi` repository has a script
+that generates a local certificate authority, a server certificate for the node and a client
+certificate for your own terminal:
 
 ```bash
-cat > slim-node.yaml <<EOF
-tracing:
-  log_level: debug
-
-services:
-  slim/0:
-    dataplane:
-      servers:
-        - endpoint: "127.0.0.1:47560"
-          tls:
-            source:
-              type: file
-              cert: "$PWD/certs/server.crt"
-              key: "$PWD/certs/server.key"
-            include_system_ca_certs_pool: false
-EOF
+curl -fsSL https://raw.githubusercontent.com/agntcy/shadi/main/tools/generate_slim_mtls_certs.sh \
+  -o generate_slim_mtls_certs.sh
+bash generate_slim_mtls_certs.sh "$PWD/.tmp/shadi-slim-mtls"
 ```
+
+The node itself needs no installation or configuration file: `shadictl slim start-node` runs a
+native SLIM node, as shown in [step 7](#7-start-the-mesh).
 
 ## 6. Define the identities and the environment
 
@@ -217,9 +181,9 @@ export SLIM_ENDPOINT=127.0.0.1:47560
 export AGENTBRIDGE_PROFILES_DIR="$PWD/profiles"
 export SHADI_TMP_DIR="$PWD/.tmp"
 
-export SLIM_TLS_CA="$PWD/certs/ca.crt"
-export SLIM_TLS_CERT="$PWD/certs/client.crt"
-export SLIM_TLS_KEY="$PWD/certs/client.key"
+export SLIM_TLS_CA="$PWD/.tmp/shadi-slim-mtls/ca.crt"
+export SLIM_TLS_CERT="$PWD/.tmp/shadi-slim-mtls/client-avatar.crt"
+export SLIM_TLS_KEY="$PWD/.tmp/shadi-slim-mtls/client-avatar.key"
 
 # DID authentication. The seed must be the same in every shell that sources this file.
 export SHADI_SLIM_AUTH=did
@@ -252,7 +216,7 @@ cd "agents/$ROLE"
 shadictl \
   --allow . --allow ~/.claude --allow ~/.claude.json \
   --allow ~/.local/bin --allow ~/.local/share/claude \
-  --allow "$ROOT/.tmp" --read "$ROOT/certs" --allow /tmp --allow /private/tmp \
+  --allow "$ROOT/.tmp" --allow /tmp --allow /private/tmp \
   --net-block --net-allow api.anthropic.com --net-allow "$SLIM_ENDPOINT" \
   -- agentbridge register --tool "$ROLE" --command "$PWD" \
   --slim-endpoint "$SLIM_ENDPOINT"
@@ -289,14 +253,14 @@ The project directory now looks like this:
 coding-agent-team/
 ├── env.sh                    # endpoint, certificates, DID identities
 ├── register-agent.sh         # registers one agent under the sandbox
-├── slim-node.yaml            # SLIM node configuration
-├── certs/                    # CA, server and client certificates
 ├── profiles/                 # AgentBridge profiles
 │   ├── initiator.json
 │   ├── microservices.json
 │   ├── monolith.json
 │   └── pragmatist.json
-├── .tmp/                     # scratch space
+├── generate_slim_mtls_certs.sh
+├── .tmp/
+│   └── shadi-slim-mtls/      # CA, server and client certificates
 └── agents/
     ├── initiator/
     │   ├── CLAUDE.md         # role definition
@@ -321,7 +285,8 @@ the project directory first.
 
 ```bash
 # terminal 1: the SLIM node
-slimctl slim start -c slim-node.yaml
+source env.sh
+shadictl slim start-node
 
 # terminals 2 to 5: one per agent
 ./register-agent.sh initiator
