@@ -1,5 +1,7 @@
 ---
 icon: material/shopping-outline
+hide:
+  - toc
 ---
 
 # E-Commerce
