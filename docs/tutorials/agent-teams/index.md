@@ -16,7 +16,7 @@ flowchart LR
         direction LR
         I["<b>initiator</b> (team lead)<br/>&lt;protocol&gt;-initiator"]
 
-        subgraph team ["Teammates · role file in personas/"]
+        subgraph team ["Teammates · spawned with their role"]
             direction TB
             S1["<b>specialist 1</b>"]
             S2["<b>specialist 2</b>"]
