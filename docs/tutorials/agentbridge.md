@@ -76,7 +76,7 @@ persona is a `CLAUDE.md` that describes the role that agent plays.
 ```bash
 claude plugin marketplace add ioc-project/cognition-protocols
 
-PROTOCOL=<protocol>   # a protocol plugin, e.g. accord or concord
+PROTOCOL=concord   # or accord
 for role in initiator microservices monolith pragmatist; do
   mkdir -p agents/$role
   (cd agents/$role && claude plugin install $PROTOCOL@cognition-protocols --scope project)
@@ -174,7 +174,7 @@ agentbridge delegate "$(cat kickoff.md)" \
 ```
 
 `kickoff.md` contains the task, with everything the initiator needs inline, and tells it to
-load the `<protocol>-initiator` skill, name the three receivers, follow the skill to the end,
+load the `$PROTOCOL-initiator` skill (`concord-initiator` or `accord-initiator`), name the three receivers, follow the skill to the end,
 and report its final output verbatim. The initiator runs the skill's script itself. Every
 message the script asks for is a real `agentbridge delegate` call to a live receiver, so a run
 takes minutes rather than seconds. The protocol's own call budget, where it declares one, is

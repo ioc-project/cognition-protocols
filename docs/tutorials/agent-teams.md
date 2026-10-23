@@ -31,7 +31,7 @@ Create an empty directory outside any repository, with one persona file per team
 empty `run/` for the lead's files, and install the protocol's plugin there with project scope:
 
 ```bash
-PROTOCOL=<protocol>   # a protocol plugin, e.g. accord or concord
+PROTOCOL=concord   # or accord
 WORK=/tmp/teams-$PROTOCOL
 mkdir -p $WORK/personas $WORK/run
 (cd $WORK && claude plugin install $PROTOCOL@cognition-protocols --scope project)
@@ -43,7 +43,7 @@ mkdir -p $WORK/personas $WORK/run
 Start Claude Code in that directory with a prompt that has three parts:
 
 1. **The task**: the decision the team must make, stated once and verbatim.
-2. **The protocol**: tell the lead to use the `<protocol>-initiator` skill and its script
+2. **The protocol**: tell the lead to use the `$PROTOCOL-initiator` skill (`concord-initiator` or `accord-initiator`) and its script
    (`--state ./run/...` on every call), with the receivers named exactly as the teammates.
 3. **Team setup and messaging rules**: tell the lead to create a team with one teammate per
    role, each told to read its own persona file, to answer only the lead with `SendMessage`, and
