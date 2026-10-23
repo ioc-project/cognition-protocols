@@ -62,7 +62,7 @@ credits with a named remedy — and certifies that all four roles accept it.
     CONCORD without ACCORD decides something thinner than the decision the business
     needed. The composition is what produces a signable outcome.
 
-    [:octicons-arrow-right-24: Handoff between the protocols](../protocols/accord/design.md#handoff-to-concord)
+    [:octicons-arrow-right-24: Handoff between the protocols](../protocols/accord/index.md#handoff-to-concord)
 
 ## What to watch for
 
