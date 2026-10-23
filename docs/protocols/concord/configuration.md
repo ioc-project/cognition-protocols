@@ -11,12 +11,12 @@ anchors — the initiator derives from the task. Receivers need no parameters.
 **Persistent — in `AGENTS.md` or `CLAUDE.md`:**
 
 ```markdown
-## L9-CONCORD
+## CONCORD
 - Use `--satisfaction-threshold 0.8` and `-B 6`.
 ```
 
 **Per task — in the prompt:**
 
 ```
-Use l9-concord-initiator with threshold 0.8 and budget 6.
+Use concord-initiator with threshold 0.8 and budget 6.
 ```
