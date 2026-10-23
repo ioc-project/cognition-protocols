@@ -24,9 +24,9 @@ with them using `SendMessage`. Works on a single machine with no network between
 
 ## AgentBridge
 
-Independent Claude Code processes joined by AgentBridge (A2A, here over a SLIM message bus),
-each sandboxed. Agents can live in separate processes, containers or harnesses and communicate
-over the network.
+Independent agent processes joined by AgentBridge (A2A, here over a SLIM message bus), each
+sandboxed. Agents can live in separate processes, containers or harnesses — and use different
+runtimes — and communicate over the network.
 
 [**Tutorial: running a protocol over AgentBridge**](tutorials/agentbridge/index.md)
 
