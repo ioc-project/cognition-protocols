@@ -54,12 +54,6 @@ flowchart LR
     brew install shadictl agentbridge
     ```
 
-!!! warning "Unreleased fixes"
-    Running several Claude Code instances side by side needs fixes that are not in an
-    AgentBridge release yet, such as an explicit per-instance agent id and a fresh
-    Claude session for every incoming message. Until they are released, build `agentbridge`
-    and `shadictl` from the `agntcy/shadi` branches that carry them.
-
 ## One directory per agent
 
 `claude` discovers skills and personas from its working directory, so each agent gets its own
