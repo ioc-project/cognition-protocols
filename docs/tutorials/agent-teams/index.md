@@ -56,9 +56,6 @@ PROTOCOL=concord   # or accord
 claude plugin install $PROTOCOL@cognition-protocols --scope project
 ```
 
-The plugin carries both the initiator and the receiver skill. The initiator skill is the one
-this tutorial uses.
-
 ## 2. Run Claude Code with agent teams enabled
 
 Agent teams are experimental, and enabled by an environment variable. Start Claude Code in the
