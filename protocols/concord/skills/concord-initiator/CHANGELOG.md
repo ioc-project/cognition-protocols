@@ -15,8 +15,3 @@
 
 * license ([04f7ff8](https://github.com/ioc-project/cognition-protocols/commit/04f7ff8701d6ee27f00dad4a3017b824af898a9f))
 * metadata ([be035eb](https://github.com/ioc-project/cognition-protocols/commit/be035eb28f5e8993e2142a410f1c7bc72d63a055))
-
-
-### Miscellaneous Chores
-
-* **concord-initiator:** Release as 0.1.0 ([#27](https://github.com/ioc-project/cognition-protocols/issues/27)) ([7c2142b](https://github.com/ioc-project/cognition-protocols/commit/7c2142b476d56b0f0d4a4cf4cabe48de9cb64ecb))
