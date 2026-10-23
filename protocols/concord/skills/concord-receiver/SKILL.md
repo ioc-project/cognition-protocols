@@ -162,6 +162,16 @@ valid, useful outcome.
 
 ---
 
+**Your reasoning is your only voice in this protocol.** Every other agent —
+and the repair agent in particular — can only see what you write in
+`--rationale` and `--reasoning`. Private knowledge you hold but do not
+surface in those fields is invisible to every other participant, including
+the repair agent deciding how to address your concerns. If a fact from your
+domain would change how another agent proposes or repairs, you must state it
+explicitly: the protocol has no other channel for it.
+
+---
+
 ## You report raw ratings — never normalised ones
 
 Rate everything on **your own raw 0..100 scale**, the one that is natural to
@@ -261,38 +271,29 @@ now your job: this message type only ever has one valid reply. Pick or construct
 candidate you believe best satisfies your own criteria and propose it in the schema's format;
 do not shortcut to rating a candidate that hasn't been proposed by anyone yet.
 
-If prior positions exist from before this call, the message includes them as a
-flat anonymized `<prior_proposals>` list (no agent names attached — do not name
-or refer to any agent in your reply, only the answer content).
-
-**If `<prior_proposals>` does not appear**: propose the single candidate you
-genuinely believe best satisfies your role's criteria. Conform strictly to the
+Propose the single candidate you genuinely believe best satisfies your role's criteria. Conform strictly to the
 schema. Do not hedge, do not offer alternatives, do not pre-compromise for other
 roles — this is the round where your role's viewpoint is supposed to be
 represented undiluted.
-
-**If `<prior_proposals>` appears**: you are being given one chance to consider
-the pool before proposing. Read each proposal honestly. If any contains an
-argument or evidence that actually changes your assessment, revise your candidate
-to reflect that — this is not "pre-compromising," it's correcting a position now
-that you can see something you couldn't before. If nothing in it changes your
-assessment, propose the candidate you would have proposed without it; do not
-revise just because other positions differ from yours or because more of them
-hold one view than another. You may or may not have proposed something in a
-prior round — check your own context window to see if you did before deciding
-whether to keep or revise a prior position.
 
 Forge your reply (`--rationale` is required):
 ```
 concord_receiver.py forge seed --candidate "CANDIDATE IN SCHEMA FORMAT" --rationale "EVIDENCE AND REASONING"
 ```
 
-`--rationale` must include the concrete facts and evidence from your role's
-criteria that support this candidate — why it satisfies your requirements,
-any trade-offs you considered, and why you believe it will hold up under
-scrutiny from other agents. This rationale is what scoring agents use to
-detect incorrect logic in your proposal, and what the repair agent will read
-when deciding whether your reasoning stands.
+`--rationale` must include:
+- the concrete facts and evidence from your role's criteria that support this candidate
+- why the other options in `<candidate_schema>` are less suitable from your
+  role's perspective — any domain knowledge you hold that argues against
+  them, even if none of them have been proposed yet
+- any trade-offs you considered
+- why you believe the candidate will hold up under scrutiny from other agents
+
+This rationale is what scoring agents use to detect incorrect logic in your
+proposal, and what the repair agent will read when deciding whether your
+reasoning stands. Any domain knowledge you hold but do not state here is
+invisible to every other participant — if a fact would change how others
+propose or score, write it here.
 
 **Example** (you are the "cost" agent, no prior proposals exist):
 ```
@@ -330,12 +331,18 @@ reasoning for that number. This is required — not optional, not a summary.
 Your reasoning must include:
 - the specific properties of the candidate that drove the score
 - any concrete facts or evidence from your role's criteria that support it
+- any concrete facts or evidence from your role's criteria that oppose it
 - any concern about a false claim, factual error, or flawed step in the
   candidate's reasoning
 
 A score with no evidence behind it is not useful to the repair agent that
 will read it. "Too expensive" is not reasoning; "adds ~$400/month in Redis
 hosting based on current cluster pricing, which exceeds the cost budget" is.
+
+**Write everything you know that is relevant, even if it seems obvious to
+you.** The repair agent and other agents can only see what you write in
+`--reasoning`. Any domain knowledge you hold but omit here is permanently
+invisible to the rest of the protocol.
 
 Forge your reply (repeat `--candidate-id / --raw / --reasoning` once per
 candidate, in the order they appear in the message):
@@ -445,9 +452,15 @@ concord_receiver.py forge repair \
   it low — and why your new candidate addresses it or why that concern does not
   apply to the new proposal
 - what specifically changed from any prior candidate you proposed and why
+- any domain knowledge from your role that has not yet appeared in the message
+  history and is relevant to why this candidate is the right choice — if you
+  know something that argues for or against any option, this is your last
+  reliable opportunity to make it visible
 
 A rationale that ignores the scoring evidence already on record — treating it
 as if the counter-arguments had not been made — is not an acceptable repair.
+Equally, knowledge you hold but do not write here stays invisible to every
+other participant for the remainder of the run.
 
 **Example** (you are the "cost" agent; prior cluster proposal was scored low on cost):
 ```
