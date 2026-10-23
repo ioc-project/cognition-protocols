@@ -2,31 +2,26 @@
 
 <p class="eyebrow">Running a Cognition Protocol end to end</p>
 
-Step-by-step walkthroughs that run a Cognition Protocol on a real decision, using the skills
-from the [Getting Started](../getting-started.md) page.
+Step-by-step walkthroughs that run a Cognition Protocol on a team of agents, using the skills
+from the [Getting Started](../getting-started.md) page. Each tutorial comes with examples: a
+team of agents, the role of each one, and a task for them to run the protocol on. You can
+follow a tutorial with an example of your own.
 
 <div class="grid cards" markdown>
 
--   **[Coding Agent Team](coding-agent-team/index.md)**
+-   **[Running a protocol with Claude Agent Teams](agent-teams/index.md)**
 
     ---
 
-    A team of coding agents settling an architecture decision: three specialists that must
-    decide how to build a notification service. The scenario, its task and its roles are
-    shared by the tutorials of this section.
+    The quickest way to try a protocol: an initiator and its teammates in your local Claude
+    Code, with no message bus. [Examples](agent-teams/examples/index.md)
 
--   **[Running a protocol with Claude Agent Teams](coding-agent-team/agent-teams.md)**
-
-    ---
-
-    The quickest way to try a protocol: a lead and three teammates in your local Claude
-    Code, with no message bus.
-
--   **[Running a protocol over AgentBridge](coding-agent-team/agentbridge.md)**
+-   **[Running a protocol over AgentBridge](agentbridge/index.md)**
 
     ---
 
-    Four independent Claude Code processes joined by AgentBridge (A2A, here over a SLIM message bus),
+    Independent Claude Code processes joined by AgentBridge (A2A, here over a SLIM message bus),
     each sandboxed. Agents can live in separate processes, containers or harnesses.
+    [Examples](agentbridge/examples/index.md)
 
 </div>

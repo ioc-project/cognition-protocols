@@ -1,7 +1,0 @@
-# Role: initiator
-
-- Keep every file you write under `./run/` (create it with `mkdir -p run`), never in the
-  top level of this directory.
-- The task is given to you inline in the message that starts the run. Work from that
-  message; do not look for it in a file.
-- When the protocol ends, report its final output verbatim, not your own summary of it.
