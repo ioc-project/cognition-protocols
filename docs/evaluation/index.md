@@ -1,18 +1,31 @@
 
-# Benchmarks
+# Evaluation
 
 <p class="eyebrow">What was measured, and what it showed</p>
 
-Both protocols were evaluated on four dimensions, chosen because they fail
-independently: a protocol can converge reliably and buy nothing, or buy a great deal
-at a price nobody would pay.
+Each Cognition Protocol makes three guarantees by construction — convergence, certified
+benefit, and bounded cost — as defined in the [Common Principles](../common-principles.md).
+A specification that asserts these properties without measuring them is not a protocol;
+it is a claim. Evaluation exists to close that gap.
+
+Each protocol is evaluated on four independent dimensions. They are independent because
+they fail independently: a protocol can converge reliably and buy nothing, or buy a great
+deal at a price nobody would pay.
+
+| Dimension | What it measures |
+|---|---|
+| **Convergence / compliance** | Whether the exchange reaches a valid fixed point within its stated bound |
+| **Correctness** | Whether the output is accurate relative to a ground truth |
+| **Cost** | Tokens and rounds against the declared ceiling and a matched baseline |
+| **Benefit** | Whether the outcome measurably improves on what would have happened without the protocol |
 
 !!! abstract "The full write-up"
-    This page reports the results. The method behind them — the benchmark, the
-    overlays, the use cases and the per-run reporting contract — is set out in full
-    in the extended version of the study.
+    The method behind the results — the benchmark, the overlays, the use cases and the
+    per-run reporting contract — is set out in full in the extended version of the study.
 
     [:octicons-download-24: Agreeing on Purpose, Deciding Under Conflict — extended version (PDF, 26 pages)](../protocols/blogs/accord-concord-extended.pdf)
+
+## Results
 
 | Dimension | ACCORD | CONCORD |
 |---|---|---|
@@ -21,11 +34,8 @@ at a price nobody would pay.
 | **Cost** | 379K prompt tokens per run, 86.5% cache-eligible | 876K tokens per run, 78% served from cache, against a published ceiling |
 | **Benefit** | Not established — uptake +17.9 pp and utilization 99.5%, but goal success flat against baseline | Met — every agent above the floor on all four decisions |
 
-CONCORD meets all four. ACCORD meets three; the benefit dimension is unresolved, in
-that the contract is constructed and used but goal success is flat against the
-baseline. Measuring dimension by dimension is what
-[locates that gap](accord.md#benefit) rather than only reporting it, which an outcome-only
-comparison would not do.
+Measuring dimension by dimension is what [locates that gap](accord.md#benefit) rather
+than only reporting it, which an outcome-only comparison would not do.
 
 ## What each run reports
 
@@ -38,15 +48,7 @@ comparison would not do.
 
 Certified and correct are reported separately wherever a ground truth exists.
 
-!!! info "ACCORD evaluation"
-    The full ACCORD measurement results — convergence, correctness, cost, and benefit
-    against a matched baseline — are on the
-    [ACCORD Evaluation page](accord.md).
-
-!!! info "CONCORD evaluation"
-    The full CONCORD measurement results — compliance and correctness, cost, threshold
-    calibration and variation across decision types — are on the
-    [CONCORD Evaluation page](concord.md).
+Full results: [ACCORD](accord.md) · [CONCORD](concord.md)
 
 ## Source
 
