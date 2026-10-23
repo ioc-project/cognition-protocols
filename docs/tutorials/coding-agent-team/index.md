@@ -2,7 +2,7 @@
 
 <p class="eyebrow">A team of coding agents settling an architecture decision</p>
 
-A team of coding agents has to settle how to build a feature. This scenario is shared by the tutorials of this section, so the task and the roles are defined once, here: [Running a protocol with Claude Agent Teams](agent-teams.md).
+A team of coding agents has to settle how to build a feature. This scenario is shared by the tutorials of this section, so the task and the roles are defined once, here: [Running a protocol with Claude Agent Teams](agent-teams.md) and [Running a protocol over AgentBridge](agentbridge.md).
 
 ## The task
 
@@ -26,8 +26,9 @@ senses, which is what a protocol has to bring to the surface before it can recon
 ## Role descriptions
 
 Each description is a plain-text file you can download, or copy from the tab. Save it as the
-agent's role file: `personas/<role>.md` in the [Claude Agent Teams tutorial](agent-teams.md). The
-downloaded file is named `CLAUDE.md`, so rename it.
+agent's role file: `personas/<role>.md` in the [Claude Agent Teams tutorial](agent-teams.md),
+`agents/<role>/CLAUDE.md` in the [AgentBridge tutorial](agentbridge.md). The downloaded file
+is named `CLAUDE.md`, so rename it for the first tutorial.
 
 === "microservices"
 

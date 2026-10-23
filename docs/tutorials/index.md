@@ -22,4 +22,11 @@ from the [Getting Started](../getting-started.md) page.
     The quickest way to try a protocol: a lead and three teammates in your local Claude
     Code, with no message bus.
 
+-   **[Running a protocol over AgentBridge](coding-agent-team/agentbridge.md)**
+
+    ---
+
+    Four independent Claude Code processes joined by AgentBridge (A2A, here over a SLIM message bus),
+    each sandboxed. Agents can live in separate processes, containers or harnesses.
+
 </div>
