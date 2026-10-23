@@ -1,2 +1,0 @@
-# Pinned so the Pages build is reproducible.
-mkdocs-material==9.7.7

@@ -1,6 +1,7 @@
 # Local docs toolchain and build output
 .venv/
 site/
+.build/
 # Generated from source — do not commit
 docs/protocols/concord/spec/CONCORD-SPEC.html
 
