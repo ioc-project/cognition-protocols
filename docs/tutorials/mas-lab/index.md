@@ -158,7 +158,7 @@ mas-ctl validate mas.yaml
 
 You should see `OK` for the MAS and for each agent.
 
-## 6. Run the protocol
+## 6. Run the MAS
 
 Run the MAS and pass the task as the query:
 
