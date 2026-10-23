@@ -28,17 +28,3 @@ An example page describes the task and the agents, and publishes these files nex
 | `team.env` | `SPECIALISTS`, the agent ids separated by spaces. Optionally `SLIM_HUMAN_SEED` and `SLIM_MEMBER_DIDS`, the identities of the agents, which skips deriving them |
 
 The initiator is not a specialist: it needs no role file, and is the same in every example.
-
-## Adding an example
-
-1. Create `docs/tutorials/agentbridge/examples/<name>/` with `index.md`, `prompt.md`, `team.env`
-   and a role file for each specialist.
-2. To publish the identities, derive those of `avatar`, `driver`, `initiator` and each specialist
-   from a seed, in this order, and list them in `SLIM_MEMBER_DIDS`:
-
-    ```bash
-    shadictl derive-agent-identity --source seed --in <seed file> -n <agent id>
-    ```
-
-    On macOS, this also stores the derived keys in the keychain.
-3. Add the page to the navigation in `mkdocs.yml` and to the cards above.

@@ -22,8 +22,3 @@ the real prompt, ready to run.
 An example page describes the task and the agents, and publishes the prompt next to it as
 `prompt.md`. The prompt is the tutorial's template, filled in with the task, the id and the role
 description of each specialist, and the protocol skill.
-
-## Adding an example
-
-1. Create `docs/tutorials/agent-teams/examples/<name>/` with `index.md` and `prompt.md`.
-2. Add the page to the navigation in `mkdocs.yml` and to the cards above.
