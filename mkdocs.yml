@@ -90,7 +90,6 @@ nav:
           - protocols/concord/index.md
           - Configuration: protocols/concord/configuration.md
           - Specification: protocols/concord/specification.md
-      - See protocols in action: protocols/replay.md
   - Tutorials:
       - tutorials/index.md
       - Claude Agent Teams:
@@ -111,6 +110,7 @@ nav:
       - CONCORD: evaluation/concord.md
   - Demos:
       - demos/index.md
+      - See protocols in action: demos/replay.md
       - Coding Architect Team: demos/coding-architect-team.md
       - Hiddenbench: demos/hiddenbench.md
       - E-Commerce: demos/e-commerce.md

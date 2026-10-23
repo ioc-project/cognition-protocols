@@ -47,6 +47,12 @@ evaluated against independent dimensions — convergence, correctness, cost, and
 so claims about behaviour are measurable, not asserted. See the [evaluation overview](evaluation/index.md)
 for results and methodology.
 
+## See protocols in action
+
+Replay recorded AgentBridge runs of ACCORD and CONCORD in the browser, without running anything,
+and follow a guided tour of the difference a protocol makes. See
+[See protocols in action](demos/replay.md).
+
 ## Demos
 
 Recorded end-to-end demos across SRE triage, e-commerce, and multi-agent
