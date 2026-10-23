@@ -12,13 +12,32 @@ communicate using some messaging mechanism, whether native to the framework or a
 external CLI. No further assumption is made about the application.
 
 The messaging mechanism can be anything that lets one agent send a message to another
-and read its reply. The [tutorials](tutorials/index.md) show concrete setups, such as
-[running a protocol with Claude Agent Teams](tutorials/agent-teams/index.md),
-which is the quickest way to try a protocol in your local Claude Code, and
-[running a protocol over AgentBridge](tutorials/agentbridge/index.md), which makes independent coding
-harnesses talk over a message bus.
+and read its reply. Pick the setup that matches your system.
 
-## Coding harnesses, Claw-like agents, and Agntcy AgentBridge
+## Claude Agent Teams
+
+The quickest way to try a protocol: an initiator and its teammates in a single Claude Code
+session, with no message bus. The initiator spawns teammates directly and exchanges messages
+with them using `SendMessage`. Works on a single machine with no network between agents.
+
+[**Tutorial: running a protocol with Claude Agent Teams**](tutorials/agent-teams/index.md)
+
+## AgentBridge
+
+Independent agent processes joined by AgentBridge (A2A, here over a SLIM message bus), each
+sandboxed. Agents can live in separate processes, containers or harnesses — and use different
+runtimes — and communicate over the network.
+
+[**Tutorial: running a protocol over AgentBridge**](tutorials/agentbridge/index.md)
+
+## MAS Lab
+
+Agents defined as YAML manifests (`kind: Agent`, `kind: MAS`) and run with `mas-ctl`. No
+coding harness required: add the protocol skills to the agents' manifests and run the MAS.
+
+[**Tutorial: running a protocol with MAS Lab**](tutorials/mas-lab/index.md)
+
+## Other coding harnesses and Claw-like agents
 
 Each protocol is distributed as **skills** — an initiator skill, a receiver skill,
 and the scripts that implement the deterministic portion of the protocol. Install the
@@ -100,7 +119,3 @@ skill loading. If your agent framework supports skills, use the same skills abov
 
 If skills are not available, implement the protocols directly against their
 specifications.
-
-## Next steps
-
-Run a protocol end to end with the [tutorials](tutorials/index.md).
