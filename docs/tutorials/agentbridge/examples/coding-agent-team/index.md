@@ -3,8 +3,8 @@
 <p class="eyebrow">A team of coding agents settling an architecture decision</p>
 
 A team of coding agents has to settle how to build a feature. Three specialists disagree, and
-an initiator coordinates them with a Cognition Protocol. Run it with any
-[tutorial](../../index.md).
+an initiator coordinates them with a Cognition Protocol. Run it with the
+[AgentBridge tutorial](../../index.md).
 
 ## The task
 
@@ -57,7 +57,7 @@ Each description is a plain-text file you can download, or copy from the tab.
     [:material-download: Download](roles/microservices.txt){ download="microservices.txt" }
 
     ```markdown
-    --8<-- "tutorials/scenarios/coding-agent-team/roles/microservices.txt"
+    --8<-- "tutorials/agentbridge/examples/coding-agent-team/roles/microservices.txt"
     ```
 
 === "monolith"
@@ -65,7 +65,7 @@ Each description is a plain-text file you can download, or copy from the tab.
     [:material-download: Download](roles/monolith.txt){ download="monolith.txt" }
 
     ```markdown
-    --8<-- "tutorials/scenarios/coding-agent-team/roles/monolith.txt"
+    --8<-- "tutorials/agentbridge/examples/coding-agent-team/roles/monolith.txt"
     ```
 
 === "pragmatist"
@@ -73,21 +73,21 @@ Each description is a plain-text file you can download, or copy from the tab.
     [:material-download: Download](roles/pragmatist.txt){ download="pragmatist.txt" }
 
     ```markdown
-    --8<-- "tutorials/scenarios/coding-agent-team/roles/pragmatist.txt"
+    --8<-- "tutorials/agentbridge/examples/coding-agent-team/roles/pragmatist.txt"
     ```
 
-## Using this scenario in a tutorial
+## Using this example in the tutorial
 
-The tutorials take a scenario from its address. For this one, set:
+The tutorial takes an example from its address. For this one, set:
 
 ```bash
-SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/scenarios/coding-agent-team
+SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/agentbridge/examples/coding-agent-team
 ```
 
-The files the tutorials download from it:
+The files the tutorial downloads from it:
 
 | File | Content |
 |---|---|
 | [`task.txt`](task.txt) | The task, as given above |
 | `roles/<id>.txt` | The role description of each specialist, listed above |
-| [`scenario.env`](scenario.env) | The specialists' ids and, for AgentBridge, the identities of the agents |
+| [`scenario.env`](scenario.env) | The specialists' ids and the identities of the agents |

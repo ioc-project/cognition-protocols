@@ -11,9 +11,9 @@ message bus. It is used purely as process launcher and transport: the protocol i
 and the initiator uses `agentbridge delegate` as its delegation primitive, where an in-process
 orchestrator would use its sub-agent tool.
 
-Any Cognition Protocol can run this way, on any [scenario](scenarios/index.md). The tutorial
+Any Cognition Protocol can run this way, on any [example](examples/index.md). The tutorial
 uses independent Claude Code processes: one initiator and one receiver per specialist of the
-scenario. It uses the SLIM transport; the node and identity steps are specific to it.
+example. It uses the SLIM transport; the node and identity steps are specific to it.
 
 ```mermaid
 flowchart LR
@@ -61,14 +61,14 @@ flowchart LR
     The commands above are for macOS. On another system, follow the installation instructions
     in the [`agntcy/shadi`](https://github.com/agntcy/shadi) repository instead.
 
-## 1. Choose the scenario
+## 1. Choose the example
 
-A [scenario](scenarios/index.md) provides the task, the specialists and their role
-definitions. Point `SCENARIO` at the scenario page, for example the
-[Coding Agent Team](scenarios/coding-agent-team/index.md), and create the project directory:
+An [example](examples/index.md) provides the task, the specialists and their role
+definitions. Point `SCENARIO` at the example page, for example the
+[Coding Agent Team](examples/coding-agent-team/index.md), and create the project directory:
 
 ```bash
-SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/scenarios/coding-agent-team   # a scenario page
+SCENARIO=https://ioc-project.github.io/cognition-protocols/tutorials/agentbridge/examples/coding-agent-team   # an example page
 
 mkdir -p ~/agent-team && cd ~/agent-team
 curl -fsSL $SCENARIO/scenario.env -o scenario.env && source scenario.env
@@ -78,7 +78,7 @@ mkdir -p profiles .tmp
 for role in initiator $(echo $SPECIALISTS); do mkdir -p agents/$role; done
 ```
 
-`scenario.env` defines `SPECIALISTS`, the ids of the scenario's agents, and the identities used
+`scenario.env` defines `SPECIALISTS`, the ids of the example's agents, and the identities used
 in [step 6](#6-define-the-identities-and-the-environment). Run every command from this
 directory unless stated otherwise.
 
@@ -104,7 +104,7 @@ the receiver skill on the agents that receive its messages.
 ## 3. Write the role definitions
 
 Each agent's `CLAUDE.md` holds its role definition. The initiator's file only sets working rules,
-and is the same in every scenario:
+and is the same in every example:
 
 ```bash
 cat > agents/initiator/CLAUDE.md <<'EOF'
@@ -118,7 +118,7 @@ cat > agents/initiator/CLAUDE.md <<'EOF'
 EOF
 ```
 
-Download one role definition per specialist from the scenario, and save each as `CLAUDE.md` in
+Download one role definition per specialist from the example, and save each as `CLAUDE.md` in
 the agent's directory:
 
 ```bash
@@ -193,7 +193,7 @@ native SLIM node, as shown in [step 7](#7-start-the-mesh).
 ## 6. Define the identities and the environment
 
 AgentBridge authenticates members of the bus with DIDs. The DIDs are derived deterministically
-from a fixed seed and the participant's name, and the scenario's `scenario.env` already exports
+from a fixed seed and the participant's name, and the example's `scenario.env` already exports
 them (`SLIM_HUMAN_SEED` and `SLIM_MEMBER_DIDS`). `env.sh` exports everything else the agents and
 your terminal need. The participants are:
 
@@ -201,7 +201,7 @@ your terminal need. The participants are:
 |---|---|
 | `avatar` | You: the kickoff `agentbridge delegate` call from your terminal |
 | `driver` | The initiator's own outbound calls to the receivers (the bus allows one active session per identity, so it cannot reuse `avatar` or `initiator`) |
-| `initiator` and the scenario's specialists | The registered agents |
+| `initiator` and the example's specialists | The registered agents |
 
 ```bash
 cat > env.sh <<'EOF'
@@ -214,14 +214,14 @@ export SHADI_TMP_DIR="$PWD/.tmp"
 export SLIM_TLS_CERT="$PWD/.tmp/shadi-slim-mtls/client-avatar.crt"
 export SLIM_TLS_KEY="$PWD/.tmp/shadi-slim-mtls/client-avatar.key"
 
-# DID authentication. The scenario provides the seed and the member DIDs.
+# DID authentication. The example provides the seed and the member DIDs.
 export SHADI_SLIM_AUTH=did
 source "$PWD/scenario.env"
 EOF
 ```
 
-For your own scenario, derive the identities as described in
-[Adding a scenario](scenarios/index.md#adding-a-scenario).
+For your own example, derive the identities as described in
+[Adding an example](examples/index.md#adding-an-example).
 
 Next, a script that registers one agent. It runs `agentbridge register` for a role under
 `shadictl`, from the agent's own directory:
@@ -282,7 +282,7 @@ chmod +x register-agent.sh
 
 ### Resulting layout
 
-For the Coding Agent Team scenario, the project directory now looks like this:
+For the Coding Agent Team example, the project directory now looks like this:
 
 ```text
 agent-team/
@@ -327,7 +327,7 @@ cannot read your keychain login.
 source env.sh
 shadictl slim start-node
 
-# one more terminal per agent: the initiator and each specialist of the scenario
+# one more terminal per agent: the initiator and each specialist of the example
 ./register-agent.sh initiator
 ./register-agent.sh <specialist id>   # for each id in $SPECIALISTS
 ```
@@ -339,8 +339,8 @@ Wait until every agent prints `ready — listening on ...`.
 Write the kickoff message. Give the initiator the task **inline**: a registered Claude Code
 instance cannot read files outside its own directory.
 
-This message is the only part that depends on the scenario, and it takes everything from the
-files downloaded in step 1: to run another scenario, change `SCENARIO` there and write it again.
+This message is the only part that depends on the example, and it takes everything from the
+files downloaded in step 1: to run another example, change `SCENARIO` there and write it again.
 
 ```bash
 source env.sh                # SLIM_ENDPOINT, and SPECIALISTS from scenario.env
