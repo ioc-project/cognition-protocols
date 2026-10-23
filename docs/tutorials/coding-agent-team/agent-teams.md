@@ -53,6 +53,7 @@ Download the three [role definitions](index.md#role-descriptions) from this docu
 for role in microservices monolith pragmatist; do
   curl -fsSL https://ioc-project.github.io/cognition-protocols/tutorials/coding-agent-team/roles/$role.txt \
     -o personas/$role.md
+  grep -q '^# Role' personas/$role.md || echo "download failed for $role"
 done
 ```
 

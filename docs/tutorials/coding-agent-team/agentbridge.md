@@ -100,6 +100,7 @@ four role files from this documentation site and save each as `CLAUDE.md` in the
 for role in initiator microservices monolith pragmatist; do
   curl -fsSL https://ioc-project.github.io/cognition-protocols/tutorials/coding-agent-team/roles/$role.txt \
     -o agents/$role/CLAUDE.md
+  grep -q '^# Role' agents/$role/CLAUDE.md || echo "download failed for $role"
 done
 ```
 
@@ -164,9 +165,10 @@ native SLIM node, as shown in [step 7](#7-start-the-mesh).
 
 ## 6. Define the identities and the environment
 
-AgentBridge authenticates members of the bus with DIDs. `env.sh` derives
-one DID per participant from a fixed seed with `shadictl derive-agent-identity`, and exports
-everything the agents and your terminal need. The participants are:
+AgentBridge authenticates members of the bus with DIDs. `env.sh` lists the DID of every
+participant and exports everything the agents and your terminal need. The DIDs are derived
+deterministically from a fixed seed and the participant's name, so the list below is valid for the
+seed in the file. The participants are:
 
 | Identity | Used for |
 |---|---|
@@ -188,17 +190,20 @@ export SLIM_TLS_KEY="$PWD/.tmp/shadi-slim-mtls/client-avatar.key"
 # DID authentication. The seed must be the same in every shell that sources this file.
 export SHADI_SLIM_AUTH=did
 export SLIM_HUMAN_SEED=coding-agent-team-seed
-seed_file="$(mktemp "$PWD/.tmp/seed.XXXXXX")"
-printf '%s' "$SLIM_HUMAN_SEED" > "$seed_file"
-dids=""
-for name in avatar driver initiator microservices monolith pragmatist; do
-  did="$(shadictl derive-agent-identity --source seed --in "$seed_file" -n "$name" | awk '/^DID: /{print $2; exit}')"
-  dids="${dids:+$dids,}$did"
-done
-rm -f "$seed_file"
-export SLIM_MEMBER_DIDS="$dids"
+# avatar, driver, initiator, microservices, monolith, pragmatist (in this order)
+export SLIM_MEMBER_DIDS="\
+did:key:z6MkrwDycXhXu1aDTh1kMgWse1WASaVBafYqexFbgDpBv9rj,\
+did:key:z6Mkh2XWaEodAMoBACwrFy3BodoeV4MVkVJyKPRE8BXJyWrf,\
+did:key:z6MkvV4eUQnckWh9VUpiRkZjzfpcCKwk7noJMxsPhVUqdqc1,\
+did:key:z6MkksXGC6CKifw4Y3BT8YMqFmmVLR9GSocFs1xx8n68pVHA,\
+did:key:z6MkkH363q9zKAxaHkbns6UCjZep8SBXWFfpeMxzfhJy2FsT,\
+did:key:z6MkoEeRE61KwHVpJp1G2UbsegLTjhdYYSGNo47rnGhUnvw1"
 EOF
 ```
+
+To use another seed, derive the new DIDs with
+`shadictl derive-agent-identity --source seed --in <seed file> -n <name>`, one per participant.
+On macOS, this also stores the derived keys in the keychain.
 
 Next, a script that registers one agent. It runs `agentbridge register` for a role under
 `shadictl`, from the agent's own directory:
@@ -210,6 +215,12 @@ cat > register-agent.sh <<'EOF'
 set -euo pipefail
 ROLE="${1:?usage: register-agent.sh <role>}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+
+if [[ -z "${ANTHROPIC_API_KEY:-}" && -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -z "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
+  echo "Set ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_AUTH_TOKEN first." >&2
+  exit 1
+fi
+
 cd "$ROOT" && source ./env.sh
 cd "agents/$ROLE"
 
@@ -281,7 +292,9 @@ coding-agent-team/
 ## 7. Start the mesh
 
 Use one terminal per process so that each agent's traffic is visible. In each terminal, go to
-the project directory first.
+the project directory first. In the agent terminals, also export the credential from the
+[Prerequisites](#prerequisites), for example `export CLAUDE_CODE_OAUTH_TOKEN=...`: the sandbox
+cannot read your keychain login.
 
 ```bash
 # terminal 1: the SLIM node
