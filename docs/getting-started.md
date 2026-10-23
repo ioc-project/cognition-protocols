@@ -14,7 +14,9 @@ external CLI. No further assumption is made about the application.
 The messaging mechanism can be anything that lets one agent send a message to another
 and read its reply. The [tutorials](tutorials/index.md) show concrete setups, such as
 [running a protocol with Claude Agent Teams](tutorials/coding-agent-team/agent-teams.md),
-which is the quickest way to try a protocol in your local Claude Code.
+which is the quickest way to try a protocol in your local Claude Code, and
+[running a protocol over AgentBridge](tutorials/coding-agent-team/agentbridge.md), which makes independent coding
+harnesses talk over a message bus.
 
 ## Coding harnesses, Claw-like agents, and Agntcy AgentBridge
 

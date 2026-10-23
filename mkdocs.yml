@@ -50,7 +50,11 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets:
       base_path: [docs]
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
 
@@ -86,6 +90,7 @@ nav:
       - Coding Agent Team:
           - tutorials/coding-agent-team/index.md
           - Claude Agent Teams: tutorials/coding-agent-team/agent-teams.md
+          - AgentBridge: tutorials/coding-agent-team/agentbridge.md
   - Evaluation:
       - evaluation/index.md
       - ACCORD: evaluation/accord.md
