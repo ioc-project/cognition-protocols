@@ -38,11 +38,13 @@ mkdir -p $WORK/personas $WORK/run
 # write personas/microservices.md, personas/monolith.md, personas/pragmatist.md
 ```
 
+The role descriptions are on the [example scenario](scenario.md) page.
+
 ## Kick off the lead
 
 Start Claude Code in that directory with a prompt that has three parts:
 
-1. **The task**: the decision the team must make, stated once and verbatim.
+1. **The task**: the decision the team must make ([the example task](scenario.md#the-task)), stated once and verbatim.
 2. **The protocol**: tell the lead to use the `$PROTOCOL-initiator` skill (`concord-initiator` or `accord-initiator`) and its script
    (`--state ./run/...` on every call), with the receivers named exactly as the teammates.
 3. **Team setup and messaging rules**: tell the lead to create a team with one teammate per

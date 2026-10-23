@@ -7,7 +7,7 @@ icon: material/school-outline
 <p class="eyebrow">Running a Cognition Protocol end to end</p>
 
 Step-by-step walkthroughs that run a Cognition Protocol on a real decision. Both use the same
-scenario, three specialists that must decide how to build a notification service, and the skills from the [Getting Started](../protocols/getting-started.md) page.
+[scenario](scenario.md), three specialists that must decide how to build a notification service, and the skills from the [Getting Started](../protocols/getting-started.md) page.
 
 <div class="grid cards" markdown>
 
