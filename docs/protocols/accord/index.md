@@ -22,7 +22,7 @@ emits the locked **Intent Contract** — CONCORD's precondition.
     The protocol specification: function, design principles, the five-phase logic,
     guarantees, worked example, and scope boundary.
 
--   **[Installation](../installation.md)**
+-   **[Getting Started](../getting-started.md)**
 
     ---
 

@@ -82,7 +82,7 @@ nav:
   - Protocols:
       - protocols/index.md
       - Design Requirements: protocols/design-requirements.md
-      - Installation: protocols/installation.md
+      - Getting Started: protocols/getting-started.md
       - ACCORD:
           - protocols/accord/index.md
           - Design: protocols/accord/design.md
@@ -91,6 +91,10 @@ nav:
           - Design: protocols/concord/design.md
           - Configuration: protocols/concord/configuration.md
           - Specification: protocols/concord/specification.md
+  - Tutorials:
+      - tutorials/index.md
+      - CONCORD over AgentBridge: tutorials/agentbridge.md
+      - CONCORD with agent teams: tutorials/agent-teams.md
   - Evaluation:
       - evaluation/index.md
       - ACCORD: evaluation/accord.md

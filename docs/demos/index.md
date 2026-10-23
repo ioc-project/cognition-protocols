@@ -57,4 +57,4 @@ the opening proposals to the committed outcome.
 
 - [ACCORD](../protocols/accord/index.md) — phases, guarantees and measured results
 - [CONCORD](../protocols/concord/index.md) — phases, guarantees and measured results
-- [Installation](../protocols/installation.md) — insertion, packaging and transport bindings
+- [Getting Started](../protocols/getting-started.md) — insertion, packaging and transport bindings

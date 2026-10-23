@@ -9,7 +9,7 @@ All Cognition Protocols share a common set of [design requirements](design-requi
 construction rather than by observation.
 
 Adding a protocol to an existing multi-agent system requires no application changes.
-See the [installation guide](installation.md) for how skills are packaged and deployed
+See the [getting started guide](getting-started.md) for how skills are packaged and deployed
 across different agent harnesses.
 
 ## Current protocols

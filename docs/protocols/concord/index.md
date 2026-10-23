@@ -24,7 +24,7 @@ committed run finished below the satisfaction floor.
     The protocol specification: problem statement, design principles, the five-phase
     logic, guarantees, communication regimes, and a worked example.
 
--   **[Installation](../installation.md)**
+-   **[Getting Started](../getting-started.md)**
 
     ---
 
