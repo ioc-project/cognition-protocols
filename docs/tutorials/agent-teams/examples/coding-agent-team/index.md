@@ -17,7 +17,7 @@ an initiator coordinates them with a Cognition Protocol. Run it with the
 
 | Agent | Role |
 |---|---|
-| `initiator` | Starts the protocol and coordinates the specialists. It has no stake in the decision. |
+| `initiator` | Starts the protocol and coordinates the specialists. |
 | `microservices` | Advocates a standalone notifications service with its own datastore and deploy pipeline. |
 | `monolith` | Advocates a notifications module inside the existing monolith. |
 | `pragmatist` | Owns on-call load and infrastructure cost, with no architectural preference. |

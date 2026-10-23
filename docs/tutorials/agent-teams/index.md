@@ -73,9 +73,6 @@ A run needs three things, all of them specific to your use case:
 - **Specialists**: the agents that take part, each with an id.
 - **A role for each specialist**: what it cares about, and how it judges a result.
 
-The initiator is the lead of the team and is the same in every use case: it coordinates the
-specialists with the protocol and has no stake in the outcome.
-
 ## 4. Prompt the initiator with a template
 
 Write the three things above into one prompt, using this template. The initiator creates the
