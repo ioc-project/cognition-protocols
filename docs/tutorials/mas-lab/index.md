@@ -35,9 +35,8 @@ Run every command from this directory.
 
 ## 2. Install the protocol skills
 
-MAS Lab discovers skills by name from the `skills/` directory next to the manifests. The
-protocol skills follow the [agentskills.io](https://agentskills.io/) format: each skill is a
-directory with a `SKILL.md` file. Download the skill zips from the
+MAS Lab discovers skills by name from the `skills/` directory next to the manifests.
+Download the skill zips from the
 [GitHub releases page](https://github.com/ioc-project/cognition-protocols/releases) and
 unzip them into `skills/`:
 
@@ -51,16 +50,6 @@ for SKILL in ${PROTOCOL}-initiator ${PROTOCOL}-receiver; do
   unzip -q /tmp/cp-skills/${SKILL}.zip -d /tmp/cp-skills/
   mv /tmp/cp-skills/${SKILL} skills/
 done
-```
-
-The `skills/` directory should now contain:
-
-```text
-skills/
-├── concord-initiator/
-│   └── SKILL.md
-└── concord-receiver/
-    └── SKILL.md
 ```
 
 ## 3. Define the agents
