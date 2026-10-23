@@ -334,8 +334,3 @@ protocol's own call budget, where it declares one, is printed when the initiator
 
 The initiator's state file in `./run/` holds the authoritative record of the run, in the
 format defined by the protocol.
-
-!!! tip "Reference setup"
-    The ready-made scripts for all of the above (certificate generation, one script per
-    process, a one-command `demo.sh`, and recorded runs) are in the `concord/testing/agentbridge`
-    folder of `ioc-core-l9`.
