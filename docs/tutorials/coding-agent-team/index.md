@@ -28,7 +28,7 @@ senses, which is what a protocol has to bring to the surface before it can recon
 Each description is a plain-text file you can download, or copy from the tab. Save it as the
 agent's role file: `personas/<role>.md` in the [Claude Agent Teams tutorial](agent-teams.md),
 `agents/<role>/CLAUDE.md` in the [AgentBridge tutorial](agentbridge.md). The downloaded file
-is named `CLAUDE.md`, so rename it for the second tutorial.
+is named `CLAUDE.md`, so rename it for the first tutorial.
 
 === "microservices"
 
