@@ -11,12 +11,17 @@ exists, without modifying the application. The design assumption is minimal: age
 communicate using some messaging mechanism, whether native to the framework or an
 external CLI. No further assumption is made about the application.
 
+The messaging mechanism can be anything that lets one agent send a message to another
+and read its reply. The [tutorials](tutorials/index.md) show concrete setups.
+
 ## Coding harnesses, Claw-like agents, and Agntcy AgentBridge
 
 Each protocol is distributed as **skills** — an initiator skill, a receiver skill,
 and the scripts that implement the deterministic portion of the protocol. Install the
 initiator on any agent that may trigger the protocol and the receiver on every agent
-that may be asked to take part. An agent can carry both.
+that may be asked to take part. If any agent in the system can trigger the protocol,
+every agent should carry both skills: each one can then start a run, and each one can
+answer when another starts it.
 
 ### Getting the skills
 
@@ -92,3 +97,6 @@ skill loading. If your agent framework supports skills, use the same skills abov
 If skills are not available, implement the protocols directly against their
 specifications.
 
+## Next steps
+
+Run a protocol end to end with the [tutorials](tutorials/index.md).
