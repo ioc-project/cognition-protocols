@@ -372,9 +372,9 @@ agent-team/
 ## 8. Start the mesh
 
 Use one terminal per process so that each agent's traffic is visible. In each terminal, go to
-the project directory first. In the agent terminals, also export the credential from the
-[Prerequisites](#prerequisites), for example `export CLAUDE_CODE_OAUTH_TOKEN=...`: the sandbox
-cannot read your keychain login.
+the project directory first. In the agent terminals, also export the credential of the harness,
+for example `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_AUTH_TOKEN` for Claude
+Code: the sandbox that wraps each agent cannot read your keychain login.
 
 ```bash
 # terminal 1: the SLIM node. This also derives the identities, once.
