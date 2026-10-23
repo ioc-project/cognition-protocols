@@ -22,6 +22,29 @@ an initiator coordinates them with a Cognition Protocol. Run it with any
 | `monolith` | Advocates a notifications module inside the existing monolith. |
 | `pragmatist` | Owns on-call load and infrastructure cost, with no architectural preference. |
 
+```mermaid
+flowchart LR
+    you(["<b>You</b>"])
+
+    subgraph init ["Initiator"]
+        direction TB
+        I["<b>initiator</b>"]
+    end
+
+    subgraph spec ["Specialists"]
+        direction TB
+        M["<b>microservices</b>"]
+        O["<b>monolith</b>"]
+        P["<b>pragmatist</b>"]
+    end
+
+    you -- "task" --> I
+    I -- "protocol messages" --> M
+    I --> O
+    I --> P
+    I -. "final outcome" .-> you
+```
+
 The three specialists also use the words *service*, *deployment* and *outage* in different
 senses, which is what a protocol has to bring to the surface before it can reconcile them.
 
