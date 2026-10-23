@@ -185,7 +185,7 @@ synthesis itself.
 **Agreeing on Purpose, Deciding Under Conflict** — L9 + MAS-Lab T3s, Outshift by
 Cisco, October 2026.
 
----
+## Next steps
 
 - [Getting Started](../../getting-started.md)
 - [Configuration](configuration.md)
