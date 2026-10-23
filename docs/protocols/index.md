@@ -1,12 +1,6 @@
 
 # Cognition Protocols
 
-## Current protocols
-
-Two protocols are currently defined, addressing the two cognitive failure classes
-that design iteration cannot remove. Further protocols addressing other failure
-classes are in development.
-
 <div class="grid cards" markdown>
 
 -   **[ACCORD — intent alignment](accord/index.md)**

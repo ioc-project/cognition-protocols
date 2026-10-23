@@ -17,25 +17,6 @@ satisfies all three by construction rather than by observation.
 | **Benefit, certified rather than promised** | The protocol emits a machine-readable artifact recording what was achieved and, where the objective was not met, the precise shortfall |
 | **Cost, bounded a priori** | An exact ceiling on rounds, candidate outcomes, agent evaluations and model calls — reported when the run opens, reconciled against actual spend when it closes |
 
-## Cognitive failure classes
-
-The cognitive failures that design iteration cannot remove fall into two classes.
-
-**Absence of shared intent.** The same term used with different meanings,
-incompatible task models, routing against an inaccurate capability model, and
-outputs produced without a verification step share a common cause: no mechanism
-established who is participating, what the problem is, what the terms mean, and how
-correctness is to be checked.
-
-**Unreconciled disagreement.** Under an unreconciled-output overlay, the final action
-remained correct in most runs while the specialists failed to converge on a shared
-solution in **84%** of them. The outcome was not produced by consensus; it was
-produced by a single agent acting first.
-
-The currently defined protocols address these in sequence: shared intent is
-established before work begins, and the decision is reconciled where roles diverge.
-
-
 ## Portability
 
 A protocol is portable only if it is specified independently of the transport it
