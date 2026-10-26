@@ -104,6 +104,9 @@ nav:
               - Coding Agent Team: tutorials/agentbridge/examples/coding-agent-team/index.md
       - MAS Lab:
           - tutorials/mas-lab/index.md
+          - Examples:
+              - tutorials/mas-lab/examples/index.md
+              - SRE Triage: tutorials/mas-lab/examples/sre-triage/index.md
   - Evaluation:
       - evaluation/index.md
       - ACCORD: evaluation/accord.md
