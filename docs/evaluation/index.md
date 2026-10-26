@@ -25,6 +25,14 @@ deal at a price nobody would pay.
 
     [:octicons-download-24: Agreeing on Purpose, Deciding Under Conflict — extended version (PDF, 26 pages)](../protocols/blogs/accord-concord-extended.pdf)
 
+!!! tip "Run the same method yourself"
+    The evaluation runs on [MAS Lab](https://ioc-project.github.io/mas-lab/): each use case is an
+    experiment that compares the same application with and without ACCORD and CONCORD, with the
+    protocols enabled by overlays. The applications and the experiments are published in the
+    [`ioc-eval-labs`](https://huggingface.co/datasets/ioc-project/ioc-eval-labs) dataset. The
+    [SRE Triage example](../tutorials/mas-lab/examples/sre-triage/index.md) of the MAS Lab tutorial
+    runs one of them step by step.
+
 ## How this is measured per protocol
 
 | Dimension | ACCORD | CONCORD |
