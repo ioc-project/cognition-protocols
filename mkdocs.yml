@@ -90,6 +90,7 @@ nav:
           - protocols/concord/index.md
           - Configuration: protocols/concord/configuration.md
           - Specification: protocols/concord/specification.md
+          - A2A Binding: protocols/concord/a2a-binding.md
   - Tutorials:
       - tutorials/index.md
       - Claude Agent Teams:
