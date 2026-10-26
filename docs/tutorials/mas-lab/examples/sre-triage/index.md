@@ -96,9 +96,9 @@ export LLM_MODEL_NAME=...                           # model name, as the endpoin
 
 ### 2. Create the project directory
 
-Create the directory, and check out MAS Lab and the dataset in it. The dataset also holds large
-recorded runs, under `labs/cognitive-protocols/traces`, which are not needed to run the lab and are
-left out:
+Create the directory, and check out MAS Lab and the dataset in it, each at a fixed commit. The
+dataset also holds large recorded runs, under `labs/cognitive-protocols/traces`, which are not
+needed to run the lab: `GIT_LFS_SKIP_SMUDGE=1` keeps them from being downloaded.
 
 ```bash
 mkdir -p ~/mas-lab-sre-triage && cd ~/mas-lab-sre-triage
@@ -109,11 +109,8 @@ LAB_COMMIT=1208a077c7c682f8e484127f298ea52f8fe8e63a
 git clone --quiet https://github.com/outshift-open/mas-lab
 git -C mas-lab checkout --quiet $MAS_LAB_COMMIT
 
-git init --quiet ioc-eval-labs
-git -C ioc-eval-labs remote add origin https://huggingface.co/datasets/ioc-project/ioc-eval-labs
-git -C ioc-eval-labs sparse-checkout set --no-cone '/*' '!labs/cognitive-protocols/traces'
-GIT_LFS_SKIP_SMUDGE=1 git -C ioc-eval-labs fetch --quiet --depth 1 origin $LAB_COMMIT
-GIT_LFS_SKIP_SMUDGE=1 git -C ioc-eval-labs checkout --quiet FETCH_HEAD
+GIT_LFS_SKIP_SMUDGE=1 git clone --quiet https://huggingface.co/datasets/ioc-project/ioc-eval-labs
+git -C ioc-eval-labs checkout --quiet $LAB_COMMIT
 ```
 
 ### 3. Install the protocol skills
@@ -219,4 +216,4 @@ minutes. The answer of the team varies from run to run, with or without a protoc
 runs (`--max-runs`) to compare scenarios.
 
 The dataset also holds recorded runs of the labs, under `labs/cognitive-protocols/traces`, to
-compare yours with.
+compare yours with. They are large files: fetch them with `git lfs pull` in `ioc-eval-labs`.
