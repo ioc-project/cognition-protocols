@@ -190,4 +190,5 @@ Cisco, October 2026.
 - [Getting Started](../../getting-started.md) — how to add CONCORD to an existing multi-agent system
 - [Configuration](configuration.md) — the two user-level inputs CONCORD takes at runtime
 - [Specification](specification.md) — formal protocol definition in W3C ReSpec format
+- [A2A Binding](a2a-binding.md) — how to expose and run CONCORD over the Agent-to-Agent protocol
 - [Evaluation](../../evaluation/concord.md) — measured results across 350 runs: compliance, correctness, cost, and threshold calibration
