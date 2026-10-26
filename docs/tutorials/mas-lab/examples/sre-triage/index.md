@@ -136,9 +136,19 @@ and costs tokens, more for the scenarios with a protocol than for the baseline.
 ### The results
 
 The script writes one directory per scenario and incident under `mas-lab-sre-triage/results/`,
-with the `results.csv` of the run and, next to it, a `.log` file of the output. A scenario that fails
-leaves a `.failed` file and makes the script exit with an error. The traces, the messages of every
-agent, are kept by MAS Lab in `~/.cache/mas/traces`.
+with the `results.csv` of the run and, next to it, a `.log` file of the output. A new run of a
+scenario and incident replaces its previous results and leaves the others. A run that fails leaves a
+`.failed` file and makes the script exit with an error.
+
+In `results.csv`, `output` is an excerpt of the final answer of `sre`. The whole run, with the
+messages of every agent, is the trace that `trace_path` points to, under `~/.cache/mas/traces`.
+
+With `-j` above 1, the runs share one MAS Lab daemon, so each `.log` can also hold lines of the
+other runs. The `results.csv` files are not affected.
+
+On `claude-haiku-4-5`, a baseline run took about 2 minutes and a run with a protocol 5 to 6
+minutes. The answer of the team varies from run to run, with or without a protocol, so use
+several runs (`-r`) to compare scenarios.
 
 The dataset also holds recorded runs of the labs, under `labs/cognitive-protocols/traces`, to
 compare yours with.

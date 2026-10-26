@@ -156,6 +156,7 @@ run_one() { # scenario incident
   local scenario="$1" incident="$2"
   local out="$RESULTS/${scenario}/${incident}"
   mkdir -p "$out"
+  rm -f "$out.failed"
   echo "==> [scenario=$scenario incident=$incident max-runs=$MAX_RUNS] output: $out"
   if (cd "$LAB" && mas-lab benchmark run sre-triage-experiments.yaml \
         --override 'experiment:experiment.execution.design.mode=cartesian' \
@@ -175,7 +176,7 @@ run_one() { # scenario incident
 to_lines() { tr ', ' '\n\n' <<<"$1" | sed '/^$/d'; }
 
 echo "==> 5. Run the benchmark (max parallel: $MAX_PARALLEL)"
-rm -rf "$RESULTS"
+mkdir -p "$RESULTS"
 while read -r scenario; do
   while read -r incident; do
     while [ "$(jobs -rp | wc -l)" -ge "$MAX_PARALLEL" ]; do sleep 1; done
