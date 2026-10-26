@@ -64,3 +64,17 @@ jobs:
 
       - name: Check the embedded decision engine
         run: python3 protocols/concord/tools/sync_core.py --check
+
+  # The script tests need no model: a stub plays it. They cover the protocol end to end (relay, acks, nudges, errors,
+  # the rules an answer must meet).
+  script-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Run the script tests
+        run: protocols/concord/tests/run_all.sh
