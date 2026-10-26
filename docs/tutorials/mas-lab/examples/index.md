@@ -4,7 +4,7 @@
 
 The [tutorial](../index.md) describes the steps to run a Cognition Protocol on a system defined
 as MAS Lab manifests. An example is a complete lab: an application, the overlays that turn a
-protocol on, and a script that runs it with and without the protocol.
+protocol on, and the commands that run it with and without the protocol.
 
 <div class="grid cards" markdown>
 
