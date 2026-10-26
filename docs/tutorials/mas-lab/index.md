@@ -2,7 +2,7 @@
 
 <p class="eyebrow">Agents defined as YAML manifests, run with mas-ctl</p>
 
-[MAS Lab](https://outshift-open.github.io/mas-lab/) (`mas-lab`, `mas-ctl`) lets you define a
+[MAS Lab](https://ioc-project.github.io/mas-lab/) (`mas-lab`, `mas-ctl`) lets you define a
 multi-agent system as a set of YAML manifests and run it with one command. Adding a Cognition
 Protocol to a MAS Lab system means installing the protocol skills and listing them in the
 agents that will use them. The protocol's own activation conditions determine which skill fires
@@ -10,7 +10,7 @@ for each agent — no changes to the MAS topology are needed.
 
 ## Prerequisites
 
-- **MAS Lab installed.** Follow [Tutorial 0 — Environment Setup](https://outshift-open.github.io/mas-lab/tutorials/00-environment-setup/)
+- **MAS Lab installed.** Follow [Tutorial 0 — Environment Setup](https://ioc-project.github.io/mas-lab/tutorials/00-environment-setup/)
   in the MAS Lab documentation to install `mas-ctl` and configure LLM access.
 
     ```bash
@@ -21,7 +21,7 @@ for each agent — no changes to the MAS topology are needed.
     ```
 
     !!! note "Other installation paths"
-        Docker and developer-workspace installs also work. See [Tutorial 0](https://outshift-open.github.io/mas-lab/tutorials/00-environment-setup/) for those paths. Prefix every `mas-ctl` command with `docker compose --profile tools run --rm --no-deps cli` when using Docker.
+        Docker and developer-workspace installs also work. See [Tutorial 0](https://ioc-project.github.io/mas-lab/tutorials/00-environment-setup/) for those paths. Prefix every `mas-ctl` command with `docker compose --profile tools run --rm --no-deps cli` when using Docker.
 
 ## 1. Create the project directory
 
