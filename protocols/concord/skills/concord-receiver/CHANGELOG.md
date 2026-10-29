@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/ioc-project/cognition-protocols/compare/concord-receiver-v0.1.0...concord-receiver-v0.1.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* make accord / concord scripts executable ([#79](https://github.com/ioc-project/cognition-protocols/issues/79)) ([3163f94](https://github.com/ioc-project/cognition-protocols/commit/3163f942a4e831c62be98e69139b731ade504fde))
+
 ## 0.1.0 (2026-10-23)
 
 
