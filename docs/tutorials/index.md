@@ -29,6 +29,6 @@ follow a tutorial with an example of your own.
     ---
 
     Agents defined as YAML manifests (`kind: Agent`, `kind: MAS`) and run with `mas-ctl`.
-    No coding harness required.
+    No coding harness required. [Examples](mas-lab/examples/index.md)
 
 </div>

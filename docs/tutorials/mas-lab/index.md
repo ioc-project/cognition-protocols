@@ -6,7 +6,8 @@
 multi-agent system as a set of YAML manifests and run it with one command. Adding a Cognition
 Protocol to a MAS Lab system means installing the protocol skills and listing them in the
 agents that will use them. The protocol's own activation conditions determine which skill fires
-for each agent — no changes to the MAS topology are needed.
+for each agent — no changes to the MAS topology are needed. The [examples](examples/index.md) are complete labs
+you can run.
 
 ## Prerequisites
 
@@ -36,19 +37,21 @@ Run every command from this directory.
 ## 2. Install the protocol skills
 
 MAS Lab discovers skills by name from the `skills/` directory next to the manifests.
-Download the skill zips from the
-[GitHub releases page](https://github.com/ioc-project/cognition-protocols/releases) and
-unzip them into `skills/`:
+Each skill is released on its own, with its own tag, as `<skill>-v<version>`. Download the zip of
+each skill from the
+[GitHub releases page](https://github.com/ioc-project/cognition-protocols/releases) and copy the
+skill folder into `skills/`:
 
 ```bash
 PROTOCOL=concord   # or accord
-RELEASE=https://github.com/ioc-project/cognition-protocols/releases/latest/download
+VERSION=0.1.0      # the version of each skill, as on the releases page
+RELEASES=https://github.com/ioc-project/cognition-protocols/releases/download
 
 mkdir -p skills /tmp/cp-skills
 for SKILL in ${PROTOCOL}-initiator ${PROTOCOL}-receiver; do
-  curl -fsSL $RELEASE/${SKILL}.zip -o /tmp/cp-skills/${SKILL}.zip
-  unzip -q /tmp/cp-skills/${SKILL}.zip -d /tmp/cp-skills/
-  mv /tmp/cp-skills/${SKILL} skills/
+  curl -fsSL $RELEASES/${SKILL}-v${VERSION}/${SKILL}.zip -o /tmp/cp-skills/${SKILL}.zip
+  unzip -q -o /tmp/cp-skills/${SKILL}.zip -d /tmp/cp-skills/
+  cp -R /tmp/cp-skills/protocols/${PROTOCOL}/skills/${SKILL} skills/
 done
 ```
 
