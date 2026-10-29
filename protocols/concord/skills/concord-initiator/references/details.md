@@ -125,6 +125,21 @@ returns the nudge for you.
   say". With `--no-relay` there are no numbers and no acks. An ack vouches for a contiguous run: "I received deliveries
   1 to N", so a lost delivery is never hidden by a later one, and a nudge (which carries everything recorded, marked as
   a full delivery) closes any gap.
+- **A delivery that carries replies has a `check`.** `<concord-delivery seq=… check="…">` holds a short fingerprint of
+  the replies inside it (whitespace aside). The receiving agent's script compares it with the text the agent gave it,
+  so a reply that was shortened or reworded on the way is refused: the agent hands the delivery over again, and a
+  second failure comes back to you as a `<concord-error>`, after which the delivery is sent again. It changes nothing
+  for you: send the block as printed, however your environment carries messages.
+- **A nudge too soon after a send is held back.** A nudge is what you get by calling the script with no input: it sends
+  the current request again to the agents still awaited, on the assumption that a message was lost. Right after a send
+  that assumption is usually wrong. The agents have the message and are still working on it, and a nudge would make
+  them answer twice. So when the last message went out less than 30 seconds ago, the script does not nudge: it prints
+  `STATUS: NONE`, says how long ago it sent and who is still awaited, and tells you to wait and keep passing replies
+  as they arrive. If 30 seconds pass and nothing has come, calling it with no input nudges as before. To nudge sooner
+  on purpose, pass `--force`. The 30 seconds is the environment variable `CONCORD_MIN_NUDGE` (in seconds; 0 turns the
+  guard off). The watchdog is not held back: it has its own timeout (60 seconds by default) and nudges when that ends.
+- **An exact repeat is not an error.** An anchor, a proposal or a rating that is identical to the one on record (an
+  agent that answered again after a nudge) is ignored silently.
 - **Several messages.** When the output carries several messages it is split in blocks: a line `--- to: NAME[, NAME]`
   introduces a message, and its text (up to the next `--- to:` line) goes to the agents named. A single message with
   no such line goes to everyone awaited. Send each exactly as printed: add no introduction, no summary, no reply

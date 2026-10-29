@@ -24,6 +24,7 @@ Any text argument may be given as @path to read it from a file.
 import argparse
 import fcntl
 import contextlib
+import hashlib
 import io
 import json
 import os
@@ -274,6 +275,23 @@ def parse_reply_doc(root):
     except ValueError:
         return None
     return None
+
+# --------------------------------------------------------------------------
+# delivery check: the replies inside a delivery, fingerprinted by the initiator, verified by the receiver
+# --------------------------------------------------------------------------
+
+_CHECKED_RE = re.compile(r"<(concord-(?:anchor|candidate|score)-reply)\b[^>]*>.*?</\1\s*>", re.DOTALL)
+
+
+def reply_check(text):
+    """A short fingerprint of the replies of other agents inside a delivery, blind to whitespace. The initiator puts it
+    on the delivery (`check="..."`); the receiver compares it with the text its agent passed in, so a reply that was
+    shortened or reworded in a copy is caught, not silently used. None when there is no reply in `text`."""
+    docs = [m.group(0) for m in _CHECKED_RE.finditer(text)]
+    if not docs:
+        return None
+    return hashlib.sha256(re.sub(r"\s+", "", "".join(docs)).encode("utf-8")).hexdigest()[:8]
+
 # <<< END SHARED CORE
 
 DEFAULT_STATE = "concord-state.json"
@@ -1235,6 +1253,10 @@ def _final_report(st):
     return "\n".join(lines)
 
 
+# A nudge this soon after a send is not for a lost message: the agents are still working on it.
+MIN_NUDGE_SECONDS = float(os.environ.get("CONCORD_MIN_NUDGE", "30"))
+
+
 def _blocks(per):
     """per: agent -> text. One message when all agents get the same, else `--- to:` blocks."""
     groups = {}
@@ -1258,7 +1280,8 @@ def _next_send(phase, nudge=False, complete=False):
         tail = ("From here the agents rate and repair among themselves: you only pass things on. " + tail)
     if complete:
         tail = ("The run is over: after sending, report the RUN COMPLETE result printed on the error output, "
-                "exactly as printed and with nothing added.")
+                "exactly as printed and with nothing added. Ignore any message the agents send after this one (acks, "
+                "idle notices, questions): the run is over and nothing is owed to them.")
     return ("NEXT: " + lead + "Send each block below to the agent or agents named on its `--- to:` line, exactly as "
             "printed and without that line. " + _RULES + " " + tail)
 
@@ -1268,7 +1291,8 @@ def _next_none(report=False, hold=False, awaiting="-"):
     if report:
         return ("NEXT: The run is over. Report exactly the result below (outcome, winning candidate, final scores) to "
                 "whoever asked for it, and add nothing: no steps, recommendations or commentary of your own. Run no "
-                "more commands.")
+                "more commands. Ignore any message the agents send after this one (acks, idle notices, questions): the "
+                "run is over.")
     wait = ("The run is not over, so do not end your turn just because nothing is due now. If no reply is still on its "
             "way (you have already collected what the agents answered), run `handle` with no input now: it prints the "
             "nudge to send, as it would after a lost message. Do not ask the agents for anything yourself (no request "
@@ -1364,6 +1388,10 @@ def cmd_handle(args):
                     if rr["kind"] == "candidate" and any(
                             c["proposer"] == agent and c["candidate"] == rr["candidate"] for c in st["pool"]):
                         continue                               # an exact repeat of a proposal already recorded: nothing to do
+                    if rr["kind"] == "anchor" and st["anchors"].get(agent) == {
+                            "raw_reject": rr["raw_reject"], "raw_ideal": rr["raw_ideal"]}:
+                        continue                               # an exact repeat of an anchor already recorded (a resend
+                                                               # after a nudge): nothing to do, and no error
                     kept, _ = _apply_reply(st, agent, rr, False)
                     n += 1
                     if not (rr["kind"] == "scores" and kept and len(kept) == len(rr["scores"])):
@@ -1384,6 +1412,19 @@ def cmd_handle(args):
         acked_ = dict(st.get("acked", {}))
         dcount_ = json.loads(json.dumps(st.get("dcount", {})))      # per agent: delivery number -> replies recorded then
         awaiting_ = list(action.get("recipients", []))
+        # Nothing came in, but the last message went out seconds ago: it is not lost, the agents are still working on
+        # it. A nudge now would only make them answer again. (--force or --resend send it anyway.)
+        since_send = time.time() - st["last_send_ts"] if st.get("last_send_ts") else None
+        if (since_send is not None and since_send < MIN_NUDGE_SECONDS and not text.strip() and phase != "Complete"
+                and not args.resend and not getattr(args, "force", False)):
+            print("STATUS: NONE")
+            print(f"NEXT: Send nothing. The last message went out {since_send:.0f}s ago, too recently to be lost: the "
+                  f"agents are still working on it. Wait for a reply from: {', '.join(awaiting_) or '-'}. Pass each "
+                  "reply to the script as it arrives, exactly as received. If nothing has arrived after about "
+                  f"{MIN_NUDGE_SECONDS:g}s in all, call the script with no input again to get the nudge.")
+            print(f"recorded 0; phase {phase}; awaiting: {', '.join(awaiting_) or '-'}. Nothing new to send: wait for "
+                  "the replies still awaited.")
+            return
         # nothing came in: the run may be stuck. A finished run is never nudged: it only reports.
         if prose_only:
             notes.append("what you passed holds no CONCORD reply: it is prose (an agent answered in words instead of "
@@ -1447,10 +1488,14 @@ def cmd_handle(args):
                 # a nudge names the agents whose reply is still awaited: one that already answered sends it again
                 # (it may have been lost, or refused for a change made on the way)
                 aw = f' awaiting="{",".join(awaiting_)}"' if nudge and st_deliv and awaiting_ else ""
-                parts.insert(0, f'<concord-delivery seq="{dv}" state="{state_id_}"{full}{aw}></concord-delivery>')
+                # a fingerprint of the replies it carries: the receiver checks what it was passed against it
+                chk = reply_check("\n\n".join(parts))
+                ck = f' check="{chk}"' if chk else ""
+                parts.insert(0, f'<concord-delivery seq="{dv}" state="{state_id_}"{ck}{full}{aw}></concord-delivery>')
             per[a] = "\n\n".join(parts)
-    if new_deliv:
+    if per:
         with locked_state(args.state) as st3:
+            st3["last_send_ts"] = time.time()
             st3.setdefault("deliv", {}).update(new_deliv)
             for a_, n_ in new_dcount.items():
                 st3.setdefault("dcount", {}).setdefault(a_, {})[str(new_deliv[a_])] = n_
@@ -1529,7 +1574,7 @@ def cmd_watchdog(args):
                       "owes an anchor, a seed or a repair cannot be skipped.")
                 return
             buf = io.StringIO()
-            ns = argparse.Namespace(state=args.state, text="", sender=None, resend=False, format="text")
+            ns = argparse.Namespace(state=args.state, text="", sender=None, resend=False, force=True, format="text")
             with contextlib.redirect_stdout(buf):
                 cmd_handle(ns)
             out = buf.getvalue()
@@ -1705,6 +1750,8 @@ def _main():
     p.add_argument("--from", dest="sender", default=None,
                    help="who sent it (only for a reply that does not name its author)")
     p.add_argument("--resend", action="store_true", help="print the pending message again")
+    p.add_argument("--force", action="store_true",
+                   help="nudge even if the last message went out only seconds ago (see CONCORD_MIN_NUDGE)")
     p.set_defaults(fn=cmd_handle)
 
     p = sub.add_parser("watchdog", help="wait for a stall; then print the nudge, or STATUS: ASK if nudges do not help")
