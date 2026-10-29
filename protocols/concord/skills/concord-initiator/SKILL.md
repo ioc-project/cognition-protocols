@@ -97,7 +97,9 @@ back on the path: never work around it.
 2. Never write, summarise or change a message, a rating or a repair, and never
    fill in for an agent that has not replied.
 3. Do not stop until the script prints `RUN COMPLETE`.
-4. Then report that result, as printed, and nothing else.
+4. Then report that result, as printed, and nothing else. Ignore any message
+   the agents send after `RUN COMPLETE` (acks, idle notices, questions): the run
+   is over and nothing is owed to them. Add no commentary of your own.
 
 More detail (phases, relay and acks, the watchdog, a silent agent, diagnostics)
 is in [references/details.md](./references/details.md). You should not need it.

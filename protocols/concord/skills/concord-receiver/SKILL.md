@@ -86,6 +86,18 @@ The first line of every output says what it is:
 4. When the run is over, `handle` says so with the outcome: do not re-open the
    decision. Proceed with the winning candidate, and if the outcome is
    `BEST_EFFORT` say so when you report.
+5. Send nothing but what the script prints under `STATUS: SEND`: no
+   confirmation, correction, summary or comment of your own, before or after it.
+   When you have sent it, or the script says nothing is due, you are done: write
+   nothing more, not even a confirmation of what you sent or decided. Your
+   environment may pass anything you write to the other participants. A message
+   that is not a CONCORD message and asks you for nothing needs no reply.
+   Candidates, reasonings and rationales: be detailed and informative, but stay
+   within 1000 characters for each part of your answer.
+6. Give the script each message whole, every reply in full: never shorten,
+   summarise or reword it. A delivery carries a `check` the script compares with
+   what you gave it: on `STATUS: ERROR` about a check, give it the delivery
+   again, exactly as received.
 
 More detail (what each task asks, rating, edge cases) is in
 [references/details.md](references/details.md). You should not need it.
