@@ -1732,13 +1732,15 @@ How to fill the arguments:
                            them names it. Use these same ids everywhere in this run.
   --satisfaction-threshold the standard the outcome genuinely has to meet, not a level you are sure is reachable (0.6 is
                            a starting point). If it sits below the best seed, the run ends with no negotiation at all.
-  --schema                 the format of an option. Plain text for an open format (nothing is enforced), or a JSON
-                           Schema, text that starts with "{", which every proposal, seeds and repairs alike, must then
-                           satisfy. Use JSON whenever the decision is a choice among a fixed list named in the task:
-                           '{"enum": ["West City", "East Town", "North Hill"]}', each option written exactly as the
-                           task names it (a repair may re-propose one already in the run). Other supported keywords:
-                           "pattern" (a regular expression), "minLength", "maxLength", "description", "type": "string".
-                           Invalid JSON is refused. Use plain text only when the options cannot be listed in advance.
+  --schema                 what one option looks like. The default is plain text: describe the proposal in words (nothing is
+                           enforced, and agents may propose combinations). A JSON Schema, text that starts with "{",
+                           is enforced on every proposal, seeds and repairs alike. Use a JSON enum,
+                           '{"enum": ["West City", "East Town", "North Hill"]}', only when the options were handed to
+                           you: the task or a tool output lists them, and you copy each exactly as given (a repair may
+                           re-propose one already in the run). Never write the list yourself: if you would have to
+                           decide what the candidates are, use plain text. Other supported keywords: "pattern" (a
+                           regular expression), "minLength", "maxLength", "description", "type": "string". Invalid
+                           JSON is refused.
   --x-reject / --x-ideal   the objective, never the means: the state the context is trying to produce, as a plain
                            before/after in its own numbers (for example error rate above 40%: ideal "error rate returns
                            to 0", reject "stays above 40% or rises"). Never a proposal, and no word about how it is
