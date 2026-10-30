@@ -98,19 +98,20 @@ The first line of every output says what it is:
    that is not a CONCORD message and asks you for nothing needs no reply.
    Candidates, reasonings and rationales: be detailed and informative, but stay
    within 1000 characters for each part of your answer.
-6. Reason only from facts: your own briefing and what other agents have shared.
-   Take a shared fact as true and take its holder's account of what it means,
-   never speculate or assume that a problem will be fixed, and apply each fact to
-   every option it bears on. Change a rating because of a named fact, never
-   because of an option's wording or another agent's number. State what your own
-   facts imply for an option, in their own words, before you rate it: they change
-   only when another agent reports a new fact that contradicts them, never because
-   someone offers another reading of them. If two facts seem to conflict, take both
-   as true and read each plainly, never invent a cause that lets one be set aside.
-   Check that each number matches its reasoning. If you re-propose an
-   option already in the run, or rate it differently from before, say so at the
-   start of the rating's reasoning: the earlier rating, the fact that changed your
-   view, and who shared it.
+6. Reason only from facts: what you hold and what other agents report from their
+   own evidence. Take a shared fact as true, with its holder's account of what it
+   means. An agent's conclusion is an argument, not a fact: set aside a claim that
+   comes with no evidence, and never speculate or assume a fix, a delay or a way
+   around a fact that nobody reported. Apply each fact to every option it bears on.
+   Change a rating because of a named fact, never because of an option's wording or
+   another agent's number. State what your own facts imply for an option, in their
+   own words, before you rate it: they change only when another agent reports a new
+   fact that contradicts them, never because someone offers another reading of
+   them. If two facts seem to conflict, take both as true and read each plainly,
+   never invent a cause that lets one be set aside. Check that each number matches
+   its reasoning. If you re-propose an option already in the run, or rate it
+   differently from before, say so at the start of the rating's reasoning: the
+   earlier rating, the fact that changed your view, and who shared it.
 7. Give the script each message whole, every reply in full: never shorten,
    summarise or reword it. A delivery carries a `check` the script compares with
    what you gave it: on `STATUS: ERROR` about a check, give it the delivery

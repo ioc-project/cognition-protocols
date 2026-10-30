@@ -74,6 +74,7 @@ scripts/concord_initiator.py init \
   --quiet --agents <id,id,...> \
   --satisfaction-threshold 0.6 \
   --schema "<the shared format of an option>" \
+  --options "<option>|<option>|..." \
   --context "<the problem>" \
   --x-reject "<an outcome that fails every criterion>" \
   --x-ideal "<an outcome that fully satisfies them>"
@@ -85,9 +86,12 @@ scripts/concord_initiator.py --state <path> handle <<'EOF'  # then, for every re
 EOF
 ```
 
-Add `--options "<option>|<option>|..."` to `init` only when the options are a fixed,
-closed list: every proposal must then be exactly one of them. `init --help` says how to
-fill each argument: read it before the first run. Use
+`--options` is part of the command. When the decision is a choice among a fixed list of
+options (the answers are named in the task), put every one of them in `--options`, written
+exactly as the task names them: every proposal must then be exactly one of them, so nobody
+proposes a reworded copy or a blend. Delete the `--options` line only when the options are
+open-ended and cannot be listed in advance. `init --help` says how to fill each argument:
+read it before the first run. Use
 the state path `init` prints on every later call. Every output of the script
 starts with `STATUS: SEND`, `NONE`, `ASK` or `ERROR` and a `NEXT:` line saying
 what to do now: do exactly that. An `ERROR` says what went wrong and how to get

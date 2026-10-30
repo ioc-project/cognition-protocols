@@ -1654,9 +1654,11 @@ How to fill the arguments:
                            them names it. Use these same ids everywhere in this run.
   --satisfaction-threshold the standard the outcome genuinely has to meet, not a level you are sure is reachable (0.6 is
                            a starting point). If it sits below the best seed, the run ends with no negotiation at all.
-  --options                optional. A closed list of the only allowed candidates, "A|B|C" (or @file, one per line). When
-                           set, every proposal, seeds and repairs alike, must be exactly one of them; a repair may
-                           re-propose an option already in the run. Leave it out when the options are open-ended.
+  --options                the closed list of the only allowed candidates, "A|B|C" (or @file, one per line), written
+                           exactly as the task names them. Use it whenever the decision is a choice among a fixed list
+                           named in the task: every proposal, seeds and repairs alike, must then be exactly one of
+                           them (a repair may re-propose one already in the run). Leave it out only when the options
+                           are open-ended and cannot be listed in advance.
   --x-reject / --x-ideal   the objective, never the means: the state the context is trying to produce, as a plain
                            before/after in its own numbers (for example error rate above 40%: ideal "error rate returns
                            to 0", reject "stays above 40% or rises"). Never a proposal, and no word about how it is
