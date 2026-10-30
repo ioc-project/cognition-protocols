@@ -3,8 +3,8 @@ name: concord-initiator
 description: >
   Use when you are participating in, coordinating or facilitating a task that
   needs a single outcome that satisfies multiple agents with
-  different, potentially conflicting criteria — a unilateral choice is not
-  enough. Activate on confirmed conflict (agents returned divergent outputs),
+  different, potentially conflicting criteria, or who each hold different
+  information about the problem — a unilateral choice is not enough. Activate on confirmed conflict (agents returned divergent outputs),
   anticipated conflict (distinct roles on a shared decision make divergence
   structurally likely), or when you cannot tell whether roles will diverge —
   uncertainty is itself the signal. Also activate when you would relay outputs
@@ -42,9 +42,10 @@ script computes everything.
 3. **Score.** Each agent rates every option, its own included, with reasons. If
    one option reaches the threshold for every agent, the run ends there:
    `SUCCESS`.
-4. **Repair.** Otherwise the least satisfied agent alone proposes one new option
-   and rates it, the others rate it, and the cycle repeats until an option
-   clears everyone or the budget is spent (`BEST_EFFORT`).
+4. **Repair.** Otherwise the least satisfied agent alone proposes one option and
+   rates it (a new one, or one already in the run that it now rates differently
+   because of a fact another agent shared), the others rate it, and the cycle
+   repeats until an option clears everyone or the budget is spent (`BEST_EFFORT`).
 
 You only carry messages. Out: the anchor request, the seed request, and then
 _deliveries_ (numbered; each holds the replies the other agents have not seen
@@ -55,8 +56,9 @@ ask for a rating or a repair.
 ## When to use it
 
 Use it when a decision has to satisfy agents with different, possibly
-conflicting criteria and no single one of them should decide: you can name those
-agents, and you have or can write a shared format for the options. Use it when
+conflicting criteria, or agents who each know part of the picture, and no single
+one of them should decide: you can name those agents, and you have or can write a
+shared format for the options (or the closed list of them). Use it when
 conflict is confirmed, likely from their roles, or just uncertain. Do not poll
 them first to find out. Include every agent whose criteria bear on the outcome,
 including one you would otherwise feed a summary to. Do not use it when one role
@@ -83,7 +85,9 @@ scripts/concord_initiator.py --state <path> handle <<'EOF'  # then, for every re
 EOF
 ```
 
-`init --help` says how to fill each argument: read it before the first run. Use
+Add `--options "<option>|<option>|..."` to `init` only when the options are a fixed,
+closed list: every proposal must then be exactly one of them. `init --help` says how to
+fill each argument: read it before the first run. Use
 the state path `init` prints on every later call. Every output of the script
 starts with `STATUS: SEND`, `NONE`, `ASK` or `ERROR` and a `NEXT:` line saying
 what to do now: do exactly that. An `ERROR` says what went wrong and how to get

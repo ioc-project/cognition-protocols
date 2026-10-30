@@ -204,6 +204,10 @@ scripts/concord_initiator.py init \
   --quiet
 ```
 
+Add `--options "A|B|C"` (or `@file`, one option per line) only when the options are a fixed, closed list: every
+proposal, seeds and repairs alike, must then be exactly one of them (a repair may re-propose one already in the run),
+and extra wording is refused. Leave it out when the options are open-ended.
+
 Pass each of these as a plain argument value — multi-line text is fine,
 there's no shell involved when you invoke this through a tool call rather
 than a literal shell command. If you are typing this as a literal shell

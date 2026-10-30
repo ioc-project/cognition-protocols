@@ -562,6 +562,11 @@ def _ingest_doc(st, sender, root):
             el = root.find(t)
             if el is not None and el.text and t not in brief:
                 brief[t] = el.text.strip()
+        opts_el = root.find("options")
+        if opts_el is not None and "options" not in brief:
+            listed = [(o.text or "").strip() for o in opts_el.findall("option") if (o.text or "").strip()]
+            if listed:
+                brief["options"] = listed
         ob = st.setdefault("outbox", {})
         if mine:
             asked_keys = []
@@ -746,15 +751,45 @@ _NOTHING_MORE = ("When you are done, write nothing more: not even a confirmation
                  "environment may pass anything you write to the other participants.")
 
 
+def _options_lines(brief) -> list:
+    """The closed list of options, when the run has one: the candidate must be exactly one of them."""
+    opts = brief.get("options")
+    if not opts:
+        return []
+    return ["options (the candidate must be exactly one of these, written as listed; detail about it goes in the "
+            "rationale, and added wording does not make a different option):"] + [f"  - {o}" for o in opts]
+
+
+def _option_of(brief, text):
+    """The listed option the text names (compared without case or extra spaces), or None."""
+    for o in brief.get("options") or []:
+        if " ".join(str(o).lower().split()) == " ".join(str(text).lower().split()):
+            return o
+    return None
+
+
 def _ask_text(st, items) -> str:
     """The prompt for the LLM: everything it needs to decide, and the exact shape of its answer."""
     me, m, brief = st["me"], st["mirror"], st.get("brief", {})
     pool = {c["id"]: c for c in m["pool"]} if m else {}
-    out = [f"You are the {me} agent. CONCORD needs your judgement. Decide from YOUR role's criteria only; other "
-           "agents' reasoning is evidence you may weigh (a specific, checkable fact may change your own rating or "
-           "repair, and you should be able to say what changed), their numbers are not a reason. Be honest: never "
-           "inflate to seem agreeable or deflate for leverage, and never soften your criteria to make something look "
-           "acceptable. If you cannot be satisfied, say so."]
+    out = [f"You are the {me} agent. CONCORD needs your judgement. Decide from YOUR role's criteria, using what you "
+           "know: your own briefing and the facts other agents have shared in this run. A fact another agent reports "
+           "from its own information is as reliable as your own: take it as true, and take the holder's account of "
+           "what it means; never discount it because you cannot check it. Use only those facts: do not speculate, do "
+           "not assume that a problem will be fixed or that something nobody reported is true, and do not present "
+           "general knowledge as a fact of this case. Apply each fact to every candidate it bears on, not only the one "
+           "it was raised against. When another agent's reasoning shows that you were wrong, change your rating or "
+           "your repair, and say which fact changed it. A candidate's name or added wording, and other agents' "
+           "numbers, are not reasons. Facts of your own briefing: before you rate a candidate they bear on, state "
+           "in your reasoning what they imply for it, in their own words, then give the number. Such a fact changes "
+           "only when another agent reports a new fact that directly contradicts it; another agent's reading, "
+           "theory or explanation of your fact is not a new fact. When two reported facts seem to conflict, take "
+           "both as true and read each plainly: never invent a cause or a story that lets one of them be set aside. "
+           "A fact that rules a candidate out keeps its rating low, and a fact that supports it keeps it high, "
+           "until a reported fact says otherwise: a risk or an effect that nobody reported is not a reason. "
+           "Before you answer, check that every number matches its reasoning: reasoning that says a candidate "
+           "fails what matters to you, or meets it, must not come with the opposite rating. Be honest: never inflate to seem agreeable or deflate for leverage, and never "
+           "soften your criteria to make something look acceptable. If you cannot be satisfied, say so."]
     shape = {}
     for it in items:
         k = it["kind"]
@@ -778,6 +813,7 @@ def _ask_text(st, items) -> str:
                     "agents use it to detect incorrect logic. Your rationale is your only voice here: anything you "
                     "know and do not write in it is invisible to every other participant. " + _BUDGET,
                     f"candidate format: {brief.get('candidate_schema', '?')}", f"context: {brief.get('context', '?')}"]
+            out += _options_lines(brief)
             shape["seed"] = {"candidate": "TEXT", "rationale": "TEXT with the evidence for it"}
         elif k == "repair":
             inc = pool.get(m["x_star"], {})
@@ -785,17 +821,27 @@ def _ask_text(st, items) -> str:
                     "Read the incumbent's ratings and their reasoning, not just the numbers. Propose ONE new candidate "
                     "that: (1) clears your own bar, something you would rate close to your x_ideal and not marginally "
                     "above what you just rejected; (2) does not knowingly push any other agent below the threshold: "
-                    "infer from their reasoning what they are protecting and keep it; (3) is really new, not a "
-                    "cosmetic variant of a candidate already scored; (4) follows the candidate format; (5) answers the "
+                    "infer from their reasoning what they are protecting and keep it; (3) is either not yet in the "
+                    "run, or is a candidate already scored that you now rate differently because of a specific fact "
+                    "another agent shared (this is allowed, and it is the right move when you find that you rated it "
+                    "too low). In that case the reasoning of your own rating of it must start by naming the earlier "
+                    "candidate and your earlier rating, then the specific fact that changed your view and the agent "
+                    "who shared it, for example: \"Same as r0-x, which I rated 40. I now rate it 80 because agent y "
+                    "reported that ...\". The other agents read this reasoning, so without it they cannot judge your "
+                    "change; a cosmetic variant of a candidate already scored "
+                    "(same substance, other wording) is not new and changes nothing; (4) follows the candidate format; "
+                    "(5) answers the "
                     "strongest reasoning against your position, in your rationale: agree with part of it, refute it, "
                     "or say why it does not apply; (6) states any domain knowledge of your role that has not yet appeared "
                     "and bears on why this candidate is the right one: it stays invisible to everyone if you do not "
                     "write it. " + _BUDGET + " Rate your own new candidate, honestly, in the same answer. If you "
-                    "believe no such candidate exists, still give your best attempt and state the conflict plainly in "
-                    "the rationale (which agent, over what property). Do not lower the threshold, do not weaken your "
+                    "believe no such candidate exists, still give the candidate you rate highest, even one already in the run, "
+                    "and state the conflict plainly in the rationale (which agent, over what property). Do not lower "
+                    "the threshold, do not weaken your "
                     "criteria, and do not propose something you are not satisfied by. The ratings of the incumbent "
                     "below are normalised 0-1 for you to read: never echo one back as your own rating.",
                     f"candidate format: {brief.get('candidate_schema', '?')}", f"context: {brief.get('context', '?')}",
+                    *_options_lines(brief),
                     f"incumbent {m['x_star']}: {inc.get('candidate', '')}",
                     f"its rationale: {inc.get('rationale') or ''}", "ratings of the incumbent:"]
             for ag in m["agents"]:
@@ -810,8 +856,9 @@ def _ask_text(st, items) -> str:
             out += ["", "TASK: score " + ",".join(it["ids"]),
                     "Rate each candidate listed, including one you proposed yourself, on your own raw 0-100 scale, "
                     "the same scale as your anchor, for the whole run: the same quality gets the same number in round "
-                    "7 as at anchoring. Move a number only for a real change (a rationale that answers a concern you "
-                    "raised), and be able to say in one sentence what changed your mind; refusing to budge is inertia, "
+                    "7 as at anchoring. Move a number only for a real change (a specific fact another agent shared, or a "
+                    "rationale that answers a concern you raised), and be able to say in one sentence what changed "
+                    "your mind; refusing to budge is inertia, "
                     "not honesty. Never refuse to score: a candidate you consider terrible gets a low number with "
                     "honest reasons"
                     + (f" (raw_reject={_fmt(a['raw_reject'])}, raw_ideal={_fmt(a['raw_ideal'])})" if a else "")
@@ -824,6 +871,12 @@ def _ask_text(st, items) -> str:
             for cid in it["ids"]:
                 c = pool.get(cid, {})
                 out += [f"candidate {cid}: {c.get('candidate', '')}", f"  its rationale: {c.get('rationale') or ''}"]
+                for oid, o in pool.items():
+                    prev = m["raw"].get(me, {}).get(oid)
+                    if oid != cid and prev is not None and _same_text(o.get("candidate", ""), c.get("candidate", "")):
+                        out.append(f"  this is the same candidate as {oid}, which you rated {_fmt(prev)}: keep that "
+                                   "number unless a specific fact shared since then changes your view, and name that "
+                                   "fact and who shared it in your reasoning.")
             shape.setdefault("scores", []).extend({"id": c, "raw": "N", "reasoning": "TEXT"} for c in it["ids"])
     out += ["", f"Answer by running: python3 <this script> {_who(st)} answer {_flags_for(items)}",
             "(N is a number; each text is one argument, and may have several lines.)",
@@ -1041,10 +1094,11 @@ def _check_answer(st, items, data):
                                    "the two outcomes, not metrics or percentages of today's state")
             elif k in ("seed", "repair"):
                 d = data[k]
-                if text_ok(f"{k} candidate", d["candidate"]) and k == "repair" and any(
-                        _same_text(d["candidate"], c["candidate"]) for c in pool):
-                    out.append("the repair candidate is the same as one already in the run: propose something new that "
-                               "answers the objection")
+                brief_ = st.get("brief", {})
+                if text_ok(f"{k} candidate", d["candidate"]) and brief_.get("options") and not _option_of(
+                        brief_, d["candidate"]):
+                    out.append(f"the {k} candidate must be exactly one of the listed options (" +
+                               "; ".join(brief_["options"]) + "): put any extra detail in the rationale")
                 text_ok(f"{k} rationale", d["rationale"], _MIN_REASON)
                 if k == "repair":
                     own = [x for x in data.get("scores", []) if x.get("id") == it["id"]]
@@ -1100,6 +1154,12 @@ def cmd_answer(args) -> None:
         return
     docs, problems = [], []
     problems += _check_answer(st, items, data)
+    if not problems:
+        for k_ in ("seed", "repair"):
+            opt_ = _option_of(st.get("brief", {}), (data.get(k_) or {}).get("candidate", "")) if isinstance(
+                data.get(k_), dict) else None
+            if opt_:
+                data[k_]["candidate"] = opt_
     if problems:
         print("STATUS: ASK")
         print("Your answer was not usable: " + "; ".join(problems) + ". Nothing was recorded or sent. Fix these and "
