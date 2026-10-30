@@ -751,6 +751,19 @@ _NOTHING_MORE = ("When you are done, write nothing more: not even a confirmation
                  "environment may pass anything you write to the other participants.")
 
 
+# The rules on facts, said at the tasks where an agent weighs what others reported (score, repair).
+_FACTS = ("Facts. What you hold, and what other agents report from their own evidence (what they saw, were given or "
+          "read), are facts: take them as true, including an agent's account of what its own evidence means, and never "
+          "discount one because you cannot check it. An agent's conclusion or expectation is an argument, not a fact: "
+          "weigh it, and set aside any claim that comes with no evidence, saying so in your reasoning. Do not "
+          "speculate, and do not assume a fix, a delay or a way around a fact that nobody reported. Apply each fact to "
+          "every candidate it affects. Before you rate a candidate, state what your facts imply for it, in their own "
+          "words, then give the number, and check that it matches that reasoning. A fact of yours changes only when "
+          "another agent reports a new fact that contradicts it, never because someone offers another reading of it. "
+          "When two facts seem to conflict, take both as true and read each plainly: never invent a cause that lets one "
+          "be set aside.")
+
+
 def _options_lines(brief) -> list:
     """The closed list of options, when the run has one: the candidate must be exactly one of them."""
     opts = brief.get("options")
@@ -772,24 +785,16 @@ def _ask_text(st, items) -> str:
     """The prompt for the LLM: everything it needs to decide, and the exact shape of its answer."""
     me, m, brief = st["me"], st["mirror"], st.get("brief", {})
     pool = {c["id"]: c for c in m["pool"]} if m else {}
-    out = [f"You are the {me} agent. CONCORD needs your judgement. Decide from YOUR role's criteria, using what you "
-           "know: your own briefing and the facts other agents have shared in this run. A fact another agent reports "
-           "from its own information is as reliable as your own: take it as true, and take the holder's account of "
-           "what it means; never discount it because you cannot check it. Use only those facts: do not speculate, do "
-           "not assume that a problem will be fixed or that something nobody reported is true, and do not present "
-           "general knowledge as a fact of this case. Apply each fact to every candidate it bears on, not only the one "
-           "it was raised against. When another agent's reasoning shows that you were wrong, change your rating or "
-           "your repair, and say which fact changed it. A candidate's name or added wording, and other agents' "
-           "numbers, are not reasons. Facts of your own briefing: before you rate a candidate they bear on, state "
-           "in your reasoning what they imply for it, in their own words, then give the number. Such a fact changes "
-           "only when another agent reports a new fact that directly contradicts it; another agent's reading, "
-           "theory or explanation of your fact is not a new fact. When two reported facts seem to conflict, take "
-           "both as true and read each plainly: never invent a cause or a story that lets one of them be set aside. "
-           "A fact that rules a candidate out keeps its rating low, and a fact that supports it keeps it high, "
-           "until a reported fact says otherwise: a risk or an effect that nobody reported is not a reason. "
-           "Before you answer, check that every number matches its reasoning: reasoning that says a candidate "
-           "fails what matters to you, or meets it, must not come with the opposite rating. Be honest: never inflate to seem agreeable or deflate for leverage, and never "
-           "soften your criteria to make something look acceptable. If you cannot be satisfied, say so."]
+    kinds = {it["kind"] for it in items}
+    head = (f"You are the {me} agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never "
+            "inflate to seem agreeable or deflate for leverage, and never soften your criteria to make something look "
+            "acceptable. If you cannot be satisfied, say so.")
+    if kinds & {"score", "repair"}:
+        head += (" " + _FACTS + " A candidate's name or wording, and other agents' numbers, are not reasons."
+                 if "score" in kinds else " " + _FACTS)
+    elif "seed" in kinds:
+        head += " Use only facts from your own briefing: do not speculate."
+    out = [head]
     shape = {}
     for it in items:
         k = it["kind"]
@@ -808,8 +813,9 @@ def _ask_text(st, items) -> str:
                     "do not offer alternatives, do not pre-compromise for other roles: this round represents your "
                     "role's viewpoint undiluted. The rationale carries the concrete facts and evidence from your "
                     "criteria, why the other options in the candidate format are less suitable from your role's "
-                    "perspective (any domain knowledge you hold that argues against them, even if none has been "
-                    "proposed yet), the trade-offs you considered and why it will hold up under scrutiny: the other "
+                    "perspective, but only where you have evidence against them (if you have none, say so: never "
+                    "invent a risk to fill the gap), the trade-offs you considered and why it will hold up under "
+                    "scrutiny: the other "
                     "agents use it to detect incorrect logic. Your rationale is your only voice here: anything you "
                     "know and do not write in it is invisible to every other participant. " + _BUDGET,
                     f"candidate format: {brief.get('candidate_schema', '?')}", f"context: {brief.get('context', '?')}"]
@@ -818,26 +824,21 @@ def _ask_text(st, items) -> str:
         elif k == "repair":
             inc = pool.get(m["x_star"], {})
             out += ["", f"TASK: repair {it['id']}", f"REPAIR ROUND, YOU ALONE: {it['why']}.",
-                    "Read the incumbent's ratings and their reasoning, not just the numbers. Propose ONE new candidate "
+                    "Read the incumbent's ratings and their reasoning, not just the numbers. Propose ONE candidate "
                     "that: (1) clears your own bar, something you would rate close to your x_ideal and not marginally "
                     "above what you just rejected; (2) does not knowingly push any other agent below the threshold: "
-                    "infer from their reasoning what they are protecting and keep it; (3) is either not yet in the "
-                    "run, or is a candidate already scored that you now rate differently because of a specific fact "
-                    "another agent shared (this is allowed, and it is the right move when you find that you rated it "
-                    "too low). In that case the reasoning of your own rating of it must start by naming the earlier "
-                    "candidate and your earlier rating, then the specific fact that changed your view and the agent "
-                    "who shared it, for example: \"Same as r0-x, which I rated 40. I now rate it 80 because agent y "
-                    "reported that ...\". The other agents read this reasoning, so without it they cannot judge your "
-                    "change; a cosmetic variant of a candidate already scored "
-                    "(same substance, other wording) is not new and changes nothing; (4) follows the candidate format; "
+                    "infer from their reasoning what they are protecting and keep it; (3) is not yet in the run, "
+                    "or is one already scored that you now rate differently because of a named fact: then start the "
+                    "reasoning of your rating with \"Same as <id>, which I rated N. I now rate it M because <agent> "
+                    "reported ...\"; a reworded copy of a scored candidate is not new; "
+                    "(4) follows the candidate format; "
                     "(5) answers the "
                     "strongest reasoning against your position, in your rationale: agree with part of it, refute it, "
                     "or say why it does not apply; (6) states any domain knowledge of your role that has not yet appeared "
                     "and bears on why this candidate is the right one: it stays invisible to everyone if you do not "
                     "write it. " + _BUDGET + " Rate your own new candidate, honestly, in the same answer. If you "
-                    "believe no such candidate exists, still give the candidate you rate highest, even one already in the run, "
-                    "and state the conflict plainly in the rationale (which agent, over what property). Do not lower "
-                    "the threshold, do not weaken your "
+                    "believe none exists, give the candidate you rate highest, even one already in the run, and state the "
+                    "conflict (which agent, over what property). Do not lower the threshold, do not weaken your "
                     "criteria, and do not propose something you are not satisfied by. The ratings of the incumbent "
                     "below are normalised 0-1 for you to read: never echo one back as your own rating.",
                     f"candidate format: {brief.get('candidate_schema', '?')}", f"context: {brief.get('context', '?')}",
