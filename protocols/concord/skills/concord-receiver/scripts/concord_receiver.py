@@ -802,7 +802,7 @@ def _ask_text(st, items) -> str:
             out += ["", "TASK: anchor",
                     "Rate two outcomes on your own raw 0-100 scale, as satisfaction of your role if each happened "
                     "(not how true it is today: answering how true it is now inverts the scale and is refused). "
-                    "x_reject should get a LOW number, x_ideal a HIGH one strictly above it. These are satisfaction "
+                    "x_reject should get a LOW number, x_ideal a HIGH one, at least 50 points above it. These are satisfaction "
                     "ratings, not metrics: no error rate or latency in these fields. The anchors are rated once and "
                     "stay fixed for the whole run. Rate your raw scale, never a normalised 0-1 score.",
                     f"x_reject: {brief.get('x_reject', '?')}", f"x_ideal: {brief.get('x_ideal', '?')}"]
@@ -1011,6 +1011,7 @@ def cmd_observe(args) -> None:
 
 
 _MIN_REASON = 20            # characters: "too expensive" is not a reason
+_MIN_ANCHOR_SPAN = 50       # points between raw_reject and raw_ideal: a narrower scale turns a mediocre rating into "satisfied"
 
 
 def _num(x):
@@ -1093,6 +1094,13 @@ def _check_answer(st, items, data):
                     elif not (0 <= v <= 100):
                         out.append(f"anchor {key} ({v:g}) is outside the 0-100 scale: these are satisfaction ratings of "
                                    "the two outcomes, not metrics or percentages of today's state")
+                lo_, hi_ = _num(a_["raw_reject"]), _num(a_["raw_ideal"])
+                if lo_ is not None and hi_ is not None and hi_ > lo_ and hi_ - lo_ < _MIN_ANCHOR_SPAN:
+                    out.append(f"your two anchors are only {hi_ - lo_:g} points apart (raw_reject={lo_:g}, raw_ideal="
+                               f"{hi_:g}): every later rating is read between them, so a narrow range makes a mediocre "
+                               f"candidate look fully satisfying. Use anchors at least {_MIN_ANCHOR_SPAN} points apart "
+                               "(for example about 5 for the outcome you call unacceptable and about 95 for the one "
+                               "you call fully satisfying)")
             elif k in ("seed", "repair"):
                 d = data[k]
                 brief_ = st.get("brief", {})
