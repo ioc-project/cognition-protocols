@@ -387,6 +387,71 @@ def textarg(v):
 
 
 # --------------------------------------------------------------------------
+# candidate schema: plain text (open format) or a JSON Schema (enforced)
+# --------------------------------------------------------------------------
+
+_SCHEMA_KEYS = ("type", "enum", "pattern", "minLength", "maxLength", "description", "title")
+
+
+def parse_schema(text):
+    """`--schema` is either plain text, an open format that nothing enforces, or a JSON Schema object (text that starts
+    with `{`), which the receivers enforce on every proposal. Returns the parsed spec, or None for plain text. Only a
+    small subset is supported, and anything else is refused, so a rule is never silently left unenforced."""
+    s = (text or "").strip()
+    if not s.startswith("{"):
+        return None
+    try:
+        spec = json.loads(s)
+    except ValueError as exc:
+        die(f"--schema starts with '{{', so it is read as a JSON Schema, but it is not valid JSON ({exc}). Fix the JSON, "
+            "or pass the format as plain text that does not start with '{'.")
+    if not isinstance(spec, dict):
+        die("--schema must be a JSON object")
+    unknown = sorted(set(spec) - set(_SCHEMA_KEYS))
+    if unknown:
+        die(f"--schema uses keywords that are not enforced here: {', '.join(unknown)}. Supported: "
+            f"{', '.join(_SCHEMA_KEYS)}.")
+    if "type" in spec and spec["type"] != "string":
+        die('--schema "type" can only be "string": a candidate is text')
+    if "enum" in spec:
+        e = spec["enum"]
+        if not (isinstance(e, list) and len(e) >= 2 and all(isinstance(x, str) and x.strip() for x in e)):
+            die('--schema "enum" must be a list of at least 2 non-empty strings')
+        if len({" ".join(x.lower().split()) for x in e}) != len(e):
+            die('--schema "enum" holds the same option twice')
+    if "pattern" in spec:
+        if not isinstance(spec["pattern"], str):
+            die('--schema "pattern" must be a string')
+        try:
+            re.compile(spec["pattern"])
+        except re.error as exc:
+            die(f'--schema "pattern" is not a valid regular expression ({exc})')
+    for k in ("minLength", "maxLength"):
+        if k in spec and not (isinstance(spec[k], int) and not isinstance(spec[k], bool) and spec[k] >= 0):
+            die(f'--schema "{k}" must be a non-negative integer')
+    if "minLength" in spec and "maxLength" in spec and spec["minLength"] > spec["maxLength"]:
+        die('--schema "minLength" is greater than "maxLength"')
+    return spec
+
+
+def render_schema(spec):
+    """The candidate format as the agents read it."""
+    parts = []
+    if spec.get("description"):
+        parts.append(str(spec["description"]))
+    if "enum" in spec:
+        parts.append("exactly one of: " + " | ".join(spec["enum"]))
+    if "pattern" in spec:
+        parts.append(f"text matching the regular expression {spec['pattern']}")
+    if "minLength" in spec or "maxLength" in spec:
+        lo, hi = spec.get("minLength"), spec.get("maxLength")
+        parts.append("between %s and %s characters" % (lo if lo is not None else 0, hi if hi is not None else "any number of")
+                     if lo is not None and hi is not None else
+                     (f"at least {lo} characters" if lo is not None else f"at most {hi} characters"))
+    return "; ".join(parts) or spec.get("title") or "text"
+
+
+# --------------------------------------------------------------------------
 # anchor-leak guard
 # --------------------------------------------------------------------------
 
@@ -472,19 +537,29 @@ CLOSED_NOTE = ("The candidate must be exactly one of the listed options: detail 
                "added wording does not make a different option. ")
 
 
+FORMAT_NOTE = ("The candidate must satisfy the candidate_schema exactly: detail about it goes in the rationale. ")
+
+
 def instructions_line(kind, st=None):
     text = INSTRUCTIONS[kind]
-    if st and st.get("options") and kind in ("seed", "repair"):
+    note = ""
+    if st and kind in ("seed", "repair"):
+        note = CLOSED_NOTE if st.get("options") else (FORMAT_NOTE if st.get("schema_json") else "")
+    if note:
         head, sep, tail = text.partition("Your answer to this message")
-        text = head + CLOSED_NOTE + sep + tail
+        text = head + note + sep + tail
     return f"  <instructions>{esc(text)}</instructions>"
 
 
 def options_lines(st):
+    """The enforced part of the schema, as the receivers read it: the closed list, and the schema itself as JSON."""
+    lines = []
     opts = st.get("options")
-    if not opts:
-        return []
-    return ["  <options>", *[f"    <option>{esc(o)}</option>" for o in opts], "  </options>"]
+    if opts:
+        lines += ["  <options>", *[f"    <option>{esc(o)}</option>" for o in opts], "  </options>"]
+    if st.get("schema_json"):
+        lines.append(f"  <schema_json>{esc(st['schema_json'])}</schema_json>")
+    return lines
 
 
 # --------------------------------------------------------------------------
@@ -1002,15 +1077,17 @@ def cmd_init(args):
     context = textarg(args.context)
     x_reject = textarg(args.x_reject)
     x_ideal = textarg(args.x_ideal)
-    schema = textarg(args.schema)
-    options = None
-    if args.options:
-        raw_opts = textarg(args.options)
-        options = [o.strip() for o in (raw_opts.splitlines() if "\n" in raw_opts else raw_opts.split("|")) if o.strip()]
-        if len(options) < 2:
-            die("--options needs at least 2 options, separated by '|' (or one per line in a @file)")
-        if len({" ".join(o.lower().split()) for o in options}) != len(options):
-            die("--options holds the same option twice")
+    schema = textarg(args.schema) if args.schema else None
+    spec = None
+    if schema:
+        spec = parse_schema(schema)
+    else:
+        die("--schema is required: plain text for an open format, or a JSON Schema such as "
+            '\'{"enum": ["A", "B", "C"]}\' for a closed list')
+    options = list(spec["enum"]) if spec and "enum" in spec else None
+    schema_json = json.dumps(spec, ensure_ascii=False, sort_keys=True) if spec else None
+    if spec:
+        schema = render_schema(spec)
 
     st = {
         "version": 2,
@@ -1022,6 +1099,7 @@ def cmd_init(args):
         },
         "agents": agents,
         "schema": schema,
+        "schema_json": schema_json,
         "options": options,
         "context": context,
         "x_reject": x_reject,
@@ -1654,11 +1732,13 @@ How to fill the arguments:
                            them names it. Use these same ids everywhere in this run.
   --satisfaction-threshold the standard the outcome genuinely has to meet, not a level you are sure is reachable (0.6 is
                            a starting point). If it sits below the best seed, the run ends with no negotiation at all.
-  --options                the closed list of the only allowed candidates, "A|B|C" (or @file, one per line), written
-                           exactly as the task names them. Use it whenever the decision is a choice among a fixed list
-                           named in the task: every proposal, seeds and repairs alike, must then be exactly one of
-                           them (a repair may re-propose one already in the run). Leave it out only when the options
-                           are open-ended and cannot be listed in advance.
+  --schema                 the format of an option. Plain text for an open format (nothing is enforced), or a JSON
+                           Schema, text that starts with "{", which every proposal, seeds and repairs alike, must then
+                           satisfy. Use JSON whenever the decision is a choice among a fixed list named in the task:
+                           '{"enum": ["West City", "East Town", "North Hill"]}', each option written exactly as the
+                           task names it (a repair may re-propose one already in the run). Other supported keywords:
+                           "pattern" (a regular expression), "minLength", "maxLength", "description", "type": "string".
+                           Invalid JSON is refused. Use plain text only when the options cannot be listed in advance.
   --x-reject / --x-ideal   the objective, never the means: the state the context is trying to produce, as a plain
                            before/after in its own numbers (for example error rate above 40%: ideal "error rate returns
                            to 0", reject "stays above 40% or rises"). Never a proposal, and no word about how it is
@@ -1760,10 +1840,9 @@ def _main():
                    dest="satisfaction_threshold")
     p.add_argument("--eps", type=float, default=0.05)
     p.add_argument("-B", "--B", "--budget", type=int, default=10, dest="B")
-    p.add_argument("--schema", required=True, help="candidate format description (or @file)")
-    p.add_argument("--options", default=None,
-                   help="optional closed list of the only allowed candidates: 'A|B|C' (or @file, one per line). "
-                        "Every proposal must then be exactly one of them")
+    p.add_argument("--schema", default=None,
+                   help="candidate format: plain text (open) or a JSON Schema starting with '{' (enforced), "
+                        "e.g. '{\"enum\": [\"A\", \"B\"]}' (or @file)")
     p.add_argument("--context", required=True, help="problem statement (or @file)")
     p.add_argument("--x-reject", required=True, dest="x_reject",
                    help="reject anchor — outcome that fails all criteria (or @file)")

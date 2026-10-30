@@ -567,6 +567,14 @@ def _ingest_doc(st, sender, root):
             listed = [(o.text or "").strip() for o in opts_el.findall("option") if (o.text or "").strip()]
             if listed:
                 brief["options"] = listed
+        js_el = root.find("schema_json")
+        if js_el is not None and js_el.text and "schema_spec" not in brief:
+            try:
+                spec_ = json.loads(js_el.text)
+                if isinstance(spec_, dict):
+                    brief["schema_spec"] = spec_
+            except ValueError:
+                pass
         ob = st.setdefault("outbox", {})
         if mine:
             asked_keys = []
@@ -768,9 +776,41 @@ def _options_lines(brief) -> list:
     """The closed list of options, when the run has one: the candidate must be exactly one of them."""
     opts = brief.get("options")
     if not opts:
+        if brief.get("schema_spec"):
+            return ["(the candidate is checked against the format above and refused if it does not satisfy it)"]
         return []
     return ["options (the candidate must be exactly one of these, written as listed; detail about it goes in the "
             "rationale, and added wording does not make a different option):"] + [f"  - {o}" for o in opts]
+
+
+def _schema_problem(spec, text):
+    """Why `text` does not satisfy the candidate schema (None when it does). The schema is the JSON subset the initiator
+    accepts: enum, pattern, minLength, maxLength (type is always string)."""
+    t = " ".join(str(text).split()) if "enum" in spec else str(text).strip()
+    if "enum" in spec and not any(" ".join(str(o).lower().split()) == t.lower() for o in spec["enum"]):
+        return "must be exactly one of the listed options (" + "; ".join(spec["enum"]) + ")"
+    t = next((o for o in spec.get("enum", []) if " ".join(str(o).lower().split()) == t.lower()), t)
+    if "pattern" in spec:
+        import re as _re
+        try:
+            if not _re.search(spec["pattern"], t):
+                return f"must match the regular expression {spec['pattern']}"
+        except _re.error:
+            pass
+    if "minLength" in spec and len(t) < spec["minLength"]:
+        return f"must be at least {spec['minLength']} characters"
+    if "maxLength" in spec and len(t) > spec["maxLength"]:
+        return f"must be at most {spec['maxLength']} characters"
+    return None
+
+
+def _brief_spec(brief):
+    """The enforced candidate schema of this run: the JSON schema when there is one, else the closed list, else none."""
+    if brief.get("schema_spec"):
+        return brief["schema_spec"]
+    if brief.get("options"):
+        return {"enum": brief["options"]}
+    return None
 
 
 def _option_of(brief, text):
@@ -1104,10 +1144,11 @@ def _check_answer(st, items, data):
             elif k in ("seed", "repair"):
                 d = data[k]
                 brief_ = st.get("brief", {})
-                if text_ok(f"{k} candidate", d["candidate"]) and brief_.get("options") and not _option_of(
-                        brief_, d["candidate"]):
-                    out.append(f"the {k} candidate must be exactly one of the listed options (" +
-                               "; ".join(brief_["options"]) + "): put any extra detail in the rationale")
+                spec_ = _brief_spec(brief_)
+                if text_ok(f"{k} candidate", d["candidate"]) and spec_:
+                    why_ = _schema_problem(spec_, d["candidate"])
+                    if why_:
+                        out.append(f"the {k} candidate {why_}: put any extra detail in the rationale")
                 text_ok(f"{k} rationale", d["rationale"], _MIN_REASON)
                 if k == "repair":
                     own = [x for x in data.get("scores", []) if x.get("id") == it["id"]]

@@ -197,18 +197,23 @@ how long to wait.
 scripts/concord_initiator.py init \
   --agents security,cost,reliability \
   --satisfaction-threshold 0.6 --eps 0.05 -B 10 \
-  --schema  "the shared candidate format, inline — multi-line is fine" \
-  --options "A|B|C" \
+  --schema  '{"enum": ["A", "B", "C"]}' \
   --context "the problem statement, inline" \
   --x-reject "an outcome the shared context calls unacceptable" \
   --x-ideal  "an outcome the shared context calls fully satisfying" \
   --quiet
 ```
 
-`--options "A|B|C"` (or `@file`, one option per line) is part of the command whenever the options are a fixed, closed
-list named in the task: every proposal, seeds and repairs alike, must then be exactly one of them (a repair may
-re-propose one already in the run), and extra wording is refused. Write each option exactly as the task names it.
-Delete the line only when the options are open-ended and cannot be listed in advance.
+`--schema` is the format of an option, in one of two forms:
+
+- **A JSON Schema** (text that starts with `{`) is enforced: a receiver refuses any seed or repair that does not satisfy
+  it, and says why. `{"enum": ["A", "B", "C"]}` is a closed list: every proposal, seeds and repairs alike, must be
+  exactly one of them (a repair may re-propose one already in the run), and extra wording is refused; write each
+  option exactly as the task names it. Also supported: `"pattern"` (a regular expression the candidate must match),
+  `"minLength"` and `"maxLength"`, `"description"` (what the agents read as the format), and `"type": "string"`. Any
+  other keyword, or invalid JSON, is refused by `init`, so a rule is never silently left unenforced.
+- **Plain text** (anything that does not start with `{`) describes an open format, such as a plan or an action.
+  Nothing is enforced, and agents may propose hybrids.
 
 Pass each of these as a plain argument value — multi-line text is fine,
 there's no shell involved when you invoke this through a tool call rather
