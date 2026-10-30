@@ -197,7 +197,7 @@ how long to wait.
 scripts/concord_initiator.py init \
   --agents security,cost,reliability \
   --satisfaction-threshold 0.6 --eps 0.05 -B 10 \
-  --schema  '{"enum": ["A", "B", "C"]}' \
+  --schema  "what one option is, in plain words" \
   --context "the problem statement, inline" \
   --x-reject "an outcome the shared context calls unacceptable" \
   --x-ideal  "an outcome the shared context calls fully satisfying" \
@@ -208,12 +208,13 @@ scripts/concord_initiator.py init \
 
 - **A JSON Schema** (text that starts with `{`) is enforced: a receiver refuses any seed or repair that does not satisfy
   it, and says why. `{"enum": ["A", "B", "C"]}` is a closed list: every proposal, seeds and repairs alike, must be
-  exactly one of them (a repair may re-propose one already in the run), and extra wording is refused; write each
-  option exactly as the task names it. Also supported: `"pattern"` (a regular expression the candidate must match),
+  exactly one of them (a repair may re-propose one already in the run), and extra wording is refused. Use it only
+  when the options were handed to you (the task or a tool output lists them) and copy each exactly as given; never
+  write the list yourself, because a list you invent shuts out better answers that nobody listed. Also supported: `"pattern"` (a regular expression the candidate must match),
   `"minLength"` and `"maxLength"`, `"description"` (what the agents read as the format), and `"type": "string"`. Any
   other keyword, or invalid JSON, is refused by `init`, so a rule is never silently left unenforced.
-- **Plain text** (anything that does not start with `{`) describes an open format, such as a plan or an action.
-  Nothing is enforced, and agents may propose hybrids.
+- **Plain text** (anything that does not start with `{`) describes an open format, such as a plan or an action. It is
+  the default. Nothing is enforced, and agents may propose hybrids.
 
 Pass each of these as a plain argument value — multi-line text is fine,
 there's no shell involved when you invoke this through a tool call rather
