@@ -458,16 +458,33 @@ INSTRUCTIONS = {
     ),
     "repair": (
         "You are the least-satisfied agent on the incumbent. Read the incumbent, its rationale and every agent's score "
-        "and reasoning, then propose ONE new candidate in the candidate_schema format that you would rate close to "
-        "your x_ideal and that does not push other agents below the threshold. Your rationale must answer the "
-        "strongest reasoning against your position. Rate your own new candidate in the same reply. "
+        "and reasoning, then propose ONE candidate in the candidate_schema format that you would rate close to "
+        "your x_ideal and that does not push other agents below the threshold. It may be a new candidate, or one "
+        "already in the run that you now rate differently because of a specific fact another agent shared: say which "
+        "fact and from whom. Your rationale must answer the strongest reasoning against your position. Rate your own "
+        "candidate in the same reply. "
         "Your answer to this message is only the reply the script tells you to send, with nothing before or after it. Pass this message to concord_receiver.py handle and do what it says; never write the reply yourself."
     ),
 }
 
 
-def instructions_line(kind):
-    return f"  <instructions>{esc(INSTRUCTIONS[kind])}</instructions>"
+CLOSED_NOTE = ("The candidate must be exactly one of the listed options: detail about it goes in the rationale, and "
+               "added wording does not make a different option. ")
+
+
+def instructions_line(kind, st=None):
+    text = INSTRUCTIONS[kind]
+    if st and st.get("options") and kind in ("seed", "repair"):
+        head, sep, tail = text.partition("Your answer to this message")
+        text = head + CLOSED_NOTE + sep + tail
+    return f"  <instructions>{esc(text)}</instructions>"
+
+
+def options_lines(st):
+    opts = st.get("options")
+    if not opts:
+        return []
+    return ["  <options>", *[f"    <option>{esc(o)}</option>" for o in opts], "  </options>"]
 
 
 # --------------------------------------------------------------------------
@@ -509,11 +526,12 @@ def build_seed_msg(st, addressed):
     lines = [
         "<concord-propose-seed>",
         f"  <candidate_schema>{esc(st['schema'])}</candidate_schema>",
+        *options_lines(st),
         f"  <satisfaction_threshold>{esc(st['params']['satisfaction_threshold'])}</satisfaction_threshold>",
         f"  <context>{esc(st['context'])}</context>",
     ]
     lines += _routing_lines(st, addressed)
-    lines.append(instructions_line("seed"))
+    lines.append(instructions_line("seed", st))
     lines.append("</concord-propose-seed>")
     return "\n".join(lines)
 
@@ -549,6 +567,7 @@ def build_repair_msg(st, agent):
         "<concord-repair>",
         f"  <satisfaction_threshold>{esc(tau)}</satisfaction_threshold>",
         f"  <candidate_schema>{esc(st['schema'])}</candidate_schema>",
+        *options_lines(st),
         f"  <context>{esc(st['context'])}</context>",
         f"  <new_candidate_id>r{st['pending']['round']}-{esc(agent)}</new_candidate_id>",
         f'  <incumbent id="{esc(cid)}"'
@@ -568,7 +587,7 @@ def build_repair_msg(st, agent):
             lines.append("      </score>")
         else:
             lines.append(f'      <score agent="{esc(a)}"{s_attr}/>')
-    lines += ["    </scores>", "  </incumbent>", *_routing_lines(st, addressed=[agent]), instructions_line("repair"), "</concord-repair>"]
+    lines += ["    </scores>", "  </incumbent>", *_routing_lines(st, addressed=[agent]), instructions_line("repair", st), "</concord-repair>"]
     return "\n".join(lines)
 
 
@@ -984,6 +1003,14 @@ def cmd_init(args):
     x_reject = textarg(args.x_reject)
     x_ideal = textarg(args.x_ideal)
     schema = textarg(args.schema)
+    options = None
+    if args.options:
+        raw_opts = textarg(args.options)
+        options = [o.strip() for o in (raw_opts.splitlines() if "\n" in raw_opts else raw_opts.split("|")) if o.strip()]
+        if len(options) < 2:
+            die("--options needs at least 2 options, separated by '|' (or one per line in a @file)")
+        if len({" ".join(o.lower().split()) for o in options}) != len(options):
+            die("--options holds the same option twice")
 
     st = {
         "version": 2,
@@ -995,6 +1022,7 @@ def cmd_init(args):
         },
         "agents": agents,
         "schema": schema,
+        "options": options,
         "context": context,
         "x_reject": x_reject,
         "x_ideal": x_ideal,
@@ -1386,8 +1414,11 @@ def cmd_handle(args):
                 try:
                     rr = parse_reply(doc)
                     if rr["kind"] == "candidate" and any(
-                            c["proposer"] == agent and c["candidate"] == rr["candidate"] for c in st["pool"]):
-                        continue                               # an exact repeat of a proposal already recorded: nothing to do
+                            c["proposer"] == agent and c["candidate"] == rr["candidate"]
+                            and (not rr.get("id") or c["id"] == rr["id"]) for c in st["pool"]):
+                        # a resend of a proposal already recorded (same id and text): nothing to do. The same text under
+                        # a new id is a new proposal: a repair may re-propose the agent's own earlier candidate.
+                        continue
                     if rr["kind"] == "anchor" and st["anchors"].get(agent) == {
                             "raw_reject": rr["raw_reject"], "raw_ideal": rr["raw_ideal"]}:
                         continue                               # an exact repeat of an anchor already recorded (a resend
@@ -1623,6 +1654,9 @@ How to fill the arguments:
                            them names it. Use these same ids everywhere in this run.
   --satisfaction-threshold the standard the outcome genuinely has to meet, not a level you are sure is reachable (0.6 is
                            a starting point). If it sits below the best seed, the run ends with no negotiation at all.
+  --options                optional. A closed list of the only allowed candidates, "A|B|C" (or @file, one per line). When
+                           set, every proposal, seeds and repairs alike, must be exactly one of them; a repair may
+                           re-propose an option already in the run. Leave it out when the options are open-ended.
   --x-reject / --x-ideal   the objective, never the means: the state the context is trying to produce, as a plain
                            before/after in its own numbers (for example error rate above 40%: ideal "error rate returns
                            to 0", reject "stays above 40% or rises"). Never a proposal, and no word about how it is
@@ -1725,6 +1759,9 @@ def _main():
     p.add_argument("--eps", type=float, default=0.05)
     p.add_argument("-B", "--B", "--budget", type=int, default=10, dest="B")
     p.add_argument("--schema", required=True, help="candidate format description (or @file)")
+    p.add_argument("--options", default=None,
+                   help="optional closed list of the only allowed candidates: 'A|B|C' (or @file, one per line). "
+                        "Every proposal must then be exactly one of them")
     p.add_argument("--context", required=True, help="problem statement (or @file)")
     p.add_argument("--x-reject", required=True, dest="x_reject",
                    help="reject anchor — outcome that fails all criteria (or @file)")
