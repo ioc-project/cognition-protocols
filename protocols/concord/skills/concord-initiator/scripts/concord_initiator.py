@@ -1727,7 +1727,7 @@ How to fill the arguments:
                            them names it. Use these same ids everywhere in this run.
   --satisfaction-threshold the standard the outcome genuinely has to meet, not a level you are sure is reachable (0.6 is
                            a starting point). If it sits below the best seed, the run ends with no negotiation at all.
-  --schema                 what one option looks like, as a JSON Schema (plain text is refused), enforced on every
+  --schema                 the JSON Schema for a candidate (plain text is refused), enforced on every
                            proposal, seeds and repairs alike. The default is an open format: '{"type": "string",
                            "description": "<the proposal, in words>"}' (nothing is enforced, and agents may propose
                            combinations). A schema needs a "description" or an "enum". Use a JSON enum,

@@ -204,7 +204,7 @@ scripts/concord_initiator.py init \
   --quiet
 ```
 
-`--schema` is the format of an option, a JSON Schema that a receiver enforces: it refuses any seed or repair that does
+`--schema` is the JSON Schema for a candidate, which a receiver enforces: it refuses any seed or repair that does
 not satisfy it, and says why. Two forms cover most runs:
 
 - **Open format**, the default: `{"type": "string", "description": "a remediation plan"}`. The description is what the

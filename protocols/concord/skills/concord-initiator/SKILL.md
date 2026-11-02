@@ -85,7 +85,7 @@ scripts/concord_initiator.py --state <path> handle <<'EOF'  # then, for every re
 EOF
 ```
 
-`--schema` is a JSON Schema saying what one option looks like. Two forms cover most runs:
+`--schema` is the JSON Schema for a candidate. Two forms cover most runs:
 
 ```
 # open format (the default): describe the proposal in words
