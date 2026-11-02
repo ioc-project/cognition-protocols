@@ -562,17 +562,14 @@ def _ingest_doc(st, sender, root):
             el = root.find(t)
             if el is not None and el.text and t not in brief:
                 brief[t] = el.text.strip()
-        opts_el = root.find("options")
-        if opts_el is not None and "options" not in brief:
-            listed = [(o.text or "").strip() for o in opts_el.findall("option") if (o.text or "").strip()]
-            if listed:
-                brief["options"] = listed
         js_el = root.find("schema_json")
         if js_el is not None and js_el.text and "schema_spec" not in brief:
             try:
                 spec_ = json.loads(js_el.text)
                 if isinstance(spec_, dict):
                     brief["schema_spec"] = spec_
+                    if "enum" in spec_:
+                        brief["options"] = list(spec_["enum"])
             except ValueError:
                 pass
         ob = st.setdefault("outbox", {})
@@ -776,7 +773,7 @@ def _options_lines(brief) -> list:
     """The closed list of options, when the run has one: the candidate must be exactly one of them."""
     opts = brief.get("options")
     if not opts:
-        if brief.get("schema_spec"):
+        if {"pattern", "minLength", "maxLength"} & set(brief.get("schema_spec") or {}):
             return ["(the candidate is checked against the format above and refused if it does not satisfy it)"]
         return []
     return ["options (the candidate must be exactly one of these, written as listed; detail about it goes in the "
@@ -842,7 +839,7 @@ def _ask_text(st, items) -> str:
             out += ["", "TASK: anchor",
                     "Rate two outcomes on your own raw 0-100 scale, as satisfaction of your role if each happened "
                     "(not how true it is today: answering how true it is now inverts the scale and is refused). "
-                    "x_reject should get a LOW number, x_ideal a HIGH one, at least 50 points above it. These are satisfaction "
+                    "x_reject should get a LOW number, x_ideal a HIGH one strictly above it. These are satisfaction "
                     "ratings, not metrics: no error rate or latency in these fields. The anchors are rated once and "
                     "stay fixed for the whole run. Rate your raw scale, never a normalised 0-1 score.",
                     f"x_reject: {brief.get('x_reject', '?')}", f"x_ideal: {brief.get('x_ideal', '?')}"]
@@ -1051,7 +1048,6 @@ def cmd_observe(args) -> None:
 
 
 _MIN_REASON = 20            # characters: "too expensive" is not a reason
-_MIN_ANCHOR_SPAN = 50       # points between raw_reject and raw_ideal: a narrower scale turns a mediocre rating into "satisfied"
 
 
 def _num(x):
@@ -1134,13 +1130,6 @@ def _check_answer(st, items, data):
                     elif not (0 <= v <= 100):
                         out.append(f"anchor {key} ({v:g}) is outside the 0-100 scale: these are satisfaction ratings of "
                                    "the two outcomes, not metrics or percentages of today's state")
-                lo_, hi_ = _num(a_["raw_reject"]), _num(a_["raw_ideal"])
-                if lo_ is not None and hi_ is not None and hi_ > lo_ and hi_ - lo_ < _MIN_ANCHOR_SPAN:
-                    out.append(f"your two anchors are only {hi_ - lo_:g} points apart (raw_reject={lo_:g}, raw_ideal="
-                               f"{hi_:g}): every later rating is read between them, so a narrow range makes a mediocre "
-                               f"candidate look fully satisfying. Use anchors at least {_MIN_ANCHOR_SPAN} points apart "
-                               "(for example about 5 for the outcome you call unacceptable and about 95 for the one "
-                               "you call fully satisfying)")
             elif k in ("seed", "repair"):
                 d = data[k]
                 brief_ = st.get("brief", {})

@@ -73,7 +73,7 @@ where you found this file.
 scripts/concord_initiator.py init \
   --quiet --agents <id,id,...> \
   --satisfaction-threshold 0.6 \
-  --schema "<what one option is, in plain words>" \
+  --schema '<a JSON Schema: the open format or a closed list, see below>' \
   --context "<the problem>" \
   --x-reject "<an outcome that fails every criterion>" \
   --x-ideal "<an outcome that fully satisfies them>"
@@ -85,16 +85,23 @@ scripts/concord_initiator.py --state <path> handle <<'EOF'  # then, for every re
 EOF
 ```
 
-`--schema` says what one option looks like. The default is plain text, as shown: describe
-the proposal in words (for example "a remediation plan: the actions to take, each with its
-service and version"). Nothing is enforced, and agents may propose combinations.
+`--schema` is a JSON Schema saying what one option looks like. Two forms cover most runs:
 
-Use a JSON enum, `'{"enum": ["A", "B", "C"]}'`, only when the options were handed to you:
+```
+# open format (the default): describe the proposal in words
+--schema '{"type": "string", "description": "a remediation plan: the actions to take, each with its service and version"}'
+# closed list, when the options were handed to you
+--schema '{"enum": ["<option A>", "<option B>", "<option C>"]}'
+```
+
+In the open format nothing is enforced, and agents may propose combinations.
+
+Use the JSON enum only when the options were handed to you:
 the task itself, or the output of a tool, lists them, and you copy each one exactly as given.
 Every proposal must then be exactly one of them. Never make the list up yourself. If you
 would have to decide what the candidates are (the actions to take, the plans to compare), the
-agents propose them, so use plain text: a list you write yourself shuts out better answers
-that nobody listed. A JSON schema may also carry a `"pattern"` (a regular expression) or
+agents propose them, so use the open format: a list you write yourself shuts out better answers
+that nobody listed. The schema may also carry a `"pattern"` (a regular expression) or
 `"minLength"`/`"maxLength"`; invalid JSON is refused, so fix it and run `init` again.
 `init --help` says how to fill each argument: read it before the first run. Use
 the state path `init` prints on every later call. Every output of the script

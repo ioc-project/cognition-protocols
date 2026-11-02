@@ -387,24 +387,21 @@ def textarg(v):
 
 
 # --------------------------------------------------------------------------
-# candidate schema: plain text (open format) or a JSON Schema (enforced)
+# candidate schema: a JSON Schema object (enforced)
 # --------------------------------------------------------------------------
 
 _SCHEMA_KEYS = ("type", "enum", "pattern", "minLength", "maxLength", "description", "title")
 
 
 def parse_schema(text):
-    """`--schema` is either plain text, an open format that nothing enforces, or a JSON Schema object (text that starts
-    with `{`), which the receivers enforce on every proposal. Returns the parsed spec, or None for plain text. Only a
-    small subset is supported, and anything else is refused, so a rule is never silently left unenforced."""
-    s = (text or "").strip()
-    if not s.startswith("{"):
-        return None
+    """`--schema` is a JSON Schema object, which the receivers enforce on every proposal. Only a small subset is
+    supported, and anything else is refused, so a rule is never silently left unenforced. An open format is
+    `{"type": "string", "description": "..."}`."""
     try:
-        spec = json.loads(s)
+        spec = json.loads((text or "").strip())
     except ValueError as exc:
-        die(f"--schema starts with '{{', so it is read as a JSON Schema, but it is not valid JSON ({exc}). Fix the JSON, "
-            "or pass the format as plain text that does not start with '{'.")
+        die(f"--schema must be a JSON Schema object, but it is not valid JSON ({exc}). For an open format use "
+            '\'{"type": "string", "description": "what one option is, in plain words"}\'.')
     if not isinstance(spec, dict):
         die("--schema must be a JSON object")
     unknown = sorted(set(spec) - set(_SCHEMA_KEYS))
@@ -413,6 +410,8 @@ def parse_schema(text):
             f"{', '.join(_SCHEMA_KEYS)}.")
     if "type" in spec and spec["type"] != "string":
         die('--schema "type" can only be "string": a candidate is text')
+    if not (spec.get("enum") or str(spec.get("description") or "").strip()):
+        die('--schema needs a "description" (what one option is, in plain words) or an "enum"')
     if "enum" in spec:
         e = spec["enum"]
         if not (isinstance(e, list) and len(e) >= 2 and all(isinstance(x, str) and x.strip() for x in e)):
@@ -544,19 +543,18 @@ def instructions_line(kind, st=None):
     text = INSTRUCTIONS[kind]
     note = ""
     if st and kind in ("seed", "repair"):
-        note = CLOSED_NOTE if st.get("options") else (FORMAT_NOTE if st.get("schema_json") else "")
+        spec = json.loads(st.get("schema_json") or "{}")
+        note = CLOSED_NOTE if st.get("options") else (
+            FORMAT_NOTE if {"pattern", "minLength", "maxLength"} & set(spec) else "")
     if note:
         head, sep, tail = text.partition("Your answer to this message")
         text = head + note + sep + tail
     return f"  <instructions>{esc(text)}</instructions>"
 
 
-def options_lines(st):
-    """The enforced part of the schema, as the receivers read it: the closed list, and the schema itself as JSON."""
+def schema_lines(st):
+    """The enforced part of the schema, as the receivers read it: the schema itself as JSON (an enum is the closed list)."""
     lines = []
-    opts = st.get("options")
-    if opts:
-        lines += ["  <options>", *[f"    <option>{esc(o)}</option>" for o in opts], "  </options>"]
     if st.get("schema_json"):
         lines.append(f"  <schema_json>{esc(st['schema_json'])}</schema_json>")
     return lines
@@ -601,7 +599,7 @@ def build_seed_msg(st, addressed):
     lines = [
         "<concord-propose-seed>",
         f"  <candidate_schema>{esc(st['schema'])}</candidate_schema>",
-        *options_lines(st),
+        *schema_lines(st),
         f"  <satisfaction_threshold>{esc(st['params']['satisfaction_threshold'])}</satisfaction_threshold>",
         f"  <context>{esc(st['context'])}</context>",
     ]
@@ -642,7 +640,7 @@ def build_repair_msg(st, agent):
         "<concord-repair>",
         f"  <satisfaction_threshold>{esc(tau)}</satisfaction_threshold>",
         f"  <candidate_schema>{esc(st['schema'])}</candidate_schema>",
-        *options_lines(st),
+        *schema_lines(st),
         f"  <context>{esc(st['context'])}</context>",
         f"  <new_candidate_id>r{st['pending']['round']}-{esc(agent)}</new_candidate_id>",
         f'  <incumbent id="{esc(cid)}"'
@@ -1077,17 +1075,14 @@ def cmd_init(args):
     context = textarg(args.context)
     x_reject = textarg(args.x_reject)
     x_ideal = textarg(args.x_ideal)
-    schema = textarg(args.schema) if args.schema else None
-    spec = None
-    if schema:
-        spec = parse_schema(schema)
-    else:
-        die("--schema is required: plain text for an open format, or a JSON Schema such as "
+    if not args.schema:
+        die("--schema is required: a JSON Schema such as "
+            '\'{"type": "string", "description": "what one option is"}\' for an open format, or '
             '\'{"enum": ["A", "B", "C"]}\' for a closed list')
-    options = list(spec["enum"]) if spec and "enum" in spec else None
-    schema_json = json.dumps(spec, ensure_ascii=False, sort_keys=True) if spec else None
-    if spec:
-        schema = render_schema(spec)
+    spec = parse_schema(textarg(args.schema))
+    options = list(spec["enum"]) if "enum" in spec else None
+    schema_json = json.dumps(spec, ensure_ascii=False, sort_keys=True)
+    schema = render_schema(spec)
 
     st = {
         "version": 2,
@@ -1732,15 +1727,15 @@ How to fill the arguments:
                            them names it. Use these same ids everywhere in this run.
   --satisfaction-threshold the standard the outcome genuinely has to meet, not a level you are sure is reachable (0.6 is
                            a starting point). If it sits below the best seed, the run ends with no negotiation at all.
-  --schema                 what one option looks like. The default is plain text: describe the proposal in words (nothing is
-                           enforced, and agents may propose combinations). A JSON Schema, text that starts with "{",
-                           is enforced on every proposal, seeds and repairs alike. Use a JSON enum,
-                           '{"enum": ["West City", "East Town", "North Hill"]}', only when the options were handed to
+  --schema                 what one option looks like, as a JSON Schema (plain text is refused), enforced on every
+                           proposal, seeds and repairs alike. The default is an open format: '{"type": "string",
+                           "description": "<the proposal, in words>"}' (nothing is enforced, and agents may propose
+                           combinations). A schema needs a "description" or an "enum". Use a JSON enum,
+                           '{"enum": ["<option A>", "<option B>", "<option C>"]}', only when the options were handed to
                            you: the task or a tool output lists them, and you copy each exactly as given (a repair may
                            re-propose one already in the run). Never write the list yourself: if you would have to
-                           decide what the candidates are, use plain text. Other supported keywords: "pattern" (a
-                           regular expression), "minLength", "maxLength", "description", "type": "string". Invalid
-                           JSON is refused.
+                           decide what the candidates are, use the open format. Other supported keywords: "pattern" (a
+                           regular expression), "minLength", "maxLength", "title". Invalid JSON or any other keyword is refused.
   --x-reject / --x-ideal   the objective, never the means: the state the context is trying to produce, as a plain
                            before/after in its own numbers (for example error rate above 40%: ideal "error rate returns
                            to 0", reject "stays above 40% or rises"). Never a proposal, and no word about how it is
@@ -1843,8 +1838,8 @@ def _main():
     p.add_argument("--eps", type=float, default=0.05)
     p.add_argument("-B", "--B", "--budget", type=int, default=10, dest="B")
     p.add_argument("--schema", default=None,
-                   help="candidate format: plain text (open) or a JSON Schema starting with '{' (enforced), "
-                        "e.g. '{\"enum\": [\"A\", \"B\"]}' (or @file)")
+                   help="candidate format, a JSON Schema (enforced): '{\"type\": \"string\", \"description\": \"...\"}' "
+                        "for an open format, '{\"enum\": [\"A\", \"B\"]}' for a closed list (or @file)")
     p.add_argument("--context", required=True, help="problem statement (or @file)")
     p.add_argument("--x-reject", required=True, dest="x_reject",
                    help="reject anchor — outcome that fails all criteria (or @file)")
