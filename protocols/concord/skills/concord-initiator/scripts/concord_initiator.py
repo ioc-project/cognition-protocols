@@ -1280,7 +1280,7 @@ def _next_send(phase, nudge=False, complete=False):
         tail = ("From here the agents rate and repair among themselves: you only pass things on. " + tail)
     if complete:
         tail = ("The run is over: after sending, report the RUN COMPLETE result printed on the error output, "
-                "exactly as printed and with nothing added. Ignore any message the agents send after this one (acks, "
+                "exactly as printed and with nothing added. Ignore any later message from the agents about this run (acks, "
                 "idle notices, questions): the run is over and nothing is owed to them.")
     return ("NEXT: " + lead + "Send each block below to the agent or agents named on its `--- to:` line, exactly as "
             "printed and without that line. " + _RULES + " " + tail)
@@ -1291,7 +1291,7 @@ def _next_none(report=False, hold=False, awaiting="-"):
     if report:
         return ("NEXT: The run is over. Report exactly the result below (outcome, winning candidate, final scores) to "
                 "whoever asked for it, and add nothing: no steps, recommendations or commentary of your own. Run no "
-                "more commands. Ignore any message the agents send after this one (acks, idle notices, questions): the "
+                "more commands. Ignore any later message from the agents about this run (acks, idle notices, questions): the "
                 "run is over.")
     wait = ("The run is not over, so do not end your turn just because nothing is due now. If no reply is still on its "
             "way (you have already collected what the agents answered), run `handle` with no input now: it prints the "
