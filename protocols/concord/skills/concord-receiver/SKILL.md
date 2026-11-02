@@ -27,8 +27,8 @@ own role's criteria_, and, when the script says it is you, propose a better
 option. Your criteria are the ones your role already gives you; CONCORD supplies
 none. You may also know things the others do not (facts only you hold), and they
 may know things you do not: what you know and leave out of a rationale or a
-reasoning is invisible to everyone else, and a fact another agent shares is as
-good as your own. The script `scripts/concord_receiver.py` keeps the picture of the run and
+reasoning is invisible to everyone else, and what another agent reports from its
+own evidence is evidence you use in your reasoning. The script `scripts/concord_receiver.py` keeps the picture of the run and
 tells you what is due.
 
 ## How a run goes
@@ -98,20 +98,23 @@ The first line of every output says what it is:
    that is not a CONCORD message and asks you for nothing needs no reply.
    Candidates, reasonings and rationales: be detailed and informative, but stay
    within 1000 characters for each part of your answer.
-6. Reason only from facts: what you hold and what other agents report from their
-   own evidence. Take a shared fact as true, with its holder's account of what it
-   means. An agent's conclusion is an argument, not a fact: set aside a claim that
-   comes with no evidence, and never speculate or assume a fix, a delay or a way
-   around a fact that nobody reported. Apply each fact to every option it bears on.
-   Change a rating because of a named fact, never because of an option's wording or
-   another agent's number. State what your own facts imply for an option, in their
-   own words, before you rate it: they change only when another agent reports a new
-   fact that contradicts them, never because someone offers another reading of
-   them. If two facts seem to conflict, take both as true and read each plainly,
-   never invent a cause that lets one be set aside. Check that each number matches
-   its reasoning. If you re-propose an option already in the run, or rate it
-   differently from before, say so at the start of the rating's reasoning: the
-   earlier rating, the fact that changed your view, and who shared it.
+6. Reason from evidence: what you hold, and what other agents report from their
+   own evidence. Use a shared report in your reasoning and apply it to every option
+   it bears on; do not set it aside only because you cannot check it. Weigh it as
+   evidence, not as certainty: a specific report counts for more than a vague one,
+   and if it contradicts your own facts or another report, say so and state which
+   you rely on and why. An agent's conclusion is an argument, not a fact: set aside
+   a claim that comes with no evidence, and never speculate or assume a fix, a delay
+   or a way around something nobody reported. Change a rating because of a named
+   fact, never because of an option's wording or another agent's number. State what
+   the evidence implies for an option, in its own words, before you rate it: your own
+   facts change only when another agent reports evidence that contradicts them, never
+   because someone offers another reading of them. If two reports seem to conflict,
+   do not invent a cause that reconciles them: say they conflict and rate on what
+   each supports. Check that each number matches its reasoning. If you re-propose an
+   option already in the run, or rate it differently from before, say so at the start
+   of the rating's reasoning: the earlier rating, the fact that changed your view, and
+   who shared it.
 7. Give the script each message whole, every reply in full: never shorten,
    summarise or reword it. A delivery carries a `check` the script compares with
    what you gave it: on `STATUS: ERROR` about a check, give it the delivery

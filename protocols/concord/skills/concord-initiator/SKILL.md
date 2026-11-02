@@ -3,15 +3,15 @@ name: concord-initiator
 description: >
   Use when you are participating in, coordinating or facilitating a task that
   needs a single outcome that satisfies multiple agents with
-  different, potentially conflicting criteria, or who each hold different
+  different, conflicting criteria, or who each hold different
   information about the problem — a unilateral choice is not enough. Activate on confirmed conflict (agents returned divergent outputs),
   anticipated conflict (distinct roles on a shared decision make divergence
-  structurally likely), or when you cannot tell whether roles will diverge —
+  likely), or when you cannot tell whether roles will diverge —
   uncertainty is itself the signal. Also activate when you would relay outputs
   from other agents to a downstream agent whose criteria bear on the decision:
-  include that agent directly instead of forwarding a pre-digested summary.
-  Apparent agreement upstream is not a reason to skip — a downstream relay
-  recipient may still hold different criteria. Also activate when an upstream
+  include that agent directly instead of forwarding a summary.
+  Apparent agreement upstream is no reason to skip: a downstream recipient
+  may still hold different criteria. Also activate when an upstream
   protocol (e.g. ACCORD) has handed you a pre-verified conflict frame.
   Do NOT activate when a single role owns the decision or agents work on
   separate sub-problems with no shared decision variable.

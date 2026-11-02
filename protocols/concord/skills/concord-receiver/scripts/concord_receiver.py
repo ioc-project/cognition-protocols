@@ -757,16 +757,17 @@ _NOTHING_MORE = ("When you are done, write nothing more: not even a confirmation
 
 
 # The rules on facts, said at the tasks where an agent weighs what others reported (score, repair).
-_FACTS = ("Facts. What you hold, and what other agents report from their own evidence (what they saw, were given or "
-          "read), are facts: take them as true, including an agent's account of what its own evidence means, and never "
-          "discount one because you cannot check it. An agent's conclusion or expectation is an argument, not a fact: "
-          "weigh it, and set aside any claim that comes with no evidence, saying so in your reasoning. Do not "
-          "speculate, and do not assume a fix, a delay or a way around a fact that nobody reported. Apply each fact to "
-          "every candidate it affects. Before you rate a candidate, state what your facts imply for it, in their own "
-          "words, then give the number, and check that it matches that reasoning. A fact of yours changes only when "
-          "another agent reports a new fact that contradicts it, never because someone offers another reading of it. "
-          "When two facts seem to conflict, take both as true and read each plainly: never invent a cause that lets one "
-          "be set aside.")
+_FACTS = ("Facts. What you hold is a fact. What other agents report from their own evidence (what they saw, were given "
+          "or read) is evidence you must use: build it into your reasoning, apply it to every candidate it affects, and "
+          "do not set it aside only because you cannot check it. Weigh it as evidence, not as certainty: a specific "
+          "report counts for more than a vague one, and if a report contradicts your own facts or another report, say "
+          "so in your reasoning and state which you rely on and why. An agent's conclusion or expectation is an "
+          "argument, not a fact: weigh it, and set aside any claim that comes with no evidence, saying so. Do not "
+          "speculate, and do not assume a fix, a delay or a way around something nobody reported. Before you rate a "
+          "candidate, state what the evidence implies for it, in its own words, then give the number, and check that "
+          "it matches that reasoning. Your own facts change only when another agent reports evidence that contradicts "
+          "them, never because someone offers another reading of them. When two reports seem to conflict, do not "
+          "invent a cause that reconciles them: say that they conflict and rate on what each supports.")
 
 
 def _options_lines(brief) -> list:

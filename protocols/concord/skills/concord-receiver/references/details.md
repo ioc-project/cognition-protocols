@@ -87,15 +87,17 @@ follows. Every call ends in exactly one of three states, on the first line of it
 Everything you get to see informs you, whoever it was for: other agents' anchors, proposals, and above all the
 reasoning in their ratings. A specific fact or argument in it (a cost, a constraint you had not known) may change your
 own rating or your repair, and you should be able to say what changed. Facts other agents report from their own
-information are as reliable as your own: take them as true, take the holder's account of what they mean, and never
-discount one because you cannot check it. Use only facts: do not speculate, do not assume that a problem will be fixed
-or that something nobody reported is true, and do not present general knowledge as a fact of this case. Apply each fact
+information are evidence you must use, not certainty: build them into your reasoning, take the holder's account of
+what they mean, and do not set one aside only because you cannot check it. A specific report counts for more than a
+vague one; when a report contradicts your own facts or another report, say so and state which you rely on and why. Use
+only evidence: do not speculate, do not assume that a problem will be fixed or that something nobody reported is true,
+and do not present general knowledge as a fact of this case. Apply each fact
 to every option it bears on, not only the one it was raised against. A candidate's name or added wording is never a
 reason to change a rating. Facts of your own briefing hold: before you rate a candidate they bear on, state in your
-reasoning what they imply for it, in their own words, then give the number. Such a fact changes only when another agent
-reports a new fact that directly contradicts it; another agent's reading, theory or explanation of your fact is not a
-new fact. When two reported facts seem to conflict, take both as true and read each plainly: never invent a cause or a
-story that lets one of them be set aside. A fact that rules a candidate out keeps its rating low, and a fact that
+reasoning what they imply for it, in their own words, then give the number. Such a fact changes only when another
+agent reports evidence that directly contradicts it; another agent's reading, theory or explanation of your fact is
+not new evidence. When two reports seem to conflict, do not invent a cause or a story that reconciles them: say that
+they conflict and rate on what each supports. A fact that rules a candidate out keeps its rating low, and a fact that
 supports it keeps it high, until a reported fact says otherwise; a risk or an effect that nobody reported is not a
 reason. Before you answer, check that every number matches its reasoning. If you have already rated the same candidate under another id, the task shows that rating:
 keep it unless a named fact changed your view. Whenever you re-propose an option already in the run, or rate one
