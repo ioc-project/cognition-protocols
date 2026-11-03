@@ -221,18 +221,6 @@ def add_ratings(st, agent, ratings):
 # reading CONCORD documents
 # --------------------------------------------------------------------------
 
-_BARE_LT_RE = re.compile(r"<(?![a-zA-Z/?!])")
-_BARE_AMP_RE = re.compile(r"&(?!(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);)")
-
-
-def escape_bare_chars(xml_text):
-    """Escape what an agent un-escaped while copying: a `<` that does not start a tag and an `&` that is not part of an
-    entity. The scripts print `&lt;` and `&amp;`, but a model copying the text often turns them back into `<` and `&`.
-    Applied to every document before it is parsed, so one such character never costs a whole reply; the meaning of
-    the text is unchanged."""
-    return _BARE_LT_RE.sub("&lt;", _BARE_AMP_RE.sub("&amp;", xml_text))
-
-
 def parse_reply_doc(root):
     """-> ('anchor', (reject, ideal)) | ('candidate', (text, rationale)) | ('score', [(id, raw, reasoning)]) | None"""
     def txt(el, tag):

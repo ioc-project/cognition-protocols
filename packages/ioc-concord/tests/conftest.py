@@ -47,6 +47,11 @@ def implementations(module):
     return impls
 
 
-@pytest.fixture(params=list(implementations("engine")))
-def engine(request):
-    return implementations("engine")[request.param]
+def _fixture(module):
+    @pytest.fixture(params=list(implementations(module)), name=module)
+    def fixture(request):
+        return implementations(module)[request.param]
+    return fixture
+
+
+engine, xmlutil, schema, errors = (_fixture(m) for m in ("engine", "xmlutil", "schema", "errors"))

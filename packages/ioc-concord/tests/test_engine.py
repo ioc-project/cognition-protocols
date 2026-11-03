@@ -96,12 +96,6 @@ def test_a_missing_rating_blocks_success(engine):
     assert st["outcome"] != "SUCCESS"
 
 
-def test_escape_bare_chars_repairs_copied_text_and_leaves_markup(engine):
-    fixed = engine.escape_bare_chars("<r>cost < 5 & risk &amp; <b>ok</b> &#38;</r>")
-    assert fixed == "<r>cost &lt; 5 &amp; risk &amp; <b>ok</b> &#38;</r>"
-    ET.fromstring(fixed)
-
-
 def test_parse_reply_doc_reads_each_kind(engine):
     parse = lambda xml: engine.parse_reply_doc(ET.fromstring(xml))   # noqa: E731
     assert parse("<concord-anchor-reply><raw_reject>10</raw_reject><raw_ideal>90</raw_ideal></concord-anchor-reply>") \

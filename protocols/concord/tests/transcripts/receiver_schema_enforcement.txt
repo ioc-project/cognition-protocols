@@ -495,15 +495,35 @@ out|
 === receiver a answer (exit 0)
 $ --me a answer --candidate anything --rationale It meets my role criteria on cost, risk and delivery time, as stated ⏎
 $ in my briefing.
-out| STATUS: SEND
-out| <concord-candidate-reply id="seed-a" agent="a" state="sch1">
-out|   <candidate>anything</candidate>
-out|   <rationale>It meets my role criteria on cost, risk and delivery time, as stated in my briefing.</rationale>
-out| </concord-candidate-reply>
+out| STATUS: ASK
+out| Your answer was not usable: the schema "pattern" is not a valid regular expression (missing ), unterminated ⏎
+out| subpattern at position 0), so no candidate can be accepted whatever you answer: tell whoever sent you the message ⏎
+out| that its schema is invalid. Nothing was recorded or sent. Fix these and answer again as the task shows below ⏎
+out| (what is due may differ from what you answered).
 out| 
-err| NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or after it, ⏎
-err| no summary of your own. Then pass the next CONCORD message you get to `handle`. When you are done, write nothing ⏎
-err| more: not even a confirmation of what you sent or decided. Your environment may pass anything you write to the ⏎
-err| other participants.
-err| 
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so. Use only facts from your own briefing: do not speculate.
+out| 
+out| TASK: seed
+out| Propose the single candidate that best satisfies your own role, in this format. Do not hedge, do not offer ⏎
+out| alternatives, do not pre-compromise for other roles: this round represents your role's viewpoint undiluted. The ⏎
+out| rationale carries the concrete facts and evidence from your criteria, why the other options in the candidate ⏎
+out| format are less suitable from your role's perspective, but only where you have evidence against them (if you have ⏎
+out| none, say so: never invent a risk to fill the gap), the trade-offs you considered and why it will hold up under ⏎
+out| scrutiny: the other agents use it to detect incorrect logic. Your rationale is your only voice here: anything you ⏎
+out| know and do not write in it is invisible to every other participant. Be detailed and informative, but stay within ⏎
+out| 1000 characters for each part of your answer.
+out| candidate format: s
+out| context: c
+out| (the candidate is checked against the format above and refused if it does not satisfy it)
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --candidate "TEXT" --rationale "TEXT with ⏎
+out| the evidence for it"
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
 
