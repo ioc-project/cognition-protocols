@@ -23,6 +23,20 @@ def rate(engine, st, agent, **raw):
     engine.add_ratings(st, agent, [(cid.replace("_", "-"), r, "reasons") for cid, r in raw.items()])
 
 
+def test_add_anchor_records_the_scale_and_refuses_a_bad_or_repeated_one(engine):
+    st = engine.new_engine_state(["a", "b"], PARAMS)
+    engine.add_anchor(st, "a", 20, 80)
+    assert st["anchors"]["a"] == {"raw_reject": 20, "raw_ideal": 80}
+    with pytest.raises(engine.ReplyError, match="already anchored"):
+        engine.add_anchor(st, "a", 0, 100)
+    engine.add_anchor(st, "a", 0, 100, overwrite=True)
+    assert st["anchors"]["a"] == {"raw_reject": 0, "raw_ideal": 100}
+    for bad in ((50, 50), (80, 20), (0, float("nan"))):
+        with pytest.raises(engine.ReplyError, match="inverted"):
+            engine.add_anchor(st, "b", *bad)
+    assert "b" not in st["anchors"]
+
+
 def test_norm_is_relative_to_the_anchors_and_clamped(engine):
     st = run(engine, {"a": (20, 80)}, {})
     assert engine.norm(st, "a", 50) == pytest.approx(0.5)

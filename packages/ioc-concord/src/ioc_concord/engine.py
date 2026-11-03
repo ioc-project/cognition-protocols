@@ -11,6 +11,8 @@ bottleneck, the outcome). It holds no I/O and no process state: it works on the 
 import hashlib
 import re
 
+from ioc_concord.errors import ReplyError
+
 TOL = 1e-9
 
 # --------------------------------------------------------------------------
@@ -175,6 +177,19 @@ def advance(st):
 def new_engine_state(agents, params):
     return {"params": dict(params), "agents": list(agents), "anchors": {}, "pool": [], "raw": {a: {} for a in agents},
             "score_reasoning": {}, "x_star": None, "t": 0, "pending": None, "outcome": None, "log": []}
+
+
+def add_anchor(st, agent, raw_reject, raw_ideal, overwrite=False):
+    """Record where an agent's own scale starts and ends: the raw rating of the worst (`raw_reject`) and the best
+    (`raw_ideal`) outcome. Every later rating of that agent is read against it. Raises ReplyError for an inverted scale,
+    and for an agent that is already anchored unless `overwrite` (which invalidates comparisons made before it)."""
+    # `not (a > b)` rather than `a <= b`, so a NaN is refused too.
+    if not (raw_ideal > raw_reject):
+        raise ReplyError(f"raw_ideal ({raw_ideal}) must exceed raw_reject ({raw_reject}); {agent}'s scale is inverted")
+    if agent in st["anchors"] and not overwrite:
+        raise ReplyError(f"{agent} is already anchored; pass --overwrite to re-anchor "
+                         f"(this invalidates comparisons made before it)")
+    st["anchors"][agent] = {"raw_reject": raw_reject, "raw_ideal": raw_ideal}
 
 
 def add_candidate(st, agent, text, rationale=None, cid=None):
