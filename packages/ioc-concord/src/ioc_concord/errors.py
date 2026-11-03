@@ -27,3 +27,15 @@ class ReplyError(ConcordError):
     """A reply or request could not be read: it is not CONCORD XML, not well-formed, or lacks a field it needs."""
 
     code = "invalid_reply"
+
+
+class InvalidRun(ConcordError):
+    """The parameters of a run are not valid (too few agents, a threshold out of range, ...)."""
+
+    code = "invalid_run"
+
+
+class StateError(ConcordError):
+    """A saved state cannot be loaded."""
+
+    code = "state_error"
