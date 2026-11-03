@@ -85,8 +85,25 @@ follows. Every call ends in exactly one of three states, on the first line of it
 ## What you learn from other agents' replies
 
 Everything you get to see informs you, whoever it was for: other agents' anchors, proposals, and above all the
-reasoning in their ratings. A specific, checkable fact or argument in it (a cost, a constraint you had not known)
-may change your own rating or your repair, and you should be able to say what changed. The number another agent
+reasoning in their ratings. A specific fact or argument in it (a cost, a constraint you had not known) may change your
+own rating or your repair, and you should be able to say what changed. Facts other agents report from their own
+information are evidence you must use, not certainty: build them into your reasoning, take the holder's account of
+what they mean, and do not set one aside only because you cannot check it. A specific report counts for more than a
+vague one; when a report contradicts your own facts or another report, say so and state which you rely on and why. Use
+only evidence: do not speculate, do not assume that a problem will be fixed or that something nobody reported is true,
+and do not present general knowledge as a fact of this case. Apply each fact
+to every option it bears on, not only the one it was raised against. A candidate's name or added wording is never a
+reason to change a rating. Facts of your own briefing hold: before you rate a candidate they bear on, state in your
+reasoning what they imply for it, in their own words, then give the number. Such a fact changes only when another
+agent reports evidence that directly contradicts it; another agent's reading, theory or explanation of your fact is
+not new evidence. When two reports seem to conflict, do not invent a cause or a story that reconciles them: say that
+they conflict and rate on what each supports. A fact that rules a candidate out keeps its rating low, and a fact that
+supports it keeps it high, until a reported fact says otherwise; a risk or an effect that nobody reported is not a
+reason. Before you answer, check that every number matches its reasoning. If you have already rated the same candidate under another id, the task shows that rating:
+keep it unless a named fact changed your view. Whenever you re-propose an option already in the run, or rate one
+differently from before, begin the reasoning of that rating with the earlier candidate id and rating, then the specific
+fact that changed your view and who shared it ("Same as r0-x, which I rated 40. I now rate it 80 because agent y
+reported that ..."): the others read that reasoning, and without it they cannot judge the change. The number another agent
 gave is never a reason: keep your scale and rate against your own criteria. Anchor first, from your own criteria,
 before you read any candidate, and propose your own seed before you read anyone else's. Both hold, because the
 phases are ordered: the script only asks for a rating after every seed is in.
@@ -144,9 +161,13 @@ with honest reasons.
 
 **Repair** (only when the script says it is you). You are the least satisfied agent on the incumbent, and you are the
 only one proposing this round. Read the incumbent's ratings and their reasoning, not just the numbers. Propose ONE
-new candidate that: (1) clears your own bar: something you would rate close to your `x_ideal`, not marginally above
+candidate that: (1) clears your own bar: something you would rate close to your `x_ideal`, not marginally above
 what you just rejected; (2) does not knowingly push any other agent below the threshold: infer from their reasoning
-what they are protecting and keep it; (3) is genuinely new, not a cosmetic variant of a candidate already scored;
+what they are protecting and keep it; (3) is either not yet in the run, or is one already scored that you now rate
+differently because of a specific fact another agent shared (say which fact and from whom; this is the right move when
+you find you rated it too low), and not a cosmetic variant of a candidate already scored (same substance, other
+wording), which is not new and changes nothing. When the run has a closed list of options, the candidate must be
+exactly one of them and extra detail goes in the rationale;
 (4) conforms to the candidate format; (5) answers the strongest reasoning against your position, in your rationale:
 agree with part of it, refute it, or explain why it does not apply. Rate your own new candidate honestly in the same
 answer. If you believe no such candidate exists (every way of satisfying you drops someone else below their floor),

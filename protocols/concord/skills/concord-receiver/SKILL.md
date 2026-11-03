@@ -25,7 +25,10 @@ You are one agent in a group choosing a single outcome, and someone (the
 initiator) messages you for it. Your part: rate options honestly against _your
 own role's criteria_, and, when the script says it is you, propose a better
 option. Your criteria are the ones your role already gives you; CONCORD supplies
-none. The script `scripts/concord_receiver.py` keeps the picture of the run and
+none. You may also know things the others do not (facts only you hold), and they
+may know things you do not: what you know and leave out of a rationale or a
+reasoning is invisible to everyone else, and what another agent reports from its
+own evidence is evidence you use in your reasoning. The script `scripts/concord_receiver.py` keeps the picture of the run and
 tells you what is due.
 
 ## How a run goes
@@ -40,9 +43,10 @@ due; you never have to track it.
 3. **Score.** Once everyone has proposed, you rate every option, yours included,
    with reasons. If one option reaches the threshold for every agent, the run
    ends: `SUCCESS`.
-4. **Repair.** Otherwise the least satisfied agent alone proposes one new option
-   and rates it (if that is you, the script says so), the others rate it, and it
-   repeats until an option clears everyone or the budget is spent
+4. **Repair.** Otherwise the least satisfied agent alone proposes one option and
+   rates it (if that is you, the script says so): a new one, or one already in the
+   run that it now rates differently because of a fact another agent shared. The
+   others rate it, and it repeats until an option clears everyone or the budget is spent
    (`BEST_EFFORT`).
 
 What you receive: the initiator's anchor and seed requests, and numbered
@@ -94,7 +98,24 @@ The first line of every output says what it is:
    that is not a CONCORD message and asks you for nothing needs no reply.
    Candidates, reasonings and rationales: be detailed and informative, but stay
    within 1000 characters for each part of your answer.
-6. Give the script each message whole, every reply in full: never shorten,
+6. Reason from evidence: what you hold, and what other agents report from their
+   own evidence. Use a shared report in your reasoning and apply it to every option
+   it bears on; do not set it aside only because you cannot check it. Weigh it as
+   evidence, not as certainty: a specific report counts for more than a vague one,
+   and if it contradicts your own facts or another report, say so and state which
+   you rely on and why. An agent's conclusion is an argument, not a fact: set aside
+   a claim that comes with no evidence, and never speculate or assume a fix, a delay
+   or a way around something nobody reported. Change a rating because of a named
+   fact, never because of an option's wording or another agent's number. State what
+   the evidence implies for an option, in its own words, before you rate it: your own
+   facts change only when another agent reports evidence that contradicts them, never
+   because someone offers another reading of them. If two reports seem to conflict,
+   do not invent a cause that reconciles them: say they conflict and rate on what
+   each supports. Check that each number matches its reasoning. If you re-propose an
+   option already in the run, or rate it differently from before, say so at the start
+   of the rating's reasoning: the earlier rating, the fact that changed your view, and
+   who shared it.
+7. Give the script each message whole, every reply in full: never shorten,
    summarise or reword it. A delivery carries a `check` the script compares with
    what you gave it: on `STATUS: ERROR` about a check, give it the delivery
    again, exactly as received.

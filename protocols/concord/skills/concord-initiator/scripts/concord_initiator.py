@@ -387,6 +387,70 @@ def textarg(v):
 
 
 # --------------------------------------------------------------------------
+# candidate schema: a JSON Schema object (enforced)
+# --------------------------------------------------------------------------
+
+_SCHEMA_KEYS = ("type", "enum", "pattern", "minLength", "maxLength", "description", "title")
+
+
+def parse_schema(text):
+    """`--schema` is a JSON Schema object, which the receivers enforce on every proposal. Only a small subset is
+    supported, and anything else is refused, so a rule is never silently left unenforced. An open format is
+    `{"type": "string", "description": "..."}`."""
+    try:
+        spec = json.loads((text or "").strip())
+    except ValueError as exc:
+        die(f"--schema must be a JSON Schema object, but it is not valid JSON ({exc}). For an open format use "
+            '\'{"type": "string", "description": "what one option is, in plain words"}\'.')
+    if not isinstance(spec, dict):
+        die("--schema must be a JSON object")
+    unknown = sorted(set(spec) - set(_SCHEMA_KEYS))
+    if unknown:
+        die(f"--schema uses keywords that are not enforced here: {', '.join(unknown)}. Supported: "
+            f"{', '.join(_SCHEMA_KEYS)}.")
+    if "type" in spec and spec["type"] != "string":
+        die('--schema "type" can only be "string": a candidate is text')
+    if not (spec.get("enum") or str(spec.get("description") or "").strip()):
+        die('--schema needs a "description" (what one option is, in plain words) or an "enum"')
+    if "enum" in spec:
+        e = spec["enum"]
+        if not (isinstance(e, list) and len(e) >= 2 and all(isinstance(x, str) and x.strip() for x in e)):
+            die('--schema "enum" must be a list of at least 2 non-empty strings')
+        if len({" ".join(x.lower().split()) for x in e}) != len(e):
+            die('--schema "enum" holds the same option twice')
+    if "pattern" in spec:
+        if not isinstance(spec["pattern"], str):
+            die('--schema "pattern" must be a string')
+        try:
+            re.compile(spec["pattern"])
+        except re.error as exc:
+            die(f'--schema "pattern" is not a valid regular expression ({exc})')
+    for k in ("minLength", "maxLength"):
+        if k in spec and not (isinstance(spec[k], int) and not isinstance(spec[k], bool) and spec[k] >= 0):
+            die(f'--schema "{k}" must be a non-negative integer')
+    if "minLength" in spec and "maxLength" in spec and spec["minLength"] > spec["maxLength"]:
+        die('--schema "minLength" is greater than "maxLength"')
+    return spec
+
+
+def render_schema(spec):
+    """The candidate format as the agents read it."""
+    parts = []
+    if spec.get("description"):
+        parts.append(str(spec["description"]))
+    if "enum" in spec:
+        parts.append("exactly one of: " + " | ".join(spec["enum"]))
+    if "pattern" in spec:
+        parts.append(f"text matching the regular expression {spec['pattern']}")
+    if "minLength" in spec or "maxLength" in spec:
+        lo, hi = spec.get("minLength"), spec.get("maxLength")
+        parts.append("between %s and %s characters" % (lo if lo is not None else 0, hi if hi is not None else "any number of")
+                     if lo is not None and hi is not None else
+                     (f"at least {lo} characters" if lo is not None else f"at most {hi} characters"))
+    return "; ".join(parts) or spec.get("title") or "text"
+
+
+# --------------------------------------------------------------------------
 # anchor-leak guard
 # --------------------------------------------------------------------------
 
@@ -458,16 +522,42 @@ INSTRUCTIONS = {
     ),
     "repair": (
         "You are the least-satisfied agent on the incumbent. Read the incumbent, its rationale and every agent's score "
-        "and reasoning, then propose ONE new candidate in the candidate_schema format that you would rate close to "
-        "your x_ideal and that does not push other agents below the threshold. Your rationale must answer the "
-        "strongest reasoning against your position. Rate your own new candidate in the same reply. "
+        "and reasoning, then propose ONE candidate in the candidate_schema format that you would rate close to "
+        "your x_ideal and that does not push other agents below the threshold. It may be a new candidate, or one "
+        "already in the run that you now rate differently because of a specific fact another agent shared: say which "
+        "fact and from whom. Your rationale must answer the strongest reasoning against your position. Rate your own "
+        "candidate in the same reply. "
         "Your answer to this message is only the reply the script tells you to send, with nothing before or after it. Pass this message to concord_receiver.py handle and do what it says; never write the reply yourself."
     ),
 }
 
 
-def instructions_line(kind):
-    return f"  <instructions>{esc(INSTRUCTIONS[kind])}</instructions>"
+CLOSED_NOTE = ("The candidate must be exactly one of the listed options: detail about it goes in the rationale, and "
+               "added wording does not make a different option. ")
+
+
+FORMAT_NOTE = ("The candidate must satisfy the candidate_schema exactly: detail about it goes in the rationale. ")
+
+
+def instructions_line(kind, st=None):
+    text = INSTRUCTIONS[kind]
+    note = ""
+    if st and kind in ("seed", "repair"):
+        spec = json.loads(st.get("schema_json") or "{}")
+        note = CLOSED_NOTE if st.get("options") else (
+            FORMAT_NOTE if {"pattern", "minLength", "maxLength"} & set(spec) else "")
+    if note:
+        head, sep, tail = text.partition("Your answer to this message")
+        text = head + note + sep + tail
+    return f"  <instructions>{esc(text)}</instructions>"
+
+
+def schema_lines(st):
+    """The enforced part of the schema, as the receivers read it: the schema itself as JSON (an enum is the closed list)."""
+    lines = []
+    if st.get("schema_json"):
+        lines.append(f"  <schema_json>{esc(st['schema_json'])}</schema_json>")
+    return lines
 
 
 # --------------------------------------------------------------------------
@@ -509,11 +599,12 @@ def build_seed_msg(st, addressed):
     lines = [
         "<concord-propose-seed>",
         f"  <candidate_schema>{esc(st['schema'])}</candidate_schema>",
+        *schema_lines(st),
         f"  <satisfaction_threshold>{esc(st['params']['satisfaction_threshold'])}</satisfaction_threshold>",
         f"  <context>{esc(st['context'])}</context>",
     ]
     lines += _routing_lines(st, addressed)
-    lines.append(instructions_line("seed"))
+    lines.append(instructions_line("seed", st))
     lines.append("</concord-propose-seed>")
     return "\n".join(lines)
 
@@ -549,6 +640,7 @@ def build_repair_msg(st, agent):
         "<concord-repair>",
         f"  <satisfaction_threshold>{esc(tau)}</satisfaction_threshold>",
         f"  <candidate_schema>{esc(st['schema'])}</candidate_schema>",
+        *schema_lines(st),
         f"  <context>{esc(st['context'])}</context>",
         f"  <new_candidate_id>r{st['pending']['round']}-{esc(agent)}</new_candidate_id>",
         f'  <incumbent id="{esc(cid)}"'
@@ -568,7 +660,7 @@ def build_repair_msg(st, agent):
             lines.append("      </score>")
         else:
             lines.append(f'      <score agent="{esc(a)}"{s_attr}/>')
-    lines += ["    </scores>", "  </incumbent>", *_routing_lines(st, addressed=[agent]), instructions_line("repair"), "</concord-repair>"]
+    lines += ["    </scores>", "  </incumbent>", *_routing_lines(st, addressed=[agent]), instructions_line("repair", st), "</concord-repair>"]
     return "\n".join(lines)
 
 
@@ -983,7 +1075,14 @@ def cmd_init(args):
     context = textarg(args.context)
     x_reject = textarg(args.x_reject)
     x_ideal = textarg(args.x_ideal)
-    schema = textarg(args.schema)
+    if not args.schema:
+        die("--schema is required: a JSON Schema such as "
+            '\'{"type": "string", "description": "what one option is"}\' for an open format, or '
+            '\'{"enum": ["A", "B", "C"]}\' for a closed list')
+    spec = parse_schema(textarg(args.schema))
+    options = list(spec["enum"]) if "enum" in spec else None
+    schema_json = json.dumps(spec, ensure_ascii=False, sort_keys=True)
+    schema = render_schema(spec)
 
     st = {
         "version": 2,
@@ -995,6 +1094,8 @@ def cmd_init(args):
         },
         "agents": agents,
         "schema": schema,
+        "schema_json": schema_json,
+        "options": options,
         "context": context,
         "x_reject": x_reject,
         "x_ideal": x_ideal,
@@ -1386,8 +1487,11 @@ def cmd_handle(args):
                 try:
                     rr = parse_reply(doc)
                     if rr["kind"] == "candidate" and any(
-                            c["proposer"] == agent and c["candidate"] == rr["candidate"] for c in st["pool"]):
-                        continue                               # an exact repeat of a proposal already recorded: nothing to do
+                            c["proposer"] == agent and c["candidate"] == rr["candidate"]
+                            and (not rr.get("id") or c["id"] == rr["id"]) for c in st["pool"]):
+                        # a resend of a proposal already recorded (same id and text): nothing to do. The same text under
+                        # a new id is a new proposal: a repair may re-propose the agent's own earlier candidate.
+                        continue
                     if rr["kind"] == "anchor" and st["anchors"].get(agent) == {
                             "raw_reject": rr["raw_reject"], "raw_ideal": rr["raw_ideal"]}:
                         continue                               # an exact repeat of an anchor already recorded (a resend
@@ -1623,6 +1727,15 @@ How to fill the arguments:
                            them names it. Use these same ids everywhere in this run.
   --satisfaction-threshold the standard the outcome genuinely has to meet, not a level you are sure is reachable (0.6 is
                            a starting point). If it sits below the best seed, the run ends with no negotiation at all.
+  --schema                 the JSON Schema for a candidate (plain text is refused), enforced on every
+                           proposal, seeds and repairs alike. The default is an open format: '{"type": "string",
+                           "description": "<the proposal, in words>"}' (nothing is enforced, and agents may propose
+                           combinations). A schema needs a "description" or an "enum". Use a JSON enum,
+                           '{"enum": ["<option A>", "<option B>", "<option C>"]}', only when the options were handed to
+                           you: the task or a tool output lists them, and you copy each exactly as given (a repair may
+                           re-propose one already in the run). Never write the list yourself: if you would have to
+                           decide what the candidates are, use the open format. Other supported keywords: "pattern" (a
+                           regular expression), "minLength", "maxLength", "title". Invalid JSON or any other keyword is refused.
   --x-reject / --x-ideal   the objective, never the means: the state the context is trying to produce, as a plain
                            before/after in its own numbers (for example error rate above 40%: ideal "error rate returns
                            to 0", reject "stays above 40% or rises"). Never a proposal, and no word about how it is
@@ -1724,7 +1837,9 @@ def _main():
                    dest="satisfaction_threshold")
     p.add_argument("--eps", type=float, default=0.05)
     p.add_argument("-B", "--B", "--budget", type=int, default=10, dest="B")
-    p.add_argument("--schema", required=True, help="candidate format description (or @file)")
+    p.add_argument("--schema", default=None,
+                   help="candidate format, a JSON Schema (enforced): '{\"type\": \"string\", \"description\": \"...\"}' "
+                        "for an open format, '{\"enum\": [\"A\", \"B\"]}' for a closed list (or @file)")
     p.add_argument("--context", required=True, help="problem statement (or @file)")
     p.add_argument("--x-reject", required=True, dest="x_reject",
                    help="reject anchor — outcome that fails all criteria (or @file)")

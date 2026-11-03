@@ -197,12 +197,26 @@ how long to wait.
 scripts/concord_initiator.py init \
   --agents security,cost,reliability \
   --satisfaction-threshold 0.6 --eps 0.05 -B 10 \
-  --schema  "the shared candidate format, inline — multi-line is fine" \
+  --schema  '{"type": "string", "description": "what one option is, in plain words"}' \
   --context "the problem statement, inline" \
   --x-reject "an outcome the shared context calls unacceptable" \
   --x-ideal  "an outcome the shared context calls fully satisfying" \
   --quiet
 ```
+
+`--schema` is the JSON Schema for a candidate, which a receiver enforces: it refuses any seed or repair that does
+not satisfy it, and says why. Two forms cover most runs:
+
+- **Open format**, the default: `{"type": "string", "description": "a remediation plan"}`. The description is what the
+  agents read as the format. Nothing else is enforced, and agents may propose hybrids.
+- **Closed list**: `{"enum": ["A", "B", "C"]}`. Every proposal, seeds and repairs alike, must be exactly one of them (a
+  repair may re-propose one already in the run), and extra wording is refused. Use it only when the options were
+  handed to you (the task or a tool output lists them) and copy each exactly as given; never write the list yourself,
+  because a list you invent shuts out better answers that nobody listed.
+
+Also supported: `"pattern"` (a regular expression the candidate must match), `"minLength"` and `"maxLength"`, `"title"`.
+A schema needs a `"description"` or an `"enum"`. Any other keyword, or invalid JSON, is refused by `init`, so a rule is
+never silently left unenforced.
 
 Pass each of these as a plain argument value — multi-line text is fine,
 there's no shell involved when you invoke this through a tool call rather

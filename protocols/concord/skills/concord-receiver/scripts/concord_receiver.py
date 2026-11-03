@@ -562,6 +562,16 @@ def _ingest_doc(st, sender, root):
             el = root.find(t)
             if el is not None and el.text and t not in brief:
                 brief[t] = el.text.strip()
+        js_el = root.find("schema_json")
+        if js_el is not None and js_el.text and "schema_spec" not in brief:
+            try:
+                spec_ = json.loads(js_el.text)
+                if isinstance(spec_, dict):
+                    brief["schema_spec"] = spec_
+                    if "enum" in spec_:
+                        brief["options"] = list(spec_["enum"])
+            except ValueError:
+                pass
         ob = st.setdefault("outbox", {})
         if mine:
             asked_keys = []
@@ -746,15 +756,83 @@ _NOTHING_MORE = ("When you are done, write nothing more: not even a confirmation
                  "environment may pass anything you write to the other participants.")
 
 
+# The rules on facts, said at the tasks where an agent weighs what others reported (score, repair).
+_FACTS = ("Facts. What you hold is a fact. What other agents report from their own evidence (what they saw, were given "
+          "or read) is evidence you must use: build it into your reasoning, apply it to every candidate it affects, and "
+          "do not set it aside only because you cannot check it. Weigh it as evidence, not as certainty: a specific "
+          "report counts for more than a vague one, and if a report contradicts your own facts or another report, say "
+          "so in your reasoning and state which you rely on and why. An agent's conclusion or expectation is an "
+          "argument, not a fact: weigh it, and set aside any claim that comes with no evidence, saying so. Do not "
+          "speculate, and do not assume a fix, a delay or a way around something nobody reported. Before you rate a "
+          "candidate, state what the evidence implies for it, in its own words, then give the number, and check that "
+          "it matches that reasoning. Your own facts change only when another agent reports evidence that contradicts "
+          "them, never because someone offers another reading of them. When two reports seem to conflict, do not "
+          "invent a cause that reconciles them: say that they conflict and rate on what each supports.")
+
+
+def _options_lines(brief) -> list:
+    """The closed list of options, when the run has one: the candidate must be exactly one of them."""
+    opts = brief.get("options")
+    if not opts:
+        if {"pattern", "minLength", "maxLength"} & set(brief.get("schema_spec") or {}):
+            return ["(the candidate is checked against the format above and refused if it does not satisfy it)"]
+        return []
+    return ["options (the candidate must be exactly one of these, written as listed; detail about it goes in the "
+            "rationale, and added wording does not make a different option):"] + [f"  - {o}" for o in opts]
+
+
+def _schema_problem(spec, text):
+    """Why `text` does not satisfy the candidate schema (None when it does). The schema is the JSON subset the initiator
+    accepts: enum, pattern, minLength, maxLength (type is always string)."""
+    t = " ".join(str(text).split()) if "enum" in spec else str(text).strip()
+    if "enum" in spec and not any(" ".join(str(o).lower().split()) == t.lower() for o in spec["enum"]):
+        return "must be exactly one of the listed options (" + "; ".join(spec["enum"]) + ")"
+    t = next((o for o in spec.get("enum", []) if " ".join(str(o).lower().split()) == t.lower()), t)
+    if "pattern" in spec:
+        import re as _re
+        try:
+            if not _re.search(spec["pattern"], t):
+                return f"must match the regular expression {spec['pattern']}"
+        except _re.error:
+            pass
+    if "minLength" in spec and len(t) < spec["minLength"]:
+        return f"must be at least {spec['minLength']} characters"
+    if "maxLength" in spec and len(t) > spec["maxLength"]:
+        return f"must be at most {spec['maxLength']} characters"
+    return None
+
+
+def _brief_spec(brief):
+    """The enforced candidate schema of this run: the JSON schema when there is one, else the closed list, else none."""
+    if brief.get("schema_spec"):
+        return brief["schema_spec"]
+    if brief.get("options"):
+        return {"enum": brief["options"]}
+    return None
+
+
+def _option_of(brief, text):
+    """The listed option the text names (compared without case or extra spaces), or None."""
+    for o in brief.get("options") or []:
+        if " ".join(str(o).lower().split()) == " ".join(str(text).lower().split()):
+            return o
+    return None
+
+
 def _ask_text(st, items) -> str:
     """The prompt for the LLM: everything it needs to decide, and the exact shape of its answer."""
     me, m, brief = st["me"], st["mirror"], st.get("brief", {})
     pool = {c["id"]: c for c in m["pool"]} if m else {}
-    out = [f"You are the {me} agent. CONCORD needs your judgement. Decide from YOUR role's criteria only; other "
-           "agents' reasoning is evidence you may weigh (a specific, checkable fact may change your own rating or "
-           "repair, and you should be able to say what changed), their numbers are not a reason. Be honest: never "
-           "inflate to seem agreeable or deflate for leverage, and never soften your criteria to make something look "
-           "acceptable. If you cannot be satisfied, say so."]
+    kinds = {it["kind"] for it in items}
+    head = (f"You are the {me} agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never "
+            "inflate to seem agreeable or deflate for leverage, and never soften your criteria to make something look "
+            "acceptable. If you cannot be satisfied, say so.")
+    if kinds & {"score", "repair"}:
+        head += (" " + _FACTS + " A candidate's name or wording, and other agents' numbers, are not reasons."
+                 if "score" in kinds else " " + _FACTS)
+    elif "seed" in kinds:
+        head += " Use only facts from your own briefing: do not speculate."
+    out = [head]
     shape = {}
     for it in items:
         k = it["kind"]
@@ -773,29 +851,36 @@ def _ask_text(st, items) -> str:
                     "do not offer alternatives, do not pre-compromise for other roles: this round represents your "
                     "role's viewpoint undiluted. The rationale carries the concrete facts and evidence from your "
                     "criteria, why the other options in the candidate format are less suitable from your role's "
-                    "perspective (any domain knowledge you hold that argues against them, even if none has been "
-                    "proposed yet), the trade-offs you considered and why it will hold up under scrutiny: the other "
+                    "perspective, but only where you have evidence against them (if you have none, say so: never "
+                    "invent a risk to fill the gap), the trade-offs you considered and why it will hold up under "
+                    "scrutiny: the other "
                     "agents use it to detect incorrect logic. Your rationale is your only voice here: anything you "
                     "know and do not write in it is invisible to every other participant. " + _BUDGET,
                     f"candidate format: {brief.get('candidate_schema', '?')}", f"context: {brief.get('context', '?')}"]
+            out += _options_lines(brief)
             shape["seed"] = {"candidate": "TEXT", "rationale": "TEXT with the evidence for it"}
         elif k == "repair":
             inc = pool.get(m["x_star"], {})
             out += ["", f"TASK: repair {it['id']}", f"REPAIR ROUND, YOU ALONE: {it['why']}.",
-                    "Read the incumbent's ratings and their reasoning, not just the numbers. Propose ONE new candidate "
+                    "Read the incumbent's ratings and their reasoning, not just the numbers. Propose ONE candidate "
                     "that: (1) clears your own bar, something you would rate close to your x_ideal and not marginally "
                     "above what you just rejected; (2) does not knowingly push any other agent below the threshold: "
-                    "infer from their reasoning what they are protecting and keep it; (3) is really new, not a "
-                    "cosmetic variant of a candidate already scored; (4) follows the candidate format; (5) answers the "
+                    "infer from their reasoning what they are protecting and keep it; (3) is not yet in the run, "
+                    "or is one already scored that you now rate differently because of a named fact: then start the "
+                    "reasoning of your rating with \"Same as <id>, which I rated N. I now rate it M because <agent> "
+                    "reported ...\"; a reworded copy of a scored candidate is not new; "
+                    "(4) follows the candidate format; "
+                    "(5) answers the "
                     "strongest reasoning against your position, in your rationale: agree with part of it, refute it, "
                     "or say why it does not apply; (6) states any domain knowledge of your role that has not yet appeared "
                     "and bears on why this candidate is the right one: it stays invisible to everyone if you do not "
                     "write it. " + _BUDGET + " Rate your own new candidate, honestly, in the same answer. If you "
-                    "believe no such candidate exists, still give your best attempt and state the conflict plainly in "
-                    "the rationale (which agent, over what property). Do not lower the threshold, do not weaken your "
+                    "believe none exists, give the candidate you rate highest, even one already in the run, and state the "
+                    "conflict (which agent, over what property). Do not lower the threshold, do not weaken your "
                     "criteria, and do not propose something you are not satisfied by. The ratings of the incumbent "
                     "below are normalised 0-1 for you to read: never echo one back as your own rating.",
                     f"candidate format: {brief.get('candidate_schema', '?')}", f"context: {brief.get('context', '?')}",
+                    *_options_lines(brief),
                     f"incumbent {m['x_star']}: {inc.get('candidate', '')}",
                     f"its rationale: {inc.get('rationale') or ''}", "ratings of the incumbent:"]
             for ag in m["agents"]:
@@ -810,8 +895,9 @@ def _ask_text(st, items) -> str:
             out += ["", "TASK: score " + ",".join(it["ids"]),
                     "Rate each candidate listed, including one you proposed yourself, on your own raw 0-100 scale, "
                     "the same scale as your anchor, for the whole run: the same quality gets the same number in round "
-                    "7 as at anchoring. Move a number only for a real change (a rationale that answers a concern you "
-                    "raised), and be able to say in one sentence what changed your mind; refusing to budge is inertia, "
+                    "7 as at anchoring. Move a number only for a real change (a specific fact another agent shared, or a "
+                    "rationale that answers a concern you raised), and be able to say in one sentence what changed "
+                    "your mind; refusing to budge is inertia, "
                     "not honesty. Never refuse to score: a candidate you consider terrible gets a low number with "
                     "honest reasons"
                     + (f" (raw_reject={_fmt(a['raw_reject'])}, raw_ideal={_fmt(a['raw_ideal'])})" if a else "")
@@ -824,6 +910,12 @@ def _ask_text(st, items) -> str:
             for cid in it["ids"]:
                 c = pool.get(cid, {})
                 out += [f"candidate {cid}: {c.get('candidate', '')}", f"  its rationale: {c.get('rationale') or ''}"]
+                for oid, o in pool.items():
+                    prev = m["raw"].get(me, {}).get(oid)
+                    if oid != cid and prev is not None and _same_text(o.get("candidate", ""), c.get("candidate", "")):
+                        out.append(f"  this is the same candidate as {oid}, which you rated {_fmt(prev)}: keep that "
+                                   "number unless a specific fact shared since then changes your view, and name that "
+                                   "fact and who shared it in your reasoning.")
             shape.setdefault("scores", []).extend({"id": c, "raw": "N", "reasoning": "TEXT"} for c in it["ids"])
     out += ["", f"Answer by running: python3 <this script> {_who(st)} answer {_flags_for(items)}",
             "(N is a number; each text is one argument, and may have several lines.)",
@@ -1041,10 +1133,12 @@ def _check_answer(st, items, data):
                                    "the two outcomes, not metrics or percentages of today's state")
             elif k in ("seed", "repair"):
                 d = data[k]
-                if text_ok(f"{k} candidate", d["candidate"]) and k == "repair" and any(
-                        _same_text(d["candidate"], c["candidate"]) for c in pool):
-                    out.append("the repair candidate is the same as one already in the run: propose something new that "
-                               "answers the objection")
+                brief_ = st.get("brief", {})
+                spec_ = _brief_spec(brief_)
+                if text_ok(f"{k} candidate", d["candidate"]) and spec_:
+                    why_ = _schema_problem(spec_, d["candidate"])
+                    if why_:
+                        out.append(f"the {k} candidate {why_}: put any extra detail in the rationale")
                 text_ok(f"{k} rationale", d["rationale"], _MIN_REASON)
                 if k == "repair":
                     own = [x for x in data.get("scores", []) if x.get("id") == it["id"]]
@@ -1100,6 +1194,12 @@ def cmd_answer(args) -> None:
         return
     docs, problems = [], []
     problems += _check_answer(st, items, data)
+    if not problems:
+        for k_ in ("seed", "repair"):
+            opt_ = _option_of(st.get("brief", {}), (data.get(k_) or {}).get("candidate", "")) if isinstance(
+                data.get(k_), dict) else None
+            if opt_:
+                data[k_]["candidate"] = opt_
     if problems:
         print("STATUS: ASK")
         print("Your answer was not usable: " + "; ".join(problems) + ". Nothing was recorded or sent. Fix these and "
