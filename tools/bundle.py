@@ -21,6 +21,10 @@ A module is bundled as it is, minus its docstring, its imports (hoisted to the t
 
     - import only the standard library, and the library's own modules as `from <library>.<module> import <names>`
     - keep its top-level names unique across the bundled modules and distinct from the script's own top-level names
+
+Only what the script reaches is copied: a function, class or constant that neither the script nor anything it uses refers to
+is left out, so a script does not carry library code it never runs. A target with `shake = false` gets every module whole.
+Reachability is by name, so a module must not be reached by `globals()` or `getattr` on its own namespace.
 """
 import argparse
 import ast
@@ -68,6 +72,17 @@ def top_level_names(tree):
     return names
 
 
+class Unit:
+    """A top-level definition that can be left out: the names it binds and uses, and its lines start..end-1."""
+
+    def __init__(self, names, refs, start, end):
+        self.names, self.refs, self.start, self.end = names, refs, start, end
+
+
+def names_used(node):
+    return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
+
+
 class Module:
     """One library module, read for bundling."""
 
@@ -79,7 +94,9 @@ class Module:
         text = self.path.read_text()
         self.tree = ast.parse(text, filename=str(self.path))
         self.where = f"{lib['name']}.{name}"
-        self.imports, self.deps, self.defined = [], {}, []
+        self.imports, self.deps, self.defined = {}, {}, []   # imports: source -> the names it binds
+        self.units, self.always = [], set()                  # always: names used by statements that cannot be left out
+        lines = text.split("\n")
         drop = []
         for i, node in enumerate(self.tree.body):
             if i == 0 and isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) \
@@ -93,12 +110,36 @@ class Module:
             elif isinstance(node, ast.Assign) and _assigned(node) == ["__all__"]:
                 drop.append(node)
             else:
-                self.defined += top_level_names(ast.Module([node], []))
-        lines = text.split("\n")
+                names = top_level_names(ast.Module([node], []))
+                self.defined += names
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Assign, ast.AnnAssign)):
+                    self.units.append(Unit(names, names_used(node), *self._span(node, lines)))
+                else:
+                    self.always |= names_used(node)
         for node in drop:
             for n in range(node.lineno - 1, node.end_lineno):
                 lines[n] = None
-        self.body = "\n".join(line for line in lines if line is not None).strip("\n") + "\n"
+        self.lines = lines
+
+    @staticmethod
+    def _span(node, lines):
+        """The lines of a definition: its decorators and the comment lines right above it, and the blank lines after."""
+        start = min([node.lineno] + [d.lineno for d in getattr(node, "decorator_list", [])]) - 1
+        while start > 0 and lines[start - 1] is not None and lines[start - 1].startswith("#"):
+            start -= 1
+        end = node.end_lineno
+        while end < len(lines) and lines[end] == "":
+            end += 1
+        return start, end
+
+    def body(self, keep=None):
+        """The module's code, without its docstring, imports and `__all__`; with only the units in `keep` if given."""
+        lines = list(self.lines)
+        for u in self.units:
+            if keep is not None and u not in keep:
+                for n in range(u.start, u.end):
+                    lines[n] = None
+        return "\n".join(line for line in lines if line is not None).strip("\n") + "\n"
 
     def _import(self, node, text):
         lib = self.lib["name"]
@@ -127,7 +168,7 @@ class Module:
             if root not in sys.stdlib_module_names:
                 raise BundleError(f"{self.where}: line {node.lineno}: `{root}` is not in the standard library; a bundled "
                                   "module is stdlib-only")
-        self.imports.append(ast.get_source_segment(text, node))
+        self.imports[ast.get_source_segment(text, node)] = top_level_names(ast.Module([node], []))
 
 
 def resolve(lib, wanted):
@@ -160,12 +201,27 @@ def resolve(lib, wanted):
     return [mods[n] for n in order]
 
 
+def reachable(mods, script_names):
+    """(the units to keep, every name they and the script use): what the script reaches, by name."""
+    unit_of = {n: u for m in mods for u in m.units for n in u.names}
+    needed = set(script_names).union(*(m.always for m in mods))
+    keep, todo = set(), [n for n in needed if n in unit_of]
+    while todo:
+        unit = unit_of[todo.pop()]
+        if unit in keep:
+            continue
+        keep.add(unit)
+        needed |= unit.refs
+        todo += [n for n in unit.refs if n in unit_of]
+    return keep, needed
+
+
 def version_of(lib):
     return tomllib.loads((ROOT / lib["path"] / "pyproject.toml").read_text())["project"]["version"]
 
 
-def render(lib, target, script_text):
-    """The bundled block for `target`, markers included."""
+def render(lib, target, script_text, shake=None):
+    """The bundled block for `target`, markers included. `shake` overrides the target's `shake` setting."""
     name = lib["name"]
     block = marker_re(name).search(script_text)
     if not block:
@@ -179,14 +235,21 @@ def render(lib, target, script_text):
                 raise BundleError(f"`{n}` is defined in both {seen[n]} and {m.where}: top-level names must be unique "
                                   "across the bundled modules")
             seen[n] = m.where
-    own = set(top_level_names(ast.parse(script_text[:block.start()] + script_text[block.end():])))
+    script = ast.parse(script_text[:block.start()] + script_text[block.end():])
+    own = set(top_level_names(script))
     clash = sorted(own & set(seen))
     if clash:
         raise BundleError(f"{target['file']} defines {', '.join(clash)} outside the bundled block, where "
                           f"{lib['name']} defines it too")
-    imports = sorted({i for m in mods for i in m.imports}, key=lambda i: (i.startswith("from "), i))
+    if shake is None:
+        shake = target.get("shake", True)
+    keep, needed = reachable(mods, names_used(script)) if shake else (None, None)
+    if shake:
+        mods = [m for m in mods if m.always or any(u in keep for u in m.units)]
+    imports = sorted({i for m in mods for i, bound in m.imports.items() if not shake or needed.intersection(bound)},
+                     key=lambda i: (i.startswith("from "), i))
     parts = ["\n".join(imports) + "\n"] if imports else []
-    parts += [f"# --- {m.where} ---\n\n{m.body}" for m in mods]
+    parts += [f"# --- {m.where} ---\n\n{m.body(keep)}" for m in mods]
     content = "\n".join(parts)
     digest = hashlib.sha256(content.encode()).hexdigest()[:12]
     src = (Path(lib["path"]) / "src" / name).as_posix()

@@ -31,10 +31,12 @@ def repo(tmp_path, monkeypatch):
     def config(*modules):
         return tmp_path / "bundle.toml", {"name": "lib", "path": "pkg", "target": [{"file": "script.py", "modules": list(modules)}]}
 
-    def run(*modules, check=False):
+    def run(*modules, check=False, shake=False, script=None):
+        if script:
+            (tmp_path / "script.py").write_text(SCRIPT.replace("return 1", script))
         path, lib = config(*modules)
         path.write_text("[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nfile = 'script.py'\n"
-                        f"modules = {list(modules)!r}\n")
+                        f"modules = {list(modules)!r}\nshake = {str(shake).lower()}\n")
         return bundle.main(["--config", str(path)] + (["--check"] if check else []))
 
     write.run, write.root = run, tmp_path
@@ -131,3 +133,66 @@ def test_a_script_without_markers_is_told_what_to_add(repo, capsys):
     repo("a", "def f():\n    return 1\n")
     assert repo.run("a") == 2
     assert "# >>> BUNDLED lib" in capsys.readouterr().err
+
+
+SHAKEN = """
+    import json
+    import re
+
+    A = 1
+    B = [A]
+    UNUSED = 2
+
+    # a helper
+    @staticmethod
+    def helper():
+        return json.dumps(B)
+
+    def dead():
+        return re.compile("x")
+
+    class Unused:
+        pass
+
+    def entry():
+        return helper()
+    """
+
+
+def test_a_script_gets_only_what_it_reaches(repo):
+    repo("a", SHAKEN)
+    assert repo.run("a", shake=True, script="entry()") == 0
+    out = (repo.root / "script.py").read_text()
+    for kept in ("import json", "A = 1", "B = [A]", "# a helper", "def helper", "def entry"):
+        assert kept in out
+    for left_out in ("import re", "UNUSED", "def dead", "Unused"):
+        assert left_out not in out
+    assert "\n\n\n\n" not in out
+    assert repo.run("a", shake=True, check=True) == 0
+
+
+def test_shake_false_bundles_everything(repo):
+    repo("a", SHAKEN)
+    assert repo.run("a", shake=False, script="entry()") == 0
+    out = (repo.root / "script.py").read_text()
+    assert "def dead" in out and "import re" in out
+
+
+def test_reachability_follows_modules_and_statements_that_stay(repo):
+    repo("a", "def f():\n    return 1\n\ndef g():\n    return 2\n")
+    repo("b", "from lib.a import f\nimport json\nREG = []\nREG.append(json)\n\ndef h():\n    return f()\n")
+    assert repo.run("a", "b", shake=True, script="h()") == 0
+    out = (repo.root / "script.py").read_text()
+    assert "def f" in out and "def h" in out and "def g" not in out
+    assert "import json" in out and "REG.append(json)" in out     # an expression statement is never left out
+    ns = {}
+    exec(bundle.extract_block(out, "lib"), ns)
+    assert ns["h"]() == 1
+
+
+def test_a_module_nothing_reaches_is_left_out_whole(repo):
+    repo("a", "def f():\n    return 1\n")
+    repo("b", "def g():\n    return 2\n")
+    assert repo.run("a", "b", shake=True, script="f()") == 0
+    out = (repo.root / "script.py").read_text()
+    assert "[a]" in out and "lib.b" not in out

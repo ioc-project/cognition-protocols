@@ -27,13 +27,16 @@ CONFIG = tomllib.loads((ROOT / "tools" / "bundle.toml").read_text())
 
 
 def bundled(module):
-    """{script path: the module as it exists inside that script}: the bundled block, run on its own."""
+    """{script path: the module as it exists inside that script}: the bundled block, run on its own.
+
+    The block is rendered whole (no tree shaking), so every name the tests call is there. The script carries the same code
+    minus what it never reaches, and test_bundled_scripts checks that it is exactly that."""
     out = {}
     for lib in CONFIG["library"]:
         for target in lib["target"]:
             if module not in target["modules"]:
                 continue
-            block = bundle_tool.extract_block((ROOT / target["file"]).read_text(), lib["name"])
+            block = bundle_tool.render(lib, target, (ROOT / target["file"]).read_text(), shake=False)
             ns = types.ModuleType(f"bundled_{Path(target['file']).stem}")
             exec(compile(block, target["file"], "exec"), ns.__dict__)
             out[target["file"]] = ns
