@@ -47,3 +47,7 @@ When a skill is released (via release-please), add an entry to `docs/ai-catalog.
 Replace `<skill-name>` with the package name from `.github/release-config.json` (e.g. `concord-initiator`) and `<version>` with the released version (e.g. `0.1.0`). The tag format matches what the `publish-release-assets` job in `.github/workflows/release.yaml` creates: `<name>-v<version>`.
 
 The updated catalog is published automatically when the docs workflow runs on the next push to `main`.
+
+## License
+
+Licensed under the Apache License 2.0 — see [LICENSE](LICENSE.txt) for the full text.
