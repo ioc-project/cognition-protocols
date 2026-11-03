@@ -11,3 +11,7 @@ build:
 # Serve the documentation site with live reload
 run:
     {{mkdocs}} serve
+
+# Run the CONCORD script tests (pytest is fetched on the fly)
+test-concord:
+    uv run --no-project --with pytest python -m pytest protocols/concord/tests -q
