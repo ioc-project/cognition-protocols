@@ -1,23 +1,16 @@
-#!/usr/bin/env python3
 #
 # Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 # SPDX-License-Identifier: Apache-2.0
 #
-"""CONCORD decision engine: the single source of truth.
+"""The CONCORD decision engine: SELECT, ACCEPT, REPAIR and COMMIT over the ratings the agents give.
 
-The initiator and the receiver both run this engine over the same replies, so they reach the same decision (the
-incumbent, the bottleneck, the outcome). Each script has to be self-contained (a skill must not rely on importing a
-sibling file), so the block between the SHARED CORE markers is COPIED into both scripts by protocols/concord/tools/sync_core.py:
-
-    python3 protocols/concord/tools/sync_core.py            # write the block into both scripts
-    python3 protocols/concord/tools/sync_core.py --check    # fail if either script has drifted from this file (for CI)
-
-Edit this file only, then run the tool. Stdlib only.
+Every participant runs this engine over the same replies, so they all reach the same decision (the incumbent, the
+bottleneck, the outcome). It holds no I/O and no process state: it works on the plain `st` dict that
+`new_engine_state` returns.
 """
-import hashlib  # noqa: F401  (the embedded block uses hashlib and re; both scripts import them already)
-import re  # noqa: F401
+import hashlib
+import re
 
-# >>> SHARED CORE: GENERATED from protocols/concord/shared/concord_core.py by protocols/concord/tools/sync_core.py. Do not edit it here: edit the source and run the tool.
 TOL = 1e-9
 
 # --------------------------------------------------------------------------
@@ -272,5 +265,3 @@ def reply_check(text):
     if not docs:
         return None
     return hashlib.sha256(re.sub(r"\s+", "", "".join(docs)).encode("utf-8")).hexdigest()[:8]
-
-# <<< END SHARED CORE
