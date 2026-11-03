@@ -14,7 +14,8 @@ sibling file), so the block between the SHARED CORE markers is COPIED into both 
 
 Edit this file only, then run the tool. Stdlib only.
 """
-import re  # noqa: F401  (the embedded block uses re; both scripts import it already)
+import hashlib  # noqa: F401  (the embedded block uses hashlib and re; both scripts import them already)
+import re  # noqa: F401
 
 # >>> SHARED CORE: GENERATED from protocols/concord/shared/concord_core.py by protocols/concord/tools/sync_core.py. Do not edit it here: edit the source and run the tool.
 TOL = 1e-9
@@ -255,4 +256,21 @@ def parse_reply_doc(root):
     except ValueError:
         return None
     return None
+
+# --------------------------------------------------------------------------
+# delivery check: the replies inside a delivery, fingerprinted by the initiator, verified by the receiver
+# --------------------------------------------------------------------------
+
+_CHECKED_RE = re.compile(r"<(concord-(?:anchor|candidate|score)-reply)\b[^>]*>.*?</\1\s*>", re.DOTALL)
+
+
+def reply_check(text):
+    """A short fingerprint of the replies of other agents inside a delivery, blind to whitespace. The initiator puts it
+    on the delivery (`check="..."`); the receiver compares it with the text its agent passed in, so a reply that was
+    shortened or reworded in a copy is caught, not silently used. None when there is no reply in `text`."""
+    docs = [m.group(0) for m in _CHECKED_RE.finditer(text)]
+    if not docs:
+        return None
+    return hashlib.sha256(re.sub(r"\s+", "", "".join(docs)).encode("utf-8")).hexdigest()[:8]
+
 # <<< END SHARED CORE

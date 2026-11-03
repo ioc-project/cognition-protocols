@@ -18,6 +18,7 @@ The script writes every reply document itself. Stdlib only; no network, no depen
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -263,6 +264,23 @@ def parse_reply_doc(root):
     except ValueError:
         return None
     return None
+
+# --------------------------------------------------------------------------
+# delivery check: the replies inside a delivery, fingerprinted by the initiator, verified by the receiver
+# --------------------------------------------------------------------------
+
+_CHECKED_RE = re.compile(r"<(concord-(?:anchor|candidate|score)-reply)\b[^>]*>.*?</\1\s*>", re.DOTALL)
+
+
+def reply_check(text):
+    """A short fingerprint of the replies of other agents inside a delivery, blind to whitespace. The initiator puts it
+    on the delivery (`check="..."`); the receiver compares it with the text its agent passed in, so a reply that was
+    shortened or reworded in a copy is caught, not silently used. None when there is no reply in `text`."""
+    docs = [m.group(0) for m in _CHECKED_RE.finditer(text)]
+    if not docs:
+        return None
+    return hashlib.sha256(re.sub(r"\s+", "", "".join(docs)).encode("utf-8")).hexdigest()[:8]
+
 # <<< END SHARED CORE
 
 
@@ -384,6 +402,38 @@ def _own_repair_id(me):
 STATE_DIR = ".concord-receiver"
 _DOC_RE = re.compile(r"<(concord-[a-z-]+)\b[^>]*>.*?</\1\s*>", re.DOTALL)
 _REQUEST_TAGS = ("concord-anchor", "concord-propose-seed", "concord-score", "concord-repair", "concord-commit")
+_DELIVERY_TAG_RE = re.compile(r"<concord-delivery\b[^>]*>(?:\s*</concord-delivery>)?")
+
+
+def _verify_delivery(st, text):
+    """Refuse a delivery whose replies are not the ones the initiator sent. Nothing is recorded; the agent still has
+    the original and gives it again. A second failure on the same delivery is reported to the initiator instead
+    (a `concord-error`), who sends it again. Each delivery is checked against its own text only (up to the next
+    delivery tag), so several deliveries passed in one call are checked one by one. Returns the payload of that
+    report, or None when every delivery is intact."""
+    tags = list(_DELIVERY_TAG_RE.finditer(text))
+    fails = st.setdefault("check_fail", {})
+    for k, tag in enumerate(tags):
+        want = re.search(r'\bcheck="([0-9a-f]+)"', tag.group(0))
+        seq_m = re.search(r'\bseq="(\d+)"', tag.group(0))
+        seq = seq_m.group(1) if seq_m else str(st.get("delivery", 0))
+        if not want:
+            continue                                    # no check on it (an older initiator): nothing to compare
+        got = reply_check(text[tag.end():tags[k + 1].start() if k + 1 < len(tags) else len(text)])
+        if got == want.group(1):
+            fails.pop(seq, None)
+            continue
+        fails[seq] = fails.get(seq, 0) + 1
+        if fails[seq] < 2:
+            _save(st)
+            sys.exit(f"error: delivery {seq} does not match its check (expected {want.group(1)}, got {got}): part of a "
+                     "reply was left out or changed when it was copied. Nothing was recorded. Give the script the "
+                     "complete text again, exactly as received, without shortening or rewording it.")
+        fails.pop(seq, None)
+        _save(st)
+        return (f'<concord-error agent="{st["me"]}" state="{st.get("id") or ""}" seq="{seq}">the delivery could not be '
+                "copied intact (its replies do not match its check): send it again</concord-error>")
+    return None
 
 
 def _close_request(text: str) -> str:
@@ -689,6 +739,13 @@ def _flags_for(items) -> str:
     return " ".join(flags)
 
 
+# Guidance only, never checked: a reply that runs over is accepted. The only length error is a message cut mid-XML.
+_BUDGET = "Be detailed and informative, but stay within 1000 characters for each part of your answer."
+# Said wherever the script ends what the agent has to do: whatever the agent writes after that may reach the others.
+_NOTHING_MORE = ("When you are done, write nothing more: not even a confirmation of what you sent or decided. Your "
+                 "environment may pass anything you write to the other participants.")
+
+
 def _ask_text(st, items) -> str:
     """The prompt for the LLM: everything it needs to decide, and the exact shape of its answer."""
     me, m, brief = st["me"], st["mirror"], st.get("brief", {})
@@ -719,7 +776,7 @@ def _ask_text(st, items) -> str:
                     "perspective (any domain knowledge you hold that argues against them, even if none has been "
                     "proposed yet), the trade-offs you considered and why it will hold up under scrutiny: the other "
                     "agents use it to detect incorrect logic. Your rationale is your only voice here: anything you "
-                    "know and do not write in it is invisible to every other participant.",
+                    "know and do not write in it is invisible to every other participant. " + _BUDGET,
                     f"candidate format: {brief.get('candidate_schema', '?')}", f"context: {brief.get('context', '?')}"]
             shape["seed"] = {"candidate": "TEXT", "rationale": "TEXT with the evidence for it"}
         elif k == "repair":
@@ -733,7 +790,7 @@ def _ask_text(st, items) -> str:
                     "strongest reasoning against your position, in your rationale: agree with part of it, refute it, "
                     "or say why it does not apply; (6) states any domain knowledge of your role that has not yet appeared "
                     "and bears on why this candidate is the right one: it stays invisible to everyone if you do not "
-                    "write it. Rate your own new candidate, honestly, in the same answer. If you "
+                    "write it. " + _BUDGET + " Rate your own new candidate, honestly, in the same answer. If you "
                     "believe no such candidate exists, still give your best attempt and state the conflict plainly in "
                     "the rationale (which agent, over what property). Do not lower the threshold, do not weaken your "
                     "criteria, and do not propose something you are not satisfied by. The ratings of the incumbent "
@@ -761,8 +818,9 @@ def _ask_text(st, items) -> str:
                     + ". Give the concrete reasons for each number (the properties that drove it, the evidence from "
                     "your criteria, both for and against it: \"too expensive\" is not a reason, \"adds about $400 a "
                     "month, over the budget\" is), and say if a candidate rests on a false claim or a flawed step. "
-                    "Write everything relevant you know, even if it seems obvious to you: the repair agent and the "
-                    "others see only your reasoning, and what you leave out is invisible to the rest of the run."]
+                    "Write the facts that matter, even if they seem obvious to you: the repair agent and the "
+                    "others see only your reasoning, and what you leave out is invisible to the rest of the run. "
+                    + _BUDGET]
             for cid in it["ids"]:
                 c = pool.get(cid, {})
                 out += [f"candidate {cid}: {c.get('candidate', '')}", f"  its rationale: {c.get('rationale') or ''}"]
@@ -770,7 +828,8 @@ def _ask_text(st, items) -> str:
     out += ["", f"Answer by running: python3 <this script> {_who(st)} answer {_flags_for(items)}",
             "(N is a number; each text is one argument, and may have several lines.)",
             "It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in "
-            "these values only: never write the reply yourself, and never add text before or after what the script prints."]
+            "these values only: never write the reply yourself, and never add text before or after what the script prints. "
+            + _NOTHING_MORE]
     return "\n".join(out)
 
 
@@ -789,19 +848,21 @@ def _status(st):
     if m is not None and m["outcome"]:
         return "NONE", (f"the run is over: outcome {m['outcome']}, winning candidate {m['x_star']}. "
                         "Do not re-open the decision.\nNEXT: Nothing is due from you: send nothing (no "
-                        "acknowledgement either) and do not re-propose. If the outcome is SUCCESS, proceed with the "
+                        "acknowledgement either) and do not re-propose. " + _NOTHING_MORE + " If the outcome is SUCCESS, proceed with the "
                         "winning candidate. If it is BEST_EFFORT, say so when you report to whoever triggered the "
                         "run, naming the agents below their floor.")
     items = _due_items(st)
     if not items:
         return "NONE", (f"nothing is due from you; waiting for {_waiting_for(st)}. Send no message.\n"
                         "NEXT: Send nothing: never write an acknowledgement or any message yourself (when one is due, "
-                        "`handle` prints it as a SEND). Pass the next CONCORD message or reply you get to `handle`.")
+                        "`handle` prints it as a SEND). Pass the next CONCORD message or reply you get to `handle`. "
+                        + _NOTHING_MORE)
     return "ASK", _ask_text(st, items)
 
 
 _SEND_REMINDER = ("NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or "
-                  "after it, no summary of your own. Then pass the next CONCORD message you get to `handle`.")
+                  "after it, no summary of your own. Then pass the next CONCORD message you get to `handle`. "
+                  + _NOTHING_MORE)
 
 
 def _print_status(st) -> None:
@@ -829,6 +890,12 @@ def cmd_observe(args) -> None:
     if closed != text:
         print("note: the closing tags of the request were missing and were added", file=sys.stderr)
         text = closed
+    broken = _verify_delivery(st, text)
+    if broken:
+        print("STATUS: SEND")
+        print(broken)
+        print(_SEND_REMINDER, file=sys.stderr)
+        return
     blocks = re.split(r"^--- from: *(\S+) *$", text, flags=re.M)
     items = [(args.sender, blocks[0])] + [(blocks[i], blocks[i + 1]) for i in range(1, len(blocks) - 1, 2)]
     if not _DOC_RE.search(text):
@@ -1246,6 +1313,9 @@ def _hint_for(msg):
     if "--me" in m:
         return ("Pass your own agent id: `--me <id>`, the one the initiator used in its list of agents (it is in the "
                 "message you received). Then run the same command again.")
+    if "does not match its check" in m:
+        return ("Give the script the whole delivery again, exactly as you received it: every reply in full, none shortened or "
+                "reworded, then give it to the script again. Nothing was recorded. Do not write anything of your own.")
     if "already sent" in m or "already rated" in m or "no repair is due" in m:
         return ("That is already answered, or not yours to answer: nothing is lost. Pass the CONCORD message you have not "
                 "recorded yet to `handle`, and if nothing is due send nothing.")

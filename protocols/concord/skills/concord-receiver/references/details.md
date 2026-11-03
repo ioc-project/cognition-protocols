@@ -64,6 +64,14 @@ follows. Every call ends in exactly one of three states, on the first line of it
   status is ASK (then SEND) and that reply is the answer; if you have nothing to say, `handle` returns `STATUS: SEND`
   with a small acknowledgement. Send it exactly as printed, like any other `SEND`: it is how the initiator knows the
   delivery arrived. (Without numbered deliveries there is nothing to acknowledge, and `NONE` means send nothing.)
+- Give the script each delivery **whole**. When it carries other agents' replies it also carries a `check`, a fingerprint
+  of those replies: if what you gave the script differs (a reply shortened, summarised or reworded), it prints
+  `STATUS: ERROR` and records nothing. Give it the delivery again, exactly as received. If that fails a second time the
+  script prints a `concord-error` for you to send to the initiator instead, and the delivery comes again.
+- Be detailed and informative, but stay within 1000 characters for each part of your answer (the candidate, the
+  rationale, and the reasoning for each candidate you rate).
+- When you have sent what the script printed, or the script says nothing is due, write nothing more: not even a
+  confirmation of what you sent or decided. Your environment may pass anything you write to the other participants.
 - If you are asked again for something you already answered (the same anchor, seed, rating or repair), the status is
   `SEND` with that same reply: it did not arrive, so send it again as it is.
 - If you are handed a batch that includes your own earlier replies, pass it whole.
