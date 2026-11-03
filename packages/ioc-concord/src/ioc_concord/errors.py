@@ -21,3 +21,9 @@ class SchemaError(ConcordError):
     """A candidate schema (or one of its keywords) is not valid or not supported."""
 
     code = "invalid_schema"
+
+
+class ReplyError(ConcordError):
+    """A reply or request could not be read: it is not CONCORD XML, not well-formed, or lacks a field it needs."""
+
+    code = "invalid_reply"

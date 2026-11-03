@@ -10,9 +10,13 @@ other integration can import the same code.
 
 Modules:
 
+    errors    ConcordError and its subclasses: what the library raises (it never prints or exits)
+    xmlutil   escaping, element building, repairing copied text, the patterns that find a document in free text
+    schema    the candidate schema: parse, validate, check a proposal, describe it
     engine    the decision engine (SELECT / ACCEPT / REPAIR / COMMIT) over the ratings the agents give
+    wire      the documents: build and read every request and reply, the notices, and the tag vocabulary
 
-Planned: errors, xmlutil, schema, wire (the documents), store (persistence). A module that is bundled into a script follows
+Planned: store (persistence). A module that is bundled into a script follows
 the rules in `tools/bundle.py`: stdlib imports at the top, intra-package imports of the form
 `from ioc_concord.<module> import <names>`, and top-level names that are unique across modules.
 """
