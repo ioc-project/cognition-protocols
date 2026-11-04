@@ -37,6 +37,8 @@ accord_initiator.py has no mint-once-reuse convention.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import json
 import math
 import os
@@ -475,6 +477,15 @@ def blank_state() -> dict:
         "roster": [], "obs": [], "frame": [], "glossary": [],
         "owned": {}, "uncovered": [], "checks": [], "defects": [],
         "frame_rounds": 0, "locked_contract": None,
+        # Self-driving fields — only populated when init is called with --task.
+        # Current phase is inferred from the per-phase trackers below (not stored explicitly).
+        "task": "",
+        "state_id": "",
+        "handle_replies": {},  # {phase_key: {agent: raw_text}}
+        "clarify_terms": [],   # populated by ground advance when ambiguous pairs exist
+        "issued": {},          # {phase:agent -> True} prevents re-sending the same message
+        "required_knowledge": [],
+        "objective_clauses": [],
     }
 
 
@@ -487,6 +498,29 @@ def load_state(path: Path) -> dict:
 def save_state(path: Path, st: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(st, indent=2))
+
+
+@contextlib.contextmanager
+def locked_state(path: Path):
+    """Exclusive flock across load → mutate → save.
+
+    Parallel handle calls (multiple agents replying simultaneously) each do a
+    read-modify-write on the state file. Without a lock the last writer wins and
+    earlier mutations are silently lost. flock(LOCK_EX) serialises them so every
+    reply is recorded regardless of arrival order.
+    """
+    if not path.exists():
+        raise SystemExit(f"no state file at {path} — run init first")
+    with open(path, "r+") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            st = {**blank_state(), **json.loads(fh.read())}
+            yield st
+            fh.seek(0)
+            fh.write(json.dumps(st, indent=2))
+            fh.truncate()
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
 
 
 def read_json(arg: str | None, default: Any = None) -> Any:
@@ -534,6 +568,283 @@ def render_execution_message(agent: str, contract: dict, assignment: str) -> str
     )
 
 # --------------------------------------------------------------------------
+# Self-driving handle infrastructure
+# --------------------------------------------------------------------------
+
+
+def _esc(text: str) -> str:
+    """XML-escape text for embedding in message attributes or content."""
+    return (text.replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
+
+
+def _header(st: dict) -> str:
+    return f'<accord-delivery state="{_esc(st["state_id"])}"></accord-delivery>'
+
+
+def build_convene_msg(st: dict) -> str:
+    specialists = ", ".join(st["specialists"])
+    return (
+        f"{_header(st)}\n\n"
+        "CONVENE_REQUEST\n\n"
+        "Activate your `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\n"
+        f"TASK: {_esc(st['task'])}\n\n"
+        f"SPECIALISTS: {specialists}"
+    )
+
+
+def build_frame_msg(st: dict, agent: str) -> str:
+    current = json.dumps(st["frame"], indent=2) if st["frame"] else "[]"
+    previous: list[str] = [
+        obs["text"] for obs in st["obs"] if obs.get("agent") == agent
+    ]
+    parts = [
+        f"{_header(st)}\n\n",
+        "FRAME_REQUEST\n\n",
+        "Activate your `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\n",
+        f"TASK: {_esc(st['task'])}\n\n",
+        f"CURRENT_FRAME: {current}",
+    ]
+    if previous:
+        parts.append(f"\n\nYOUR_PREVIOUS_ATOMS: {json.dumps(previous, indent=2)}")
+    return "".join(parts)
+
+
+def build_ground_msg(st: dict) -> str:
+    key_terms = json.dumps(st["key_terms"], indent=2)
+    return (
+        f"{_header(st)}\n\n"
+        "GROUND_REQUEST\n\n"
+        "Activate your `accord-receiver` skill and follow its GROUND_REQUEST handler.\n\n"
+        f"KEY_TERMS: {key_terms}"
+    )
+
+
+def build_clarify_msg(st: dict, agent: str, pairs: list[dict]) -> str:
+    return (
+        f"{_header(st)}\n\n"
+        "CLARIFY_REQUEST\n\n"
+        "Activate your `accord-receiver` skill and follow its CLARIFY_REQUEST handler.\n\n"
+        f"AMBIGUOUS_PAIR: {json.dumps(pairs, indent=2)}\n\n"
+        f"DEFINITIONS_SO_FAR: {json.dumps(st['glossary'], indent=2)}"
+    )
+
+
+def build_verify_msg(st: dict) -> str:
+    rk = json.dumps(st["required_knowledge"], indent=2)
+    oc = json.dumps(st["objective_clauses"], indent=2)
+    frame = json.dumps(st["frame"], indent=2)
+    return (
+        f"{_header(st)}\n\n"
+        "VERIFY_REQUEST\n\n"
+        "Activate your `accord-receiver` skill and follow its VERIFY_REQUEST handler.\n\n"
+        f"REQUIRED_KNOWLEDGE: {rk}\n\n"
+        f"OBJECTIVE_CLAUSES: {oc}\n\n"
+        f"PROBLEM_FRAME: {frame}"
+    )
+
+
+def _infer_phase_key(st: dict) -> str:
+    """Infer current phase from merged-data indicators."""
+    if not st["roster"]:
+        return "convene"
+    if st["frame_rounds"] < MAX_FRAME_ROUNDS:
+        return f"frame_{st['frame_rounds']}"
+    if not st["glossary"]:
+        return "ground"
+    if st.get("clarify_terms"):
+        return "clarify"
+    if not st.get("locked_contract"):
+        return "verify"
+    return "locked"
+
+
+def current_action(st: dict) -> dict:
+    """Return {phase, recipients, messages} for the current phase.
+
+    Every handle call uses this to know who still needs to receive a message.
+    Phase is inferred from merged-data indicators, not stored explicitly.
+    """
+    if st.get("locked_contract"):
+        return {"phase": "locked", "recipients": [], "messages": {}}
+
+    phase_key = _infer_phase_key(st)
+    specialists = st["specialists"]
+
+    replied = st["handle_replies"].get(phase_key, {})
+
+    if phase_key == "convene":
+        pending = [a for a in specialists if a not in replied]
+        msg = build_convene_msg(st)
+        return {
+            "phase": phase_key,
+            "recipients": pending,
+            "messages": {a: msg for a in pending},
+        }
+
+    if phase_key.startswith("frame_"):
+        pending = [a for a in specialists if a not in replied]
+        return {
+            "phase": phase_key,
+            "recipients": pending,
+            "messages": {a: build_frame_msg(st, a) for a in pending},
+        }
+
+    if phase_key == "ground":
+        pending = [a for a in specialists if a not in replied]
+        msg = build_ground_msg(st)
+        return {
+            "phase": phase_key,
+            "recipients": pending,
+            "messages": {a: msg for a in pending},
+        }
+
+    if phase_key == "clarify":
+        pairs = st.get("clarify_terms", [])
+        pending = [a for a in specialists if a not in replied]
+        return {
+            "phase": phase_key,
+            "recipients": pending,
+            "messages": {a: build_clarify_msg(st, a, pairs) for a in pending},
+        }
+
+    if phase_key == "verify":
+        pending = [a for a in specialists if a not in replied]
+        msg = build_verify_msg(st)
+        return {
+            "phase": phase_key,
+            "recipients": pending,
+            "messages": {a: msg for a in pending},
+        }
+
+    return {"phase": phase_key, "recipients": [], "messages": {}}
+
+
+def _is_issued(st: dict, phase: str, agent: str) -> bool:
+    return st["issued"].get(f"{phase}:{agent}", False)
+
+
+def _mark_issued(st: dict, phase: str, agents: list[str]) -> None:
+    for a in agents:
+        st["issued"][f"{phase}:{a}"] = True
+
+
+def _run_phase_advance(st: dict, phase_key: str) -> dict:
+    """Run the deterministic merge for a completed phase, mutate state, return extras."""
+    replies_map: dict[str, str] = st["handle_replies"].get(phase_key, {})
+    raw = list(replies_map.values())
+
+    if phase_key == "convene":
+        st["roster"] = union_roster(ingest_roster(raw))
+        owners: dict[str, list[str]] = {}
+        for c in st["roster"]:
+            for role in c["roles"]:
+                owners.setdefault(role.strip().lower(), []).append(c["identity"])
+        st["defects"] = [f"duplicate exclusive role '{r}' claimed by {o}"
+                         for r, o in owners.items() if len(o) > 1]
+        return {"roster": st["roster"], "flagged_items": st["defects"]}
+
+    if phase_key.startswith("frame_"):
+        by_agent, truncated, _ = ingest_frame_round(raw)
+        submitted = set(by_agent)
+        st["obs"] = [obs for obs in st["obs"] if obs["agent"] not in submitted]
+        for atoms in by_agent.values():
+            st["obs"].extend(atoms)
+        st["frame_rounds"] += 1
+        st["frame"] = group_atoms(st["obs"]) if st["obs"] else []
+        return {"frame": st["frame"], "round": st["frame_rounds"], "truncated": truncated}
+
+    if phase_key == "ground":
+        tuples = ingest_glossary(raw, st["key_terms"])
+        entries, ambiguous = build_glossary(tuples)
+        revised = {e["term"] for e in entries}
+        st["glossary"] = [e for e in st["glossary"] if e["term"] not in revised] + entries
+        if ambiguous:
+            st["clarify_terms"] = ambiguous
+        return {"glossary": st["glossary"], "ambiguous": ambiguous}
+
+    if phase_key == "clarify":
+        tuples = ingest_glossary(raw, st["key_terms"])
+        entries, ambiguous = build_glossary(tuples)
+        revised = {e["term"] for e in entries}
+        st["glossary"] = [e for e in st["glossary"] if e["term"] not in revised] + entries
+        st["clarify_terms"] = ambiguous  # empty when resolved
+        return {"glossary": st["glossary"], "remaining_ambiguous": ambiguous}
+
+    if phase_key == "verify":
+        required = st.get("required_knowledge") or []
+        clauses = st.get("objective_clauses") or []
+        covers, checks_raw, all_holds = ingest_verify(raw)
+        universe = required or all_holds
+        st["owned"], st["uncovered"] = assign_holdings(universe, covers)
+        st["checks"] = assign_checks(checks_raw, clauses)
+        contract = assemble_lock(st)
+        st["locked_contract"] = contract
+        return {"locked_intent_contract": contract, "gaps": list(st["uncovered"])}
+
+    return {}
+
+
+def cmd_handle(a: argparse.Namespace, st: dict) -> dict:
+    """Record one agent reply and advance the phase when all replies are in."""
+    agent: str = a.agent.strip()
+    reply: str = (a.reply or "").strip()
+
+    if not st.get("task"):
+        raise SystemExit("handle: no task in state — run init --task first")
+
+    if st.get("locked_contract"):
+        return {"status": "LOCKED", "phase": "locked", "awaiting": [], "messages": {}}
+
+    phase_key = _infer_phase_key(st)
+
+    # Record reply (empty string is still a valid placeholder — agent responded)
+    phase_replies: dict[str, str] = st["handle_replies"].setdefault(phase_key, {})
+    phase_replies[agent] = reply
+
+    specialists = st["specialists"]
+    pending_after = [a2 for a2 in specialists if a2 not in phase_replies]
+
+    extras: dict = {}
+    if not pending_after:
+        # All specialists replied — run the deterministic merge.
+        extras = _run_phase_advance(st, phase_key)
+
+    # Compute next action after possible advance
+    action = current_action(st)
+    new_phase = action["phase"]
+    new_pending = action.get("recipients", [])
+    messages: dict[str, str] = {}
+
+    if action.get("messages"):
+        # Only emit messages for agents we haven't already issued this phase.
+        for recipient, msg in action["messages"].items():
+            if not _is_issued(st, new_phase, recipient):
+                messages[recipient] = msg
+        _mark_issued(st, new_phase, list(messages))
+
+    if new_phase == "locked":
+        return {
+            "status": "LOCKED",
+            "phase": "locked",
+            "awaiting": [],
+            "messages": {},
+            "locked_intent_contract": st.get("locked_contract"),
+            **extras,
+        }
+
+    status = "SEND" if messages else "NONE"
+    return {
+        "status": status,
+        "phase": new_phase,
+        "awaiting": new_pending,
+        "messages": messages,
+        "still_waiting_this_phase": pending_after,
+        **extras,
+    }
+
+
+# --------------------------------------------------------------------------
 # Commands
 # --------------------------------------------------------------------------
 
@@ -553,13 +864,31 @@ def cmd_init(a: argparse.Namespace, st: dict) -> dict:
     st["specialists"] = csv(a.specialists)
     st["key_terms"] = csv(a.key_terms)
     st["action_tool"] = a.action_tool or ""
+    task = (getattr(a, "task", None) or "").strip()
+    if task:
+        st["task"] = task
+        st["state_id"] = uuid.uuid4().hex[:8]
     a._state_out = st
-    return {
+    result: dict = {
         "specialists": st["specialists"],
         "key_terms": st["key_terms"],
         "action_tool": st["action_tool"],
         **protocol_control("roster"),
     }
+    if task:
+        action = current_action(st)
+        phase_key = action["phase"]
+        recipients = action.get("recipients", [])
+        _mark_issued(st, phase_key, recipients)
+        result["phase"] = phase_key
+        result["awaiting"] = recipients
+        result["messages"] = action.get("messages", {})
+        result["status"] = "SEND"
+        result["hint"] = (
+            "Use `accord_initiator.py handle --agent <id> --reply <text>` "
+            "for each incoming reply. No separate phase commands needed."
+        )
+    return result
 
 
 def cmd_roster(a: argparse.Namespace, st: dict) -> dict:
@@ -747,6 +1076,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--specialists", required=True, help="comma-separated specialist ids")
     s.add_argument("--key-terms", default="", help="comma-separated vocabulary terms for GROUND")
     s.add_argument("--action-tool", default="", help="name of the action tool/step for EXECUTION")
+    s.add_argument("--task", default="", help="task description for self-driving mode")
     s.set_defaults(fn=cmd_init)
 
     s = sub.add_parser("roster", help="Phase 0 CONVENE merge")
@@ -789,21 +1119,61 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("status", help="show session progress")
     s.set_defaults(fn=cmd_status)
+
+    s = sub.add_parser(
+        "handle",
+        help="record one agent reply; advance phase when all replies are in (self-driving mode)",
+    )
+    s.add_argument("--agent", required=True, help="agent id whose reply is being recorded")
+    s.add_argument("--reply", required=True, help="raw reply text from the agent")
+    s.add_argument(
+        "--required-knowledge",
+        default=None,
+        help=f"required knowledge items for verify phase ({json_arg})",
+    )
+    s.add_argument(
+        "--objective-clauses",
+        default=None,
+        help=f"objective clause texts for verify phase ({json_arg})",
+    )
+    s.set_defaults(fn=cmd_handle)
+
     return p
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     path = Path(resolve_state_path(args.state))
-    st = load_state(path)
-    try:
-        data = args.fn(args, st)
-    except SystemExit:
-        raise
-    except Exception as exc:  # surface as JSON so harnesses can read it
-        print(json.dumps({"ok": False, "phase": args.phase, "error": f"{type(exc).__name__}: {exc}"}))
-        return 1
-    save_state(path, getattr(args, "_state_out", st))
+
+    if args.phase == "handle":
+        # handle uses locked_state for concurrent-safe read-modify-write
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with locked_state(path) as st:
+                # Store required-knowledge / objective-clauses if supplied this call
+                rk = read_json(getattr(args, "required_knowledge", None), None)
+                oc = read_json(getattr(args, "objective_clauses", None), None)
+                if rk is not None:
+                    st["required_knowledge"] = rk
+                if oc is not None:
+                    st["objective_clauses"] = oc
+                data = args.fn(args, st)
+        except SystemExit:
+            raise
+        except Exception as exc:
+            print(json.dumps({"ok": False, "phase": args.phase, "error": f"{type(exc).__name__}: {exc}"}))
+            return 1
+    else:
+        st = load_state(path)
+        try:
+            data = args.fn(args, st)
+        except SystemExit:
+            raise
+        except Exception as exc:
+            print(json.dumps({"ok": False, "phase": args.phase, "error": f"{type(exc).__name__}: {exc}"}))
+            return 1
+        save_state(path, getattr(args, "_state_out", st))
+
     print(json.dumps({"ok": True, "phase": args.phase, "data": data}, indent=2))
     return 0
 

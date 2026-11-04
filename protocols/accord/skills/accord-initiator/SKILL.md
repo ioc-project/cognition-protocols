@@ -95,6 +95,8 @@ phase artifacts.
 | Reference tool call | Standalone equivalent |
 |---|---|
 | `accord_merge(phase="init")` | `$ACCORD init --specialists a,b,c --key-terms t1,t2 --action-tool <name>` |
+| `accord_merge(phase="init", task=...)` | `$ACCORD init --specialists a,b,c --key-terms t1,t2 --task "..."` ← self-driving mode |
+| record one agent reply | `$ACCORD handle --agent <id> --reply '<text>'` |
 | `accord_merge(phase="roster", responses=[...])` | `$ACCORD roster --responses <file>` |
 | `accord_merge(phase="frame", responses=[...], current_frame=[...])` | `$ACCORD frame --responses <file> --current-frame <file>` |
 | `accord_merge(phase="glossary", responses=[...], key_terms=...)` | `$ACCORD glossary --responses <file>` |
@@ -130,7 +132,7 @@ differ between them, and the name of the final action step (`action_tool`).
 
 **The phase labels above are not subcommand names.** The complete set of
 subcommands is `init`, `roster`, `frame`, `glossary`, `verify`, `lock`,
-`execution-message`, `status` — nothing else exists. In particular GROUND and CLARIFY both run as
+`execution-message`, `status`, `handle` — nothing else exists. In particular GROUND and CLARIFY both run as
 `glossary`, and there is no `ground` and no `synthesis` subcommand.
 
 Output — **LOCKED_INTENT_CONTRACT** assembled via `$ACCORD lock`.
@@ -170,18 +172,54 @@ Do not activate when:
 **COMMAND — execute NOW:**
 
 ```
+# Step-by-step mode (one merge command per phase):
 $ACCORD init --specialists <id1,id2,...> --key-terms <term1,term2,...> --action-tool <name>
+
+# Self-driving mode (handle does the rest — recommended):
+$ACCORD init --specialists <id1,id2,...> --key-terms <term1,term2,...> --task "<description>"
 ```
 
 Choose the values from the task, then keep them. You will use them throughout every phase:
 
 - `specialists` — the specialist agent IDs for this task
 - `key_terms` — the vocabulary terms to ground in Phase 2
-- `action_tool` — the name of the action tool to call in Phase 5
+- `action_tool` — the name of the action tool to call in Phase 5 (step-by-step mode)
+- `task` — the task description; activates self-driving mode
 
 For every delegation in Phases 0–3: call `delegate_to_<id>` replacing `<id>`
 with each value from `specialists`. Use `key_terms` in Phase 2 GROUND.
 Use `action_tool` as the tool name in Phase 5 EXECUTION.
+
+### Self-driving mode
+
+When `--task` is passed, `init` returns the first set of messages. From then on
+only `handle` is needed — no separate `roster`, `frame`, `glossary`, or `verify`
+calls:
+
+```
+$ACCORD handle --agent <id> --reply '<raw reply text>'
+```
+
+Every `handle` result starts with `status`:
+
+| `status` | What to do |
+|---|---|
+| `SEND` | Send `messages[agent]` to each agent in `awaiting` |
+| `NONE` | Wait — still collecting replies from other agents in this phase |
+| `LOCKED` | Protocol complete — `locked_intent_contract` is in the result |
+
+Pass `--required-knowledge` and `--objective-clauses` on the first `handle` call
+once you have them (latest: before verify phase):
+
+```
+$ACCORD handle --agent <id> --reply '<text>' \
+  --required-knowledge '["item1","item2"]' \
+  --objective-clauses '["clause1","clause2"]'
+```
+
+When `LOCKED`, call `$ACCORD execution-message` for each specialist as usual.
+`handle` uses `flock(LOCK_EX)` on the state file — parallel specialist replies
+are safe.
 
 ---
 
