@@ -24,8 +24,8 @@ application/vnd.ioc-project.concord+xml
 ```
 
 A Part carrying a CONCORD message uses the `text` field (or `raw` for binary-safe transport) with
-`mediaType` set to this value. The content is the verbatim CONCORD XML document exactly as produced
-by `concord_initiator.py` or `concord_receiver.py forge` — no wrapper, no reformatting.
+`mediaType` set to this value. The content is verbatim CONCORD XML as defined in the
+[CONCORD Specification](specification.md) — no wrapper, no reformatting.
 
 ```json
 {
@@ -102,8 +102,8 @@ MUST record both per participant and reuse them in all subsequent turns.
 
 !!! note "contextId is server-assigned"
     `contextId` is assigned by the participant's A2A server, not by the initiator. The initiator
-    learns it from the first task response and tracks it per participant. The CONCORD session id (from
-    `concord_initiator.py init`) is a separate identifier carried inside the CONCORD XML; it is NOT
+    learns it from the first task response and tracks it per participant. The CONCORD session id
+    (the `<state_id>` carried inside every CONCORD XML message) is a separate identifier; it is NOT
     used as the A2A `contextId`.
 
 ---
@@ -115,7 +115,7 @@ Security is the bottleneck in this example; the actual bottleneck is determined 
 
 After the SEED phase the initiator sends only deliveries — relay wrappers carrying the other
 participants' replies. There are no explicit score requests, repair requests, or commit messages:
-each participant's script self-determines what is due from the relay stream.
+each participant self-determines what is due from the relay stream.
 
 ```mermaid
 sequenceDiagram
@@ -156,9 +156,9 @@ sequenceDiagram
 
 ### Delivery Part format
 
-After SEED, each `SendMessage` carries a single Part whose content is the verbatim block printed
-by `concord_initiator.py handle`: a self-closing `<concord-delivery>` header followed by any relay
-documents, all as one text value.
+After SEED, each `SendMessage` carries a single Part whose content is a `<concord-delivery>`
+header followed by any relay documents, all as one text value. The delivery header is a
+self-closing element; the relay documents follow as peer XML elements in the same Part.
 
 ```json
 {
@@ -167,7 +167,7 @@ documents, all as one text value.
 }
 ```
 
-The participant passes the entire Part content to `concord_receiver.py handle` verbatim — the
+The participant passes the entire Part content to its CONCORD implementation verbatim — the
 delivery header and all enclosed documents together, exactly as received.
 
 ### Phase-by-phase mapping
@@ -185,7 +185,7 @@ delivery header and all enclosed documents together, exactly as received.
 
 After SEED, the initiator only ever sends deliveries. It never explicitly requests a score, a
 repair, or a commit. Participants self-determine their obligations from the relay stream; the run
-ends when `concord_initiator.py handle` prints `RUN COMPLETE`.
+ends when every participant's picture of the run reaches a terminal state.
 
 ---
 
@@ -201,12 +201,11 @@ The following requirements apply to any implementation of this binding.
   for a participant in the same work context.
 - MUST record the server-assigned `taskId` and `contextId` from the first task response
   and supply them on all subsequent `SendMessage` calls to that participant in the run.
-- After SEED, MUST send only deliveries — the verbatim block printed by
-  `concord_initiator.py handle`. MUST NOT send explicit score requests, repair requests, or
-  commit messages.
-- MUST send each participant's delivery as a single Part containing the full block printed by
-  the script — delivery header and any relay documents — verbatim.
-- A run is complete when `concord_initiator.py handle` prints `RUN COMPLETE`. The initiator
+- After SEED, MUST send only deliveries. MUST NOT send explicit score requests, repair requests,
+  or commit messages.
+- MUST send each participant's delivery as a single Part containing the delivery header and any
+  relay documents verbatim.
+- A run is complete when the initiator's CONCORD state reaches a terminal outcome. The initiator
   reports that result and stops sending messages to participants.
 - MUST NOT treat a `TaskStatus.message` that contains no `application/vnd.ioc-project.concord+xml`
   Part as a CONCORD reply. Prose is not a reply; the initiator must re-send the delivery.
@@ -219,20 +218,20 @@ The following requirements apply to any implementation of this binding.
 - MUST respond to each CONCORD message (ANCHOR, SEED, and all deliveries) with a
   `TaskStatusUpdate(state=INPUT_REQUIRED)` whose `message.parts` contain the CONCORD reply XML
   with `mediaType: "application/vnd.ioc-project.concord+xml"`.
-- MUST respond to every delivery, even when no substantive reply is due. When
-  `concord_receiver.py handle` returns `STATUS: SEND` with an ack, the participant MUST send
-  that ack as a `TaskStatusUpdate(state=INPUT_REQUIRED)`.
+- MUST respond to every delivery, even when no substantive reply is due. When a delivery
+  requires no action, the participant MUST send a `<concord-ack>` as a
+  `TaskStatusUpdate(state=INPUT_REQUIRED)`.
 - **MUST NOT transition an A2A task to a terminal state (`COMPLETED`, `FAILED`, `CANCELED`) while
   a CONCORD session is open on that task.** A CONCORD session is open from the receipt of a
-  `concord-anchor` message until the participant's own script reports the run complete
-  (`STATUS: NONE` with outcome). There is no `concord-commit` message in the broadcast model.
-- MAY transition the task to any appropriate state once the participant's script reports the run
-  complete; this binding does not mandate `COMPLETED`.
+  `concord-anchor` message until the participant's CONCORD state reaches a terminal outcome.
+  There is no `concord-commit` message in the broadcast model.
+- MAY transition the task to any appropriate state once the participant's CONCORD state is
+  terminal; this binding does not mandate `COMPLETED`.
 
 ### Both roles
 
 - The `text` (or `raw`) content of every `application/vnd.ioc-project.concord+xml` Part MUST be
-  verbatim CONCORD XML — exactly as produced by `concord_initiator.py` or `concord_receiver.py forge`.
+  verbatim CONCORD XML as defined in the [CONCORD Specification](specification.md).
   The XML MUST NOT be paraphrased, reformatted, or reconstructed by hand.
 
 ---
@@ -241,5 +240,4 @@ The following requirements apply to any implementation of this binding.
 
 - [Specification](specification.md) — formal CONCORD protocol definition
 - [Configuration](configuration.md) — satisfaction threshold and round budget
-- [Getting Started](../../getting-started.md) — installing skills across agent harnesses
 - [Tutorial: AgentBridge](../../tutorials/agentbridge/index.md) — running CONCORD over A2A via AgentBridge and SLIM
