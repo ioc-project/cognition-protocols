@@ -32,6 +32,13 @@ def test_loading_a_state_that_is_not_there_says_where(store, tmp_path):
     assert e.value.code == "state_error"
 
 
+def test_loading_a_file_that_is_not_json_is_a_state_error(store, tmp_path):
+    (tmp_path / "bad.json").write_text("{oops")
+    with pytest.raises(store.StateError, match="bad.json is not valid JSON") as e:
+        store.FileStore(tmp_path / "bad.json").load()
+    assert e.value.code == "state_error"
+
+
 def test_a_save_replaces_the_state_and_leaves_nothing_behind(store, tmp_path):
     s = store.FileStore(tmp_path / "state.json")
     s.save({"v": 1})

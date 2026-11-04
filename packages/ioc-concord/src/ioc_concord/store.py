@@ -17,7 +17,7 @@ class Store(Protocol):
     """What a state store must offer."""
 
     def load(self) -> dict:
-        """The saved state. Raises StateError if there is none."""
+        """The saved state. Raises StateError if there is none or it cannot be read."""
 
     def save(self, state: dict) -> None:
         """Replace the saved state with `state`."""
@@ -38,7 +38,10 @@ class FileStore:
     def load(self):
         if not self.path.exists():
             raise StateError(f"no state file at {self.path}")
-        return json.loads(self.path.read_text(encoding="utf-8"))
+        try:
+            return json.loads(self.path.read_text(encoding="utf-8"))
+        except ValueError as exc:
+            raise StateError(f"state file {self.path} is not valid JSON ({exc})")
 
     def save(self, state):
         text = json.dumps(state, indent=self.indent) + "\n"          # first: a state that is not JSON leaves the file alone

@@ -28,7 +28,7 @@ out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|     <agent>c</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -56,7 +56,7 @@ $ --me a handle
  in|     <agent>b</agent>
  in|     <agent>c</agent>
  in|   </participants>
- in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+ in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
  in|   <addressed_to>
  in|     <agent>a</agent>
  in|     <agent>b</agent>
@@ -118,7 +118,7 @@ $ --me b handle
  in|     <agent>b</agent>
  in|     <agent>c</agent>
  in|   </participants>
- in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+ in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
  in|   <addressed_to>
  in|     <agent>a</agent>
  in|     <agent>b</agent>
@@ -180,7 +180,7 @@ $ --me c handle
  in|     <agent>b</agent>
  in|     <agent>c</agent>
  in|   </participants>
- in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+ in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
  in|   <addressed_to>
  in|     <agent>a</agent>
  in|     <agent>b</agent>
@@ -275,7 +275,7 @@ out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|     <agent>c</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -311,7 +311,7 @@ out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|     <agent>c</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -347,7 +347,7 @@ out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|     <agent>c</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -386,7 +386,7 @@ $ --me a handle
  in|     <agent>b</agent>
  in|     <agent>c</agent>
  in|   </participants>
- in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+ in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
  in|   <addressed_to>
  in|     <agent>a</agent>
  in|     <agent>b</agent>
@@ -469,7 +469,7 @@ $ --me b handle
  in|     <agent>b</agent>
  in|     <agent>c</agent>
  in|   </participants>
- in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+ in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
  in|   <addressed_to>
  in|     <agent>a</agent>
  in|     <agent>b</agent>
@@ -552,7 +552,7 @@ $ --me c handle
  in|     <agent>b</agent>
  in|     <agent>c</agent>
  in|   </participants>
- in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+ in|   <params><satisfaction_threshold>0.5</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
  in|   <addressed_to>
  in|     <agent>a</agent>
  in|     <agent>b</agent>

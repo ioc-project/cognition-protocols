@@ -2,12 +2,13 @@
 # Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 # SPDX-License-Identifier: Apache-2.0
 #
-"""The states a run is made of: the run state an initiator keeps and the state an agent keeps. Both are plain dicts, so any
-store can hold them; these constructors are the one place that says what is in them."""
+"""The two states a run is made of: the run state the initiator keeps and the state each agent keeps. Both are plain dicts,
+so any `Store` can hold either; these constructors are the one place that says what is in them."""
 import json
 
 from ioc_concord.errors import InvalidRun
 from ioc_concord.schema import render_schema, validate_schema
+from ioc_concord.wire import DEFAULT_PARAMS
 
 STATE_VERSION = 2
 
@@ -26,7 +27,8 @@ def check_run(agents, satisfaction_threshold, eps, B):
         raise InvalidRun("B must be >= 1")
 
 
-def new_run_state(agents, context, x_reject, x_ideal, spec, satisfaction_threshold=0.6, eps=0.05, B=10, relay=True,
+def new_run_state(agents, context, x_reject, x_ideal, spec, satisfaction_threshold=DEFAULT_PARAMS["satisfaction_threshold"],
+                  eps=DEFAULT_PARAMS["eps"], B=DEFAULT_PARAMS["B"], relay=True,
                   state_id=None):
     """The state of a new run, as the initiator keeps it: the engine state plus the brief that the requests are built from.
     `spec` is the candidate schema (see `ioc_concord.schema`); `state_id` names the run in every message."""

@@ -38,7 +38,7 @@ def test_the_schema_is_kept_three_ways(state):
 
 def test_a_run_state_without_an_id_has_none_yet(state):
     st = new(state)
-    assert "state_id" not in st and st["relay"] is True and st["params"]["B"] == 10
+    assert "state_id" not in st and st["relay"] is True and st["params"]["B"] == 8
 
 
 def test_a_run_state_survives_a_round_trip_through_json(state):
@@ -62,7 +62,7 @@ def test_a_schema_that_is_not_valid_is_refused(state):
     ({"B": 0}, "B must be >= 1"),
 ])
 def test_the_parameters_of_a_run_are_checked(state, kw, message):
-    args = {"agents": ["a", "b"], "satisfaction_threshold": 0.6, "eps": 0.05, "B": 10, **kw}
+    args = {"agents": ["a", "b"], "satisfaction_threshold": 0.6, "eps": 0.05, "B": 8, **kw}
     with pytest.raises(state.InvalidRun, match=message) as e:
         state.check_run(**args)
     assert e.value.code == "invalid_run"
@@ -75,7 +75,7 @@ def test_a_new_run_state_builds_requests_and_runs_the_engine(state, wire, engine
     req = wire.parse_request(ET.fromstring(wire.build_seed_msg(st, ["a", "b"])))
     assert req["options"] == ["Plan A", "Plan B"] and req["participants"] == ["a", "b"]
     for agent in ("a", "b"):
-        st["anchors"][agent] = {"raw_reject": 0, "raw_ideal": 100}
+        engine.add_anchor(st, agent, 0, 100)
     engine.add_candidate(st, "a", "Plan A", "r", cid="seed-a")
     engine.add_ratings(st, "a", [("seed-a", 90, "r")])
     engine.add_ratings(st, "b", [("seed-a", 80, "r")])

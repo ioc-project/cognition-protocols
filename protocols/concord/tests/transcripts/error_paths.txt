@@ -112,7 +112,7 @@ out|   <participants>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -147,7 +147,7 @@ out|   <participants>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -189,7 +189,7 @@ out|   <participants>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -266,7 +266,7 @@ out|   <participants>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>

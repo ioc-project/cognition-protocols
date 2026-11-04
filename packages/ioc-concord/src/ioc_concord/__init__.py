@@ -15,9 +15,10 @@ Modules:
     schema    the candidate schema: parse, validate, check a proposal, describe it
     engine    the decision engine (SELECT / ACCEPT / REPAIR / COMMIT) over the ratings the agents give
     wire      the documents: build and read every request and reply, the notices, and the tag vocabulary
+    store     the Store protocol, and FileStore (atomic writes) as one implementation
+    state     the run state and the agent state: constructors and checks
 
-Planned: store (persistence). A module that is bundled into a script follows
-the rules in `tools/bundle.py`: stdlib imports at the top, intra-package imports of the form
-`from ioc_concord.<module> import <names>`, and top-level names that are unique across modules.
+A module that is bundled into a script follows the rules in `tools/bundle.py`: stdlib imports at the top, intra-package
+imports of the form `from ioc_concord.<module> import <names>`, and top-level names that are unique across modules.
 """
-__version__ = "0.1.0"
+__version__ = "0.1.0"   # keep equal to pyproject.toml (tests/test_package.py checks)

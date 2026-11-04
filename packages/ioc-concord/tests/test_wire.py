@@ -16,7 +16,7 @@ ENUM = {"enum": ["Plan A", "Plan B"]}
 def run_state(spec=OPEN, agents=("a", "b")):
     """The run state an initiator holds (engine state plus the brief), halfway through a run."""
     return {
-        "params": {"satisfaction_threshold": 0.6, "eps": 0.05, "B": 10, "W": "leximin"}, "agents": list(agents),
+        "params": {"satisfaction_threshold": 0.6, "eps": 0.05, "B": 8, "W": "leximin"}, "agents": list(agents),
         "schema": "a plan" if spec is OPEN else "exactly one of: Plan A | Plan B",
         "schema_json": json.dumps(spec, sort_keys=True), "options": spec.get("enum"), "context": "Pick <one> & go",
         "x_reject": "nothing decided", "x_ideal": "a plan everyone accepts", "state_id": "s1",
@@ -38,7 +38,7 @@ def root_of(xml):
 def test_an_anchor_request_reads_back(wire):
     req = wire.parse_request(root_of(wire.build_anchor_msg(run_state(), ["a", "b"])))
     assert req["kind"] == "anchor" and req["participants"] == ["a", "b"] and req["addressed_to"] == ["a", "b"]
-    assert req["params"] == {"satisfaction_threshold": 0.6, "eps": 0.05, "B": 10}
+    assert req["params"] == {"satisfaction_threshold": 0.6, "eps": 0.05, "B": 8}
     assert req["brief"] == {"x_reject": "nothing decided", "x_ideal": "a plan everyone accepts"}
 
 
