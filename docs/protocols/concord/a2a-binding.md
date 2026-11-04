@@ -172,16 +172,16 @@ delivery header and all enclosed documents together, exactly as received.
 
 ### Phase-by-phase mapping
 
-| CONCORD phase | A2A operation | Direction | `state` in response |
-|---|---|---|---|
-| ANCHOR | `SendMessage` (new or existing task) | Initiator → each participant | — |
-| ANCHOR reply | `TaskStatusUpdate` | Participant → initiator | `INPUT_REQUIRED` |
-| SEED | `SendMessage` (same task) | Initiator → each participant | — |
-| SEED reply | `TaskStatusUpdate` | Participant → initiator | `INPUT_REQUIRED` |
-| DELIVERY (relay) | `SendMessage` (same task) | Initiator → each participant | — |
-| Score reply (self-triggered) | `TaskStatusUpdate` | Participant → initiator | `INPUT_REQUIRED` |
-| Repair candidate + own score (self-triggered, bottleneck only) | `TaskStatusUpdate` | Bottleneck → initiator | `INPUT_REQUIRED` |
-| ACK (nothing due on this delivery) | `TaskStatusUpdate` | Participant → initiator | `INPUT_REQUIRED` |
+| CONCORD phase | A2A operation | `state` in response |
+|---|---|---|
+| ANCHOR | `SendMessage` (new or existing task, initiator → each participant) | — |
+| ANCHOR reply | `TaskStatusUpdate` (participant → initiator) | `INPUT_REQUIRED` |
+| SEED | `SendMessage` (same task, initiator → each participant) | — |
+| SEED reply | `TaskStatusUpdate` (participant → initiator) | `INPUT_REQUIRED` |
+| DELIVERY (relay) | `SendMessage` (same task, initiator → each participant) | — |
+| Score reply (self-triggered by participant) | `TaskStatusUpdate` (participant → initiator) | `INPUT_REQUIRED` |
+| Repair candidate + own score (self-triggered by bottleneck) | `TaskStatusUpdate` (bottleneck → initiator) | `INPUT_REQUIRED` |
+| ACK (nothing due on this delivery) | `TaskStatusUpdate` (participant → initiator) | `INPUT_REQUIRED` |
 
 After SEED, the initiator only ever sends deliveries. It never explicitly requests a score, a
 repair, or a commit. Participants self-determine their obligations from the relay stream; the run
