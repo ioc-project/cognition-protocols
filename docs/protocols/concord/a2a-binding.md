@@ -38,14 +38,14 @@ by `concord_initiator.py` or `concord_receiver.py forge` — no wrapper, no refo
 
 ## AgentCard skill declaration
 
-An agent that implements the **CONCORD receiver** role MUST advertise the following skill in its
+An agent that implements the **CONCORD participant** role MUST advertise the following skill in its
 AgentCard at `/.well-known/agent.json`:
 
 ```json
 {
-  "id": "concord-receiver",
-  "name": "CONCORD Receiver",
-  "description": "Accepts CONCORD negotiation messages as a participant. Handles anchor, seed, score, repair, and commit phases.",
+  "id": "concord-participant",
+  "name": "CONCORD Participant",
+  "description": "Accepts CONCORD negotiation messages as a participant. Handles anchor, seed, and scoring/repair rounds driven by the relay delivery stream.",
   "tags": ["concord", "negotiation", "consensus"],
   "inputModes": ["application/vnd.ioc-project.concord+xml"],
   "outputModes": ["application/vnd.ioc-project.concord+xml"]
@@ -66,9 +66,9 @@ An agent that acts only as an initiator and never as a participant need not adve
   "defaultOutputModes": ["text/plain"],
   "skills": [
     {
-      "id": "concord-receiver",
-      "name": "CONCORD Receiver",
-      "description": "Accepts CONCORD negotiation messages as a participant. Handles anchor, seed, score, repair, and commit phases.",
+      "id": "concord-participant",
+      "name": "CONCORD Participant",
+      "description": "Accepts CONCORD negotiation messages as a participant. Handles anchor, seed, and scoring/repair rounds driven by the relay delivery stream.",
       "tags": ["concord", "negotiation", "consensus"],
       "inputModes": ["application/vnd.ioc-project.concord+xml"],
       "outputModes": ["application/vnd.ioc-project.concord+xml"]
@@ -110,7 +110,12 @@ MUST record both per participant and reuse them in all subsequent turns.
 
 ## Message flow
 
-The sequence below covers a two-participant run (security + cost) from ANCHOR through the first SCORE phase.
+The sequence below covers a two-participant run (security + cost) from ANCHOR through one repair round.
+Security is the bottleneck in this example; the actual bottleneck is determined algorithmically.
+
+After the SEED phase the initiator sends only deliveries — relay wrappers carrying the other
+participants' replies. There are no explicit score requests, repair requests, or commit messages:
+each participant's script self-determines what is due from the relay stream.
 
 ```mermaid
 sequenceDiagram
@@ -130,18 +135,40 @@ sequenceDiagram
     S-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-candidate-reply])
     C-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-candidate-reply])
 
-    Note over I,C: SCORE phase (broadcast)
-    I->>S: SendMessage(taskId=S-task, parts=[concord-score])
-    I->>C: SendMessage(taskId=C-task, parts=[concord-score])
+    Note over I,C: Relay deliveries — participants self-trigger scoring
+    I->>S: SendMessage(taskId=S-task, parts=[concord-delivery + C's candidate-reply])
+    I->>C: SendMessage(taskId=C-task, parts=[concord-delivery + S's candidate-reply])
     S-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-score-reply])
     C-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-score-reply])
 
-    Note over I,C: … REPAIR rounds if needed …
+    Note over I,C: Relay score replies — Security self-identifies as bottleneck and repairs
+    I->>S: SendMessage(taskId=S-task, parts=[concord-delivery + C's score-reply])
+    I->>C: SendMessage(taskId=C-task, parts=[concord-delivery + S's score-reply])
+    S-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-candidate-reply + concord-score-reply])
+    C-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-ack])
 
-    Note over I,C: COMMIT (broadcast, no reply required)
-    I->>S: SendMessage(taskId=S-task, parts=[concord-commit])
-    I->>C: SendMessage(taskId=C-task, parts=[concord-commit])
+    Note over I,C: Relay repair — others score; run completes from participants' own picture
+    I->>S: SendMessage(taskId=S-task, parts=[concord-delivery + S's repair])
+    I->>C: SendMessage(taskId=C-task, parts=[concord-delivery + S's repair])
+    S-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-ack])
+    C-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-score-reply])
 ```
+
+### Delivery Part format
+
+After SEED, each `SendMessage` carries a single Part whose content is the verbatim block printed
+by `concord_initiator.py handle`: a self-closing `<concord-delivery>` header followed by any relay
+documents, all as one text value.
+
+```json
+{
+  "text": "<concord-delivery seq=\"3\" state=\"RUNID\" check=\"a1b2c3d4\" />\n\n<concord-score-reply agent=\"cost\" state=\"RUNID\" ack=\"3\">\n  <score candidate_id=\"seed-cost\"><raw>72.0</raw><reasoning>…</reasoning></score>\n</concord-score-reply>",
+  "mediaType": "application/vnd.ioc-project.concord+xml"
+}
+```
+
+The participant passes the entire Part content to `concord_receiver.py handle` verbatim — the
+delivery header and all enclosed documents together, exactly as received.
 
 ### Phase-by-phase mapping
 
@@ -151,12 +178,14 @@ sequenceDiagram
 | ANCHOR reply | `TaskStatusUpdate` | Participant → initiator | `INPUT_REQUIRED` |
 | SEED | `SendMessage` (same task) | Initiator → each participant | — |
 | SEED reply | `TaskStatusUpdate` | Participant → initiator | `INPUT_REQUIRED` |
-| SCORE | `SendMessage` (same task) | Initiator → each participant | — |
-| SCORE reply | `TaskStatusUpdate` | Participant → initiator | `INPUT_REQUIRED` |
-| REPAIR | `SendMessage` (same task, **bottleneck only**) | Initiator → bottleneck | — |
-| REPAIR reply | `TaskStatusUpdate` | Bottleneck → initiator | `INPUT_REQUIRED` |
-| COMMIT | `SendMessage` (same task) | Initiator → each participant | — |
-| COMMIT acknowledged | (no reply required) | — | workflow-dependent |
+| DELIVERY (relay) | `SendMessage` (same task) | Initiator → each participant | — |
+| Score reply (self-triggered) | `TaskStatusUpdate` | Participant → initiator | `INPUT_REQUIRED` |
+| Repair candidate + own score (self-triggered, bottleneck only) | `TaskStatusUpdate` | Bottleneck → initiator | `INPUT_REQUIRED` |
+| ACK (nothing due on this delivery) | `TaskStatusUpdate` | Participant → initiator | `INPUT_REQUIRED` |
+
+After SEED, the initiator only ever sends deliveries. It never explicitly requests a score, a
+repair, or a commit. Participants self-determine their obligations from the relay stream; the run
+ends when `concord_initiator.py handle` prints `RUN COMPLETE`.
 
 ---
 
@@ -172,25 +201,33 @@ The following requirements apply to any implementation of this binding.
   for a participant in the same work context.
 - MUST record the server-assigned `taskId` and `contextId` from the first task response
   and supply them on all subsequent `SendMessage` calls to that participant in the run.
-- MUST send REPAIR messages to exactly one task — the bottleneck agent's task. REPAIR
-  MUST NOT be broadcast.
+- After SEED, MUST send only deliveries — the verbatim block printed by
+  `concord_initiator.py handle`. MUST NOT send explicit score requests, repair requests, or
+  commit messages.
+- MUST send each participant's delivery as a single Part containing the full block printed by
+  the script — delivery header and any relay documents — verbatim.
+- A run is complete when `concord_initiator.py handle` prints `RUN COMPLETE`. The initiator
+  reports that result and stops sending messages to participants.
 - MUST NOT treat a `TaskStatus.message` that contains no `application/vnd.ioc-project.concord+xml`
-  Part as a CONCORD reply. Prose is not a reply; the initiator must re-send the CONCORD message.
+  Part as a CONCORD reply. Prose is not a reply; the initiator must re-send the delivery.
 
 ### Participant
 
-- MUST advertise the `concord-receiver` skill in its AgentCard as specified above when it
-  implements the receiver role.
+- MUST advertise the `concord-participant` skill in its AgentCard as specified above when it
+  implements the participant role.
 - MUST accept `SendMessage` requests whose Parts include `mediaType: "application/vnd.ioc-project.concord+xml"`.
-- MUST respond to each CONCORD message (ANCHOR, SEED, SCORE, REPAIR) with a
+- MUST respond to each CONCORD message (ANCHOR, SEED, and all deliveries) with a
   `TaskStatusUpdate(state=INPUT_REQUIRED)` whose `message.parts` contain the CONCORD reply XML
   with `mediaType: "application/vnd.ioc-project.concord+xml"`.
+- MUST respond to every delivery, even when no substantive reply is due. When
+  `concord_receiver.py handle` returns `STATUS: SEND` with an ack, the participant MUST send
+  that ack as a `TaskStatusUpdate(state=INPUT_REQUIRED)`.
 - **MUST NOT transition an A2A task to a terminal state (`COMPLETED`, `FAILED`, `CANCELED`) while
   a CONCORD session is open on that task.** A CONCORD session is open from the receipt of a
-  `concord-anchor` message until a `concord-commit` message is received and acknowledged.
-  Terminating the task before COMMIT breaks the negotiation.
-- MAY transition the task to any appropriate state after receiving and acknowledging `concord-commit`;
-  this binding does not mandate `COMPLETED`.
+  `concord-anchor` message until the participant's own script reports the run complete
+  (`STATUS: NONE` with outcome). There is no `concord-commit` message in the broadcast model.
+- MAY transition the task to any appropriate state once the participant's script reports the run
+  complete; this binding does not mandate `COMPLETED`.
 
 ### Both roles
 
