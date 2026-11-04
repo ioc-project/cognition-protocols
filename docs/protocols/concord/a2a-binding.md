@@ -182,7 +182,7 @@ sequenceDiagram
     S-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-candidate-reply + concord-score-reply])
     C-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-ack])
 
-    Note over I,C: Relay repair - others score; run completes from participants own picture
+    Note over I,C: Relay repair - others score, run completes from participants own picture
     I->>S: SendMessage(taskId=S-task, parts=[concord-delivery + S's repair])
     I->>C: SendMessage(taskId=C-task, parts=[concord-delivery + S's repair])
     S-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-ack])
