@@ -108,10 +108,45 @@ MUST record both per participant and reuse them in all subsequent turns.
 
 ---
 
+## Transport topologies
+
+CONCORD over A2A supports two transport topologies. The CONCORD logical roles are unchanged in
+both: the initiator broadcasts ANCHOR and SEED; participants reply and self-determine scoring,
+repair, and termination from the shared reply stream.
+
+### Point-to-point (relay mode, default)
+
+The initiator holds a separate A2A task per participant. After SEED, the initiator wraps other
+participants' replies in `<concord-delivery>` blocks and sends them individually to each recipient.
+Participants acknowledge every delivery. This is the default and is described throughout this
+document.
+
+### Group communication (no-relay mode)
+
+When agents share a broadcast channel — for example via
+[A2A collaborative task](https://github.com/a2aproject/experimental-cpb-slimrpc/blob/main/spec/v1/a2a-collaborative-task.md)
+— the channel acts as the relay. Each participant sees every other participant's replies directly
+on the shared channel. The initiator uses CONCORD's `--no-relay` mode; no `<concord-delivery>`
+wrappers are sent after SEED and no acknowledgements are required.
+
+In this topology:
+
+- The initiator broadcasts ANCHOR and SEED to the shared channel; the channel delivers to all participants.
+- Participants reply to the channel; the transport delivers to all recipients.
+- The channel infrastructure may rewrite session identifiers (A2A `contextId`/`taskId`) per recipient.
+- Echo suppression (a participant does not receive its own output) is a channel responsibility.
+- The CONCORD `<state_id>` remains the authoritative run identifier and is transport-independent.
+
+Conformance requirements that reference `<concord-delivery>`, acks, and per-participant task
+management apply to point-to-point relay mode only. All other requirements apply to both topologies.
+
+---
+
 ## Message flow
 
-The sequence below covers a two-participant run (security + cost) from ANCHOR through one repair round.
-Security is the bottleneck in this example; the actual bottleneck is determined algorithmically.
+The sequence below covers a two-participant run (security + cost) in **point-to-point relay mode**,
+from ANCHOR through one repair round. Security is the bottleneck in this example; the actual
+bottleneck is determined algorithmically.
 
 After the SEED phase the initiator sends only deliveries — relay wrappers carrying the other
 participants' replies. There are no explicit score requests, repair requests, or commit messages:
@@ -154,11 +189,12 @@ sequenceDiagram
     C-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-score-reply])
 ```
 
-### Delivery Part format
+### Delivery Part format *(relay mode)*
 
-After SEED, each `SendMessage` carries a single Part whose content is a `<concord-delivery>`
-header followed by any relay documents, all as one text value. The delivery header is a
-self-closing element; the relay documents follow as peer XML elements in the same Part.
+In point-to-point relay mode, after SEED each `SendMessage` carries a single Part whose content
+is a `<concord-delivery>` header followed by any relay documents, all as one text value. The
+delivery header is a self-closing element; the relay documents follow as peer XML elements in
+the same Part.
 
 ```json
 {
@@ -170,22 +206,26 @@ self-closing element; the relay documents follow as peer XML elements in the sam
 The participant passes the entire Part content to its CONCORD implementation verbatim — the
 delivery header and all enclosed documents together, exactly as received.
 
+In group communication (no-relay) mode, participant replies arrive on the shared channel as
+plain CONCORD XML Parts with no `<concord-delivery>` wrapper. No acknowledgement is required.
+
 ### Phase-by-phase mapping
 
 | CONCORD phase | A2A operation | `state` in response |
 |---|---|---|
-| ANCHOR | `SendMessage` (new or existing task, initiator → each participant) | — |
-| ANCHOR reply | `TaskStatusUpdate` (participant → initiator) | `INPUT_REQUIRED` |
-| SEED | `SendMessage` (same task, initiator → each participant) | — |
-| SEED reply | `TaskStatusUpdate` (participant → initiator) | `INPUT_REQUIRED` |
-| DELIVERY (relay) | `SendMessage` (same task, initiator → each participant) | — |
-| Score reply (self-triggered by participant) | `TaskStatusUpdate` (participant → initiator) | `INPUT_REQUIRED` |
-| Repair candidate + own score (self-triggered by bottleneck) | `TaskStatusUpdate` (bottleneck → initiator) | `INPUT_REQUIRED` |
-| ACK (nothing due on this delivery) | `TaskStatusUpdate` (participant → initiator) | `INPUT_REQUIRED` |
+| ANCHOR | `SendMessage` (new or existing task) — broadcast from initiator | — |
+| ANCHOR reply | `TaskStatusUpdate` — from participant | `INPUT_REQUIRED` |
+| SEED | `SendMessage` (same task) — broadcast from initiator | — |
+| SEED reply | `TaskStatusUpdate` — from participant | `INPUT_REQUIRED` |
+| DELIVERY *(relay mode only)* | `SendMessage` (same task) — initiator sends per-participant delivery | — |
+| Score reply (self-triggered) | `TaskStatusUpdate` — from participant | `INPUT_REQUIRED` |
+| Repair candidate + own score (self-triggered, bottleneck only) | `TaskStatusUpdate` — from bottleneck participant | `INPUT_REQUIRED` |
+| ACK — nothing due on this delivery *(relay mode only)* | `TaskStatusUpdate` — from participant | `INPUT_REQUIRED` |
 
-After SEED, the initiator only ever sends deliveries. It never explicitly requests a score, a
-repair, or a commit. Participants self-determine their obligations from the relay stream; the run
-ends when every participant's picture of the run reaches a terminal state.
+After SEED, the initiator only ever sends deliveries (relay mode) or sends nothing further
+(no-relay / group mode). It never explicitly requests a score, a repair, or a commit.
+Participants self-determine their obligations from the relay stream; the run ends when every
+participant's picture of the run reaches a terminal state.
 
 ---
 
@@ -197,16 +237,19 @@ The following requirements apply to any implementation of this binding.
 
 - MUST send each CONCORD message as a `SendMessage` with exactly one Part carrying
   `mediaType: "application/vnd.ioc-project.concord+xml"`.
+- After SEED, MUST NOT send explicit score requests, repair requests, or commit messages.
+  Participants self-determine their obligations from the reply stream.
+- A run is complete when the initiator's CONCORD state reaches a terminal outcome. The initiator
+  reports that result and stops sending messages to participants.
+
+**Point-to-point relay mode only:**
+
 - MUST reuse an existing `taskId` and `contextId` when an active task already exists
   for a participant in the same work context.
 - MUST record the server-assigned `taskId` and `contextId` from the first task response
   and supply them on all subsequent `SendMessage` calls to that participant in the run.
-- After SEED, MUST send only deliveries. MUST NOT send explicit score requests, repair requests,
-  or commit messages.
-- MUST send each participant's delivery as a single Part containing the delivery header and any
-  relay documents verbatim.
-- A run is complete when the initiator's CONCORD state reaches a terminal outcome. The initiator
-  reports that result and stops sending messages to participants.
+- After SEED, MUST send only deliveries (`<concord-delivery>` Parts). MUST send each
+  participant's delivery as a single Part containing the delivery header and any relay documents verbatim.
 - MUST NOT treat a `TaskStatus.message` that contains no `application/vnd.ioc-project.concord+xml`
   Part as a CONCORD reply. Prose is not a reply; the initiator must re-send the delivery.
 
@@ -214,19 +257,22 @@ The following requirements apply to any implementation of this binding.
 
 - MUST advertise the `concord-participant` skill in its AgentCard as specified above when it
   implements the participant role.
-- MUST accept `SendMessage` requests whose Parts include `mediaType: "application/vnd.ioc-project.concord+xml"`.
-- MUST respond to each CONCORD message (ANCHOR, SEED, and all deliveries) with a
-  `TaskStatusUpdate(state=INPUT_REQUIRED)` whose `message.parts` contain the CONCORD reply XML
-  with `mediaType: "application/vnd.ioc-project.concord+xml"`.
-- MUST respond to every delivery, even when no substantive reply is due. When a delivery
-  requires no action, the participant MUST send a `<concord-ack>` as a
-  `TaskStatusUpdate(state=INPUT_REQUIRED)`.
+- MUST accept CONCORD messages (ANCHOR, SEED, and post-SEED relay content) delivered via the
+  transport, whether as individual `SendMessage` calls (relay mode) or channel messages (group mode).
+- MUST respond to each CONCORD message with CONCORD reply XML in a Part with
+  `mediaType: "application/vnd.ioc-project.concord+xml"`.
 - **MUST NOT transition an A2A task to a terminal state (`COMPLETED`, `FAILED`, `CANCELED`) while
   a CONCORD session is open on that task.** A CONCORD session is open from the receipt of a
   `concord-anchor` message until the participant's CONCORD state reaches a terminal outcome.
   There is no `concord-commit` message in the broadcast model.
 - MAY transition the task to any appropriate state once the participant's CONCORD state is
   terminal; this binding does not mandate `COMPLETED`.
+
+**Point-to-point relay mode only:**
+
+- MUST respond to every delivery via `TaskStatusUpdate(state=INPUT_REQUIRED)`, even when no
+  substantive reply is due. When a delivery requires no action, the participant MUST send a
+  `<concord-ack>` as that `TaskStatusUpdate`.
 
 ### Both roles
 
