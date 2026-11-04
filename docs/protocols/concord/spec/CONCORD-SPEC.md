@@ -33,12 +33,12 @@ Conflict may be confirmed, anticipated, or merely uncertain — all three cases 
 
 | Role | Count | Responsibilities |
 |---|---|---|
-| **Initiator** | 1 | Sends `<concord-init>`. In relay mode it also relays replies to all other agents, nudges agents that owe one, and reports the final result. In broadcast mode it re-sends `<concord-init>` until every init reply has arrived, then does nothing more |
+| **Initiator** | 1 | Sends `<concord-init>`. In relay mode it also relays the participants' messages to all other agents, nudges agents that owe one, and reports the final result. In broadcast mode it re-sends `<concord-init>` until every init reply has arrived, then does nothing more |
 | **Participant** | N ≥ 2 | Each holds a role-specific scoring perspective; maintains its own full picture of the run; self-determines when to score, repair, or terminate |
 
-The initiator never authors replies on behalf of participants. Participants send replies verbatim — no preamble or rewording.
+The initiator never authors messages on behalf of participants. Participants send their messages verbatim — no preamble or rewording.
 
-The state machine is distributed. Each participant runs the same decision engine over the same replies, whether the initiator relays them (relay mode) or the participant reads them directly from a shared channel (broadcast mode), and moves as soon as its own picture says it is its turn — it scores after all seeds have reached it, and repairs when every score is in and it is the bottleneck. The initiator does not request scores or repairs. After `<concord-init>`, in relay mode, it only relays replies and nudges agents that owe one. In broadcast mode it listens only for init replies and sends `<concord-init>` again until all of them have arrived; after that it takes no further part: each participant detects a gap in its own picture and asks for the reply itself, and aborts if it stays unanswered (see [Timeouts and abort](#timeouts-and-abort)). An initiator that also wants to negotiate is a participant like the others, with its own participant instance.
+The state machine is distributed. Each participant runs the same decision engine over the same messages, whether the initiator relays them (relay mode) or the participant reads them directly from a shared channel (broadcast mode), and moves as soon as its own picture says it is its turn — it scores after all seeds have reached it, and repairs when every score is in and it is the bottleneck. The initiator does not request scores or repairs. After `<concord-init>`, in relay mode, it only relays messages and nudges agents that owe one. In broadcast mode it listens only for init replies and sends `<concord-init>` again until all of them have arrived; after that it takes no further part: each participant detects a gap in its own picture and asks for the reply itself, and aborts if it stays unanswered (see [Timeouts and abort](#timeouts-and-abort)). An initiator that also wants to negotiate is a participant like the others, with its own participant instance.
 
 ---
 
@@ -75,7 +75,7 @@ START
       every participant answers with one init reply (its anchors and its seed candidate)
       all init replies received (relayed, in relay mode)
       └─ each participant scores all seeds independently (no explicit request)
-           all score replies received (relayed, in relay mode)
+           all scores received (relayed, in relay mode)
            each participant evaluates
            ├─ floor(x*) ≥ τ, no absent scores  →  RUN COMPLETE (SUCCESS)
            ├─ t ≥ B                              →  RUN COMPLETE (BEST_EFFORT)
@@ -95,15 +95,15 @@ At any point where a participant waits for a message it is owed, the run can als
 | REPAIR | Each participant's own picture shows floor(x\*) < τ and t < B; the bottleneck self-identifies and proposes without an explicit request |
 | COMPLETE | Each participant independently computes the outcome once its own picture holds every rating; no message is sent |
 
-The initiator opens the run with `<concord-init>`, and sends it again, unchanged, only to trigger init replies that are missing. All other communication is replies: relayed inside `<concord-delivery>` wrappers (relay mode) or read directly from the channel (broadcast mode). There is no explicit score request and no explicit repair request: each participant determines its own obligations from the replies it has received.
+The initiator opens the run with `<concord-init>`, and sends it again, unchanged, only to trigger init replies that are missing. After that, the only communication is the participants' own messages (`<concord-init-reply>`, `<concord-score>` and `<concord-repair>`), relayed inside `<concord-delivery>` wrappers (relay mode) or read directly from the channel (broadcast mode). Nothing requests a score or a repair: each participant determines its own obligations from the messages it has received.
 
 ### Relay and broadcast mode
 
 A participant learns the mode from `<params>` in `<concord-init>`: `timeout` and `retries` present means broadcast mode, absent means relay mode.
 
-**Relay mode (default):** The initiator delivers other agents' replies via numbered `<concord-delivery>` wrappers and tracks acknowledgements to detect lost messages. The initiator sends `<concord-init>` to each participant as delivery 1, preceded by `<concord-delivery seq="1" state="RUNID" />` (no `check` on that header, since init carries its own), so replies to it carry `ack="1"`. The initiator's timer (see [Timeouts and abort](#timeouts-and-abort)) covers a reply that never arrives; participants run no timers.
+**Relay mode (default):** The initiator delivers other agents' messages via numbered `<concord-delivery>` wrappers and tracks acknowledgements to detect lost messages. The initiator sends `<concord-init>` to each participant as delivery 1, preceded by `<concord-delivery seq="1" state="RUNID" />` (that header carries no `check`, since `<concord-init>` carries its own), so the init replies carry `ack="1"`. The initiator's timer (see [Timeouts and abort](#timeouts-and-abort)) covers a reply that never arrives; participants run no timers.
 
-**Broadcast mode:** Use only when agents already share a broadcast channel and see each other's replies directly. The initiator sends `<concord-init>` and listens for the init replies. If some are still missing after `timeout` seconds it sends `<concord-init>` again, unchanged, up to `retries` times. There are no delivery wrappers and no acknowledgements, and once every init reply has arrived the initiator takes no further part in the run. Each participant that finds a reply missing or damaged sends `<concord-error>` to the agent that must send it again. A participant whose requests stay unanswered aborts the run (see [Timeouts and abort](#timeouts-and-abort)).
+**Broadcast mode:** Use only when agents already share a broadcast channel and see each other's messages directly. The initiator sends `<concord-init>` and listens for the init replies. If some are still missing after `timeout` seconds it sends `<concord-init>` again, unchanged, up to `retries` times. There are no delivery wrappers and no acknowledgements, and once every init reply has arrived the initiator takes no further part in the run. Each participant that finds a reply missing or damaged sends `<concord-error>` to the agent that must send it again. A participant whose requests stay unanswered aborts the run (see [Timeouts and abort](#timeouts-and-abort)).
 
 ### Messages owed
 
@@ -123,7 +123,7 @@ An agent is never owed its own messages. In relay mode the initiator is the agen
 
 ### Attributes of participant messages
 
-In relay mode a participant sends its replies to the initiator, who relays them. In broadcast mode it posts them to the channel, where every other participant reads them directly.
+In relay mode a participant sends its messages to the initiator, who relays them. In broadcast mode it posts them to the channel, where every other participant reads them directly.
 
 Every content message a participant sends (`<concord-init-reply>`, `<concord-repair>`, `<concord-score>`) carries these attributes on the root element. The control messages (`<concord-ack>`, `<concord-error>`) have their own, described below:
 
@@ -131,7 +131,7 @@ Every content message a participant sends (`<concord-init-reply>`, `<concord-rep
 |---|---|---|
 | `agent` | always | Sender's own id |
 | `state` | always | Run id (from `<state_id>` in `<concord-init>`) |
-| `ack` | relay mode only | The highest delivery number such that every delivery from 1 up to it has been received. A delivery that is missing therefore holds the number back. `<concord-init>` is delivery 1, so a reply to it carries `ack="1"` |
+| `ack` | relay mode only | The highest delivery number such that every delivery from 1 up to it has been received. A delivery that is missing therefore holds the number back. `<concord-init>` is delivery 1, so an init reply carries `ack="1"` |
 | `check` | always | Integrity fingerprint of the document (see below) |
 
 An agent ignores any message whose run id (`state`, or `<state_id>` in `<concord-init>`) is not that of its own run, so several runs can share a channel.
@@ -146,7 +146,7 @@ The check detects accidental change, such as text shortened or reworded while an
 |---|---|
 | The text handed to an agent's own protocol implementation is wrong | The implementation records nothing and asks for the whole text again; no message is sent |
 | The document arrived damaged (relay mode) | The participant sends `<concord-error reason="check">` to the initiator, who re-sends the delivery |
-| The document arrived damaged (broadcast mode) | The participant sends `<concord-error reason="check">` to the author, who sends the reply again |
+| The document arrived damaged (broadcast mode) | The participant sends `<concord-error reason="check">` to the author, who sends the message again |
 
 ### Invalid messages
 
@@ -278,7 +278,7 @@ Every participant rates every candidate in the pool, its own included, on the sa
 
 ### `<concord-delivery>` — Initiator → one participant (relay mode)
 
-A self-closing header element that precedes the relay payload. The relayed reply documents follow as peer XML elements in the same message, not nested inside the delivery element. Everything the initiator sends a participant in relay mode is a delivery: `<concord-init>`, relayed replies, and a `<concord-error>` for an invalid message, which follows the header like any other payload, so it has a `seq` and is acknowledged.
+A self-closing header element that precedes the relay payload. The relayed messages follow as peer XML elements in the same message, not nested inside the delivery element. Everything the initiator sends a participant in relay mode is a delivery: `<concord-init>`, relayed messages, and a `<concord-error>` for an invalid message, which follows the header like any other payload, so it has a `seq` and is acknowledged.
 
 ```xml
 <concord-delivery seq="3" state="RUNID" check="a1b2c3d4" />
@@ -306,15 +306,15 @@ A self-closing header element that precedes the relay payload. The relayed reply
 |---|---|---|
 | `seq` | always | Monotonically increasing per recipient. `<concord-init>` is delivery 1, so the first relayed delivery is `seq="2"` |
 | `state` | always | Run id |
-| `check` | when payload is non-empty | 8-hex SHA-256 fingerprint of the enclosed reply documents as a whole; the participant compares it to detect relay corruption, including a message left out of the delivery (each message in it also carries its own `check`) |
-| `full="1"` | nudge only | Re-sends all replies recorded so far, not just new ones |
+| `check` | when the payload holds relayed messages | 8-hex SHA-256 fingerprint of the enclosed messages as a whole; the participant compares it to detect relay corruption, including a message left out of the delivery (each message in it also carries its own `check`). A delivery that carries `<concord-init>` or only a `<concord-error>` has none |
+| `full="1"` | nudge only | Re-sends all messages recorded so far, not just new ones |
 | `awaiting="A,B"` | nudge only | Comma-separated agents still awaited |
 
 ---
 
 ### `<concord-ack>` — Participant → Initiator (relay mode)
 
-Sent by a participant when a delivery requires no substantive reply. The initiator uses acks to confirm delivery and distinguish "nothing to say" from "message lost".
+Sent by a participant when a delivery requires no substantive message. The initiator uses acks to confirm delivery and distinguish "nothing to say" from "message lost".
 
 ```xml
 <concord-ack agent="cost" state="RUNID" seq="3"></concord-ack>
@@ -326,7 +326,7 @@ Sent by a participant when a delivery requires no substantive reply. The initiat
 
 ### `<concord-error>` — Participant (or the initiator, for an invalid message in relay mode) → one agent
 
-Reports a problem with a reply or a delivery and asks for it to be sent again: it never arrived, it arrived damaged, or it is invalid. The same message is used in both modes. Only the addressee differs: in relay mode a participant talks only to the initiator, and in broadcast mode it reads the author's reply directly.
+Reports a problem with a message or a delivery and asks for it to be sent again: it never arrived, it arrived damaged, or it is invalid. The same message is used in both modes. Only the addressee differs: in relay mode a participant talks only to the initiator, and in broadcast mode it reads the author's message directly.
 
 ```xml
 <concord-error state="RUNID" from="cost" to="security" what="score" candidate="seed-cost" reason="missing">
@@ -334,7 +334,7 @@ Reports a problem with a reply or a delivery and asks for it to be sent again: i
 </concord-error>
 
 <concord-error state="RUNID" from="cost" to="initiator" what="delivery" seq="3" reason="check">
-  delivery 3 could not be copied intact (its replies do not match its check): send it again
+  delivery 3 could not be copied intact (its messages do not match its check): send it again
 </concord-error>
 ```
 
@@ -342,7 +342,7 @@ Reports a problem with a reply or a delivery and asks for it to be sent again: i
 |---|---|
 | `state` | Run id |
 | `from` | The sender's agent id, or `initiator` |
-| `to` | The agent that must send again: the author of the reply, or `initiator` when `<concord-init>` or a delivery is wanted |
+| `to` | The agent that must send again: the author of the message, or `initiator` when `<concord-init>` or a delivery is wanted |
 | `what` | `init`, `score`, `repair` or `delivery`: what is wanted. `init` is `<concord-init>` when `to` is `initiator`, and the addressed participant's `<concord-init-reply>` otherwise |
 | `candidate` | Required when `what` is `score` or `repair`: the id of the candidate whose score, or whose repair proposal, is missing, for example `r1-security`. Omitted for `init` and `delivery` |
 | `seq` | With `what="delivery"`: the delivery number wanted |
@@ -350,7 +350,7 @@ Reports a problem with a reply or a delivery and asks for it to be sent again: i
 
 The text inside is optional and for readers only; for `reason="invalid"` it states why the message was refused. The participant's protocol implementation produces this message; it is not written by hand.
 
-The addressed agent sends the stored document again, word for word, with the same `check`. In relay mode that is the initiator re-sending the delivery unchanged; in broadcast mode it is the author re-sending its reply. Every other agent ignores the message. Sending a document twice is harmless: a repeated rating or candidate is ignored by the decision engine.
+The addressed agent sends the stored document again, word for word, with the same `check`. In relay mode that is the initiator re-sending the delivery unchanged; in broadcast mode it is the author re-sending its message. Every other agent ignores the message. Sending a document twice is harmless: a repeated rating or candidate is ignored by the decision engine.
 
 An agent sends each message once and keeps it. It may re-send only that stored original, and never writes a new version of a message it has already sent, except one that was refused as invalid and so was never recorded. A receiver that has recorded a message ignores a different one from the same author for the same item (an init reply; a score for the same candidate; a repair with the same id): the first one recorded stands.
 
@@ -358,7 +358,7 @@ A re-sent document answers an error when it is the message the error names: the 
 
 In relay mode a participant sends it to the initiator when a delivery fails its check or the delivery numbers show a gap. The initiator sends it to a participant only when a message is invalid.
 
-In broadcast mode the participant detects the problem itself and sends the message. It sends `reason="missing"` when it has waited `timeout` seconds for a reply it knows is owed, or when its picture has a gap that a later message reveals (see [Lost messages](#lost-messages-broadcast-mode)). It sends `reason="check"` when a document fails its check and `reason="invalid"` when one is invalid. Each request counts against `retries`.
+In broadcast mode the participant detects the problem itself and sends the message. It sends `reason="missing"` when it has waited `timeout` seconds for a message it knows is owed, or when its picture has a gap that a later message reveals (see [Lost messages](#lost-messages-broadcast-mode)). It sends `reason="check"` when a document fails its check and `reason="invalid"` when one is invalid. Each request counts against `retries`.
 
 #### Lost messages (broadcast mode)
 
@@ -453,7 +453,7 @@ The report of a run is not a protocol message: nothing is sent. It contains:
 
 `timeout` and `retries` are set for the run, with defaults of 300 and 3. In broadcast mode they are sent to all agents in `<params>` in `<concord-init>`, so every waiting agent uses the same values. In relay mode only the initiator waits, so it uses them and does not send them. Each wait is counted on the waiting agent's own clock.
 
-**Relay mode.** The initiator's timer is enough: it is the only agent that waits for replies, and participants only react to the deliveries they receive. When the initiator is owed a reply that has not arrived after `timeout` seconds, it nudges the agents that owe one (the current delivery again) and restarts the timer. When the timer expires after `retries` nudges, the initiator aborts: the run ends with outcome `ABORTED` and the initiator reports it. Participants run no timers; they simply stop being sent anything. A participant that sees a damaged delivery or a gap in the delivery numbers sends `<concord-error>` to the initiator at once. That is not a timer.
+**Relay mode.** The initiator's timer is enough: it is the only agent that waits for messages, and participants only react to the deliveries they receive. When the initiator is owed a message that has not arrived after `timeout` seconds, it nudges the agents that owe one (the current delivery again) and restarts the timer. When the timer expires after `retries` nudges, the initiator aborts: the run ends with outcome `ABORTED` and the initiator reports it. Participants run no timers; they simply stop being sent anything. A participant that sees a damaged delivery or a gap in the delivery numbers sends `<concord-error>` to the initiator at once. That is not a timer.
 
 **Broadcast mode.** The initiator runs a timer for init replies only: when some are missing after `timeout` seconds it sends `<concord-init>` again, and when the timer expires after `retries` re-sends it aborts and reports `ABORTED`. After that, every participant runs the timer, since nobody else waits for it. An agent that is owed a message and does not have it starts a timer of `timeout` seconds. When it expires the agent sends `<concord-error>` to the author and restarts the timer. When the timer expires after `retries` requests, the agent aborts: its run ends with outcome `ABORTED`. A message that arrives ends the wait. No message announces the abort: every other agent reaches the same conclusion with its own timer, or stops earlier because the run has ended.
 
@@ -467,10 +467,10 @@ An agent waits at most `(retries + 1) × timeout` seconds for one message. `ABOR
 2. **Threshold is fixed.** `satisfaction_threshold` never changes during a run.
 3. **Anchors are rated once.** An agent's anchors are the ones in its first init reply. A later, different init reply is ignored, since replacing anchors would invalidate every earlier comparison.
 4. **One proposer per round.** The bottleneck is determined algorithmically by each participant's own decision engine; the initiator does not choose and sends no repair request. A repair from any other agent for that round is ignored.
-5. **Messages are sent verbatim.** The initiator and the participants send message content exactly as produced — no preamble, rewording, or added reply template.
+5. **Messages are sent verbatim.** The initiator and the participants send message content exactly as produced — no preamble, rewording, or added template.
 6. **Run to complete.** Once a run has started it ends with one of the outcomes (`SUCCESS`, `BEST_EFFORT` or `ABORTED`); it never ends without one.
 7. **Announcing is not acting.** Stating that an action will be taken is not a substitute for taking it.
-8. **Termination is distributed.** Each participant computes the outcome independently from the same replies, relayed or read from the channel. The result is reported by the initiator in relay mode and by the participants in broadcast mode (the initiator also reports an abort caused by missing init replies).
+8. **Termination is distributed.** Each participant computes the outcome independently from the same messages, relayed or read from the channel. The result is reported by the initiator in relay mode and by the participants in broadcast mode (the initiator also reports an abort caused by missing init replies).
 9. **A damaged document is never used.** A document that fails its `check` is not recorded; it is asked for again.
 10. **Silence ends the run.** An agent never continues on a partial picture: if a message it is owed has not arrived after `retries` requests, it aborts.
 11. **One message per item.** An agent sends each message once and may re-send only the stored original. A different message from the same author for an item already recorded is ignored. The exception is a message refused as invalid, which its author may replace.
