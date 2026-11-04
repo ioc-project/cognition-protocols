@@ -170,19 +170,19 @@ sequenceDiagram
     S-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-candidate-reply])
     C-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-candidate-reply])
 
-    Note over I,C: Relay deliveries — participants self-trigger scoring
+    Note over I,C: Relay deliveries - participants self-trigger scoring
     I->>S: SendMessage(taskId=S-task, parts=[concord-delivery + C's candidate-reply])
     I->>C: SendMessage(taskId=C-task, parts=[concord-delivery + S's candidate-reply])
     S-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-score-reply])
     C-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-score-reply])
 
-    Note over I,C: Relay score replies — Security self-identifies as bottleneck and repairs
+    Note over I,C: Relay score replies - Security self-identifies as bottleneck and repairs
     I->>S: SendMessage(taskId=S-task, parts=[concord-delivery + C's score-reply])
     I->>C: SendMessage(taskId=C-task, parts=[concord-delivery + S's score-reply])
     S-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-candidate-reply + concord-score-reply])
     C-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-ack])
 
-    Note over I,C: Relay repair — others score; run completes from participants' own picture
+    Note over I,C: Relay repair - others score; run completes from participants own picture
     I->>S: SendMessage(taskId=S-task, parts=[concord-delivery + S's repair])
     I->>C: SendMessage(taskId=C-task, parts=[concord-delivery + S's repair])
     S-->>I: TaskStatusUpdate(state=INPUT_REQUIRED, message.parts=[concord-ack])
