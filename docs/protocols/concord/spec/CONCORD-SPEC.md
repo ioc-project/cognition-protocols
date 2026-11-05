@@ -93,7 +93,7 @@ At any point where an agent waits for a message it is owed, the run can also end
 | COMPLETE | Each participant independently computes the outcome once its own picture holds every rating, then sends its `<concord-result>` |
 | CONFIRM | Each agent has its own outcome and holds the `<concord-result>` of every participant; the run ends for it when they all match |
 
-The initiator opens the run with `<concord-init>`. After that the only communication is the participants' own messages (`<concord-init-reply>`, `<concord-score>`, `<concord-repair>` and `<concord-result>`) and the control messages `<concord-error>` and `<concord-resend>`. Nothing requests a score or a repair: each participant determines its own obligations from the messages it has received.
+The initiator opens the run with `<concord-init>`. After that the only communication is the participants' own messages (`<concord-init-reply>`, `<concord-score>`, `<concord-repair>` and `<concord-result>`) and the control messages `<concord-error>`, `<concord-resend>` and `<concord-cancel>`. Nothing requests a score or a repair: each participant determines its own obligations from the messages it has received.
 
 ### Messages owed
 
@@ -107,6 +107,26 @@ An agent is owed a message when its own picture shows that the state machine req
 | Once the agent has computed its own outcome | A result from every other participant |
 
 An agent is never owed its own messages. An initiator that is not a participant is owed the init replies and the results, and the other agents are not owed anything from it. 
+
+---
+
+### One run at a time
+
+An agent takes part in one run at a time. A run is active for an agent from the moment it accepts `<concord-init>` until the run ends for it, the final round included. Keeping the state of an ended run, and answering errors from it, does not count.
+
+When an agent listed in `<participants>` receives a `<concord-init>` for a run it does not know:
+
+| The agent is | It does |
+|---|---|
+| in no active run | Accepts the run and starts it |
+| in an active run | Sends `<concord-error what="init" reason="busy">` to the author of the init |
+| the initiator of a run that still waits for init replies | Compares the two run ids. If its own is lower, it sends `busy`. Otherwise it sends `<concord-cancel>` for its own run, naming the new one in `superseded_by`, and joins the new run |
+
+Run ids are compared as UUID text in lower case, and the lower one continues. This settles two inits sent at about the same time: each initiator sees the other's init, and only the one with the higher id gives way. An agent that is not listed in `<participants>` ignores the init. An init for a run the agent already knows is a re-send and is not a new init: the agent answers it as described under `<concord-init>`.
+
+A `busy` error does not end the wait of the initiator. It keeps its timer and re-sends `<concord-init>` as usual, so an agent that becomes free can still join, and the run ends `ABORTED` after `retries` if nobody does. An agent that refused a run as busy and is then released by a `<concord-cancel>` that names that run joins it at once.
+
+This keeps every agent in at most one run, and every run ends. It does not promise that a run completes: in a race both runs can abort, and the initiators start again with new ids.
 
 ---
 
@@ -125,7 +145,7 @@ Every message carries these attributes on its root element:
 
 ### Integrity check
 
-`<concord-init>`, `<concord-init-reply>`, `<concord-repair>`, `<concord-score>` and `<concord-result>` each carry a `check` attribute: the first 8 hex characters of the SHA-256 of the document exactly as sent, in its serialized and escaped form and not a parsed one, with all whitespace removed and the `check` attribute itself left out. The agent that authors the document computes it; every agent that reads the document verifies it. A document that fails its check is not recorded. The control messages (`<concord-error>`, `<concord-resend>`) carry none: a `<concord-resend>` carries a stored original whose own `check` protects it.
+`<concord-init>`, `<concord-init-reply>`, `<concord-repair>`, `<concord-score>` and `<concord-result>` each carry a `check` attribute: the first 8 hex characters of the SHA-256 of the document exactly as sent, in its serialized and escaped form and not a parsed one, with all whitespace removed and the `check` attribute itself left out. The agent that authors the document computes it; every agent that reads the document verifies it. A document that fails its check is not recorded. The control messages (`<concord-error>`, `<concord-resend>`, `<concord-cancel>`) carry none: a `<concord-resend>` carries a stored original whose own `check` protects it.
 
 The check detects accidental change, such as text shortened or reworded while an agent copies it. It is not a signature: it uses no secret. Agent ids are self-declared. The protocol assumes cooperative agents and does not defend against an agent that lies about who it is.
 
@@ -287,7 +307,7 @@ The run ends for an agent when it holds the result of every participant. If a re
 
 ### `<concord-error>`
 
-Reports a problem with a message and asks for it to be sent again: it never arrived, it arrived damaged, or it is invalid. It is also used to tell an agent that its result differs from another's, which no re-send answers. A missing, damaged or invalid result is asked for like any other message. Any agent that finds the problem sends it, the initiator included.
+Reports a problem with a message and asks for it to be sent again: it never arrived, it arrived damaged, or it is invalid. It is also how an agent refuses a `<concord-init>` because it is busy (see [One run at a time](#one-run-at-a-time)), and how it tells an agent that its result differs from another's, which no re-send answers. A missing, damaged or invalid result is asked for like any other message. Any agent that finds the problem sends it, the initiator included.
 
 ```xml
 <concord-error run_id="RUNID" from="cost" to="security" uuid="3a8c1f5d-7e24-4b90-a6d2-c1e0f9b84a73" what="score" candidate="seed-cost" reason="missing">
@@ -298,9 +318,9 @@ Reports a problem with a message and asks for it to be sent again: it never arri
 | Attribute | Meaning |
 |---|---|
 | `to` | The author of the message that is wanted |
-| `what` | `init-reply`, `score`, `repair` or `result`: what is wanted. `result` is the final round; with `reason="mismatch"` no re-send answers it |
-| `candidate` | Required when `what` is `score` or `repair`: the id of the candidate whose score, or whose repair proposal, is missing, for example `r1-security`. Omitted for `init-reply` and `result` |
-| `reason` | `missing` (never arrived), `check` (arrived, failed its check), `invalid` (arrived intact but breaks a rule, such as the schema; the text says why) or `mismatch` (a result differs from the sender's) |
+| `what` | `init-reply`, `score`, `repair` or `result`: what is wanted. `init` goes only with `reason="busy"`: the refused message is the init itself. `result` is the final round; with `reason="mismatch"` no re-send answers it |
+| `candidate` | Required when `what` is `score` or `repair`: the id of the candidate whose score, or whose repair proposal, is missing, for example `r1-security`. Omitted for `init`, `init-reply` and `result` |
+| `reason` | `missing` (never arrived), `check` (arrived, failed its check), `invalid` (arrived intact but breaks a rule, such as the schema; the text says why) `mismatch` (a result differs from the sender's) or `busy` (the sender is in another run and refuses this init) |
 
 Besides the attributes above, an error carries the common attributes; its `uuid` is what the re-send names in `reply_to`. The text inside is optional and for readers only; for `reason="invalid"` it states why the message was refused. A protocol implementation produces this message; it is not written by hand.
 
@@ -352,6 +372,22 @@ Sent by the author of a stored message to carry it again, word for word. It answ
 | `reply_to` | when it answers an error | The `uuid` of that error |
 
 Besides `reply_to`, the wrapper carries the common attributes, with its own `uuid`, new for every re-send. The message inside is the stored original, untouched: it keeps its own `uuid` and `check`. A receiver unwraps it, verifies its `check`, and records it if it holds no message for that item; otherwise it ignores it. An agent that relays treats the wrapper like any other transmission, by its own `uuid`.
+
+---
+
+### `<concord-cancel>`
+
+Sent by the initiator to end its own run before it has started: another run for the same participants has a lower run id (see [One run at a time](#one-run-at-a-time)).
+
+```xml
+<concord-cancel from="alice" run_id="RUNID" uuid="8f3a1c52-6d07-4e9b-b4a8-2c5d7e0f1a36" superseded_by="OTHER-RUNID"/>
+```
+
+| Attribute | Presence | Meaning |
+|---|---|---|
+| `superseded_by` | always | The run id of the run that continues |
+
+A participant that receives it ends the run as `ABORTED`, with the reason "cancelled", and sends no result: a cancelled run is not confirmed. A `<concord-cancel>` from any agent other than the author of the run's `<concord-init>` is ignored. It carries no `check`. If it is lost, the participants end the run on their timers, since the initiator sends nothing more.
 
 ---
 
@@ -470,3 +506,4 @@ An agent ignores any message of a run it is not part of, and any message whose r
 10. **Silence ends the run.** An agent never continues on a partial picture: if a message it is owed has not arrived after `retries` requests, it aborts.
 11. **One message per item.** An agent sends each message once and may re-send only the stored original, and only its author does. A different message from the same author for an item already recorded is ignored. The exception is a message refused as invalid, which its author may replace.
 12. **One uuid per transmission.** Every send, a re-send included, has a new `uuid`, and an agent relays a `uuid` at most once.
+13. **One run at a time.** An agent is in at most one active run. It refuses a second init as busy, and of two runs started together the one with the lower run id continues.
