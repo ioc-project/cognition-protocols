@@ -50,10 +50,9 @@ jobs:
         run: agentskills validate "${{ matrix.skill }}"
 
 
-  # The CONCORD decision engine has one source (protocols/concord/shared/concord_core.py) that
-  # protocols/concord/tools/sync_core.py copies into the initiator and receiver scripts, which must stay
-  # self-contained. Fail if either copy drifts.
-  check-shared-core:
+  # A script that bundles library modules (tools/bundle.toml) must carry exactly what the library holds, so it
+  # stays self-contained. Fail if a copy drifts.
+  check-sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,5 +61,5 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Check the embedded decision engine
-        run: python3 protocols/concord/tools/sync_core.py --check
+      - name: Check the bundled library code
+        run: python3 tools/bundle.py --check

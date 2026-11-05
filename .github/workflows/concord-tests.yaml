@@ -4,8 +4,9 @@ on:
   pull_request:
     paths:
       - "protocols/concord/skills/**"
-      - "protocols/concord/shared/**"
       - "protocols/concord/tests/**"
+      - "packages/ioc-concord/**"
+      - "tools/**"
       - ".github/workflows/concord-tests.yaml"
   push:
     branches:
@@ -27,8 +28,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install pytest
-        run: pip install pytest
+      - name: Install pytest and the library
+        run: pip install pytest ./packages/ioc-concord
 
-      - name: Replay the scripted runs
+      - name: Bundler
+        run: python -m pytest tools -q
+
+      - name: Library, as imported and as bundled in each script
+        run: python -m pytest packages/ioc-concord/tests -q
+
+      - name: Scripts
         run: python -m pytest protocols/concord/tests -q

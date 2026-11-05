@@ -25,7 +25,7 @@ out|   <participants>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -51,7 +51,7 @@ out|   "messages": {
 out|     "a": "<concord-anchor>\n  <satisfaction_threshold>0.6</satisfaction_threshold>\n  <x_reject>nothing is ⏎
 out| decided</x_reject>\n  <x_ideal>a decision everyone accepts</x_ideal>\n  <state_id>423da7dd</state_id>\n  ⏎
 out| <participants>\n    <agent>a</agent>\n    <agent>b</agent>\n  </participants>\n  ⏎
-out| <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>\n  ⏎
+out| <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>\n  ⏎
 out| <addressed_to>\n    <agent>a</agent>\n    <agent>b</agent>\n  </addressed_to>\n  <instructions>Rate the two ⏎
 out| outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject is how satisfied your role ⏎
 out| would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role would be if x_ideal ⏎
@@ -61,7 +61,7 @@ out| concord_receiver.py handle and do what it says; never write the reply yours
 out|     "b": "<concord-anchor>\n  <satisfaction_threshold>0.6</satisfaction_threshold>\n  <x_reject>nothing is ⏎
 out| decided</x_reject>\n  <x_ideal>a decision everyone accepts</x_ideal>\n  <state_id>423da7dd</state_id>\n  ⏎
 out| <participants>\n    <agent>a</agent>\n    <agent>b</agent>\n  </participants>\n  ⏎
-out| <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>\n  ⏎
+out| <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>\n  ⏎
 out| <addressed_to>\n    <agent>a</agent>\n    <agent>b</agent>\n  </addressed_to>\n  <instructions>Rate the two ⏎
 out| outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject is how satisfied your role ⏎
 out| would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role would be if x_ideal ⏎

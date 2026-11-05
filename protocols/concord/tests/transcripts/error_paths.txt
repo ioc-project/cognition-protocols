@@ -112,7 +112,7 @@ out|   <participants>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -147,7 +147,7 @@ out|   <participants>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -189,7 +189,7 @@ out|   <participants>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
@@ -221,7 +221,6 @@ out| rating or a reply, not even to speed things up): each agent works out what 
 out| recorded 0; phase Anchor; awaiting: a, b; not yet acknowledged: a, b. Nothing new to send: wait for the replies ⏎
 out| still awaited.
 out| 
-err| error: zzz is not in the negotiating set
 err| NOT RECORDED: from zzz: zzz is not in the negotiating set
 err| NEXT: Do not fix or rewrite a reply yourself. A reply that was not recorded is as if it had not arrived: the ⏎
 err| agent has to answer again. Send it the message it was asked again, exactly as printed (`handle` with no input ⏎
@@ -240,7 +239,6 @@ out| rating or a reply, not even to speed things up): each agent works out what 
 out| recorded 0; phase Anchor; awaiting: a, b; not yet acknowledged: a, b. Nothing new to send: wait for the replies ⏎
 out| still awaited.
 out| 
-err| error: raw_ideal (10.0) must exceed raw_reject (90.0); a's scale is inverted
 err| NOT RECORDED: from a: raw_ideal (10.0) must exceed raw_reject (90.0); a's scale is inverted
 err| NEXT: Do not fix or rewrite a reply yourself. A reply that was not recorded is as if it had not arrived: the ⏎
 err| agent has to answer again. Send it the message it was asked again, exactly as printed (`handle` with no input ⏎
@@ -268,7 +266,7 @@ out|   <participants>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
 out|   </participants>
-out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
 out|   <addressed_to>
 out|     <agent>a</agent>
 out|     <agent>b</agent>
