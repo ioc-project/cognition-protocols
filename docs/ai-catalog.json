@@ -70,6 +70,19 @@
       ],
       "url": "https://github.com/ioc-project/cognition-protocols/releases/download/concord-receiver-v0.2.0/concord-receiver.zip",
       "updatedAt": "2026-11-05T17:04:32Z"
+    },
+    {
+      "identifier": "urn:air:ioc-project:skill:concord-initiator",
+      "displayName": "concord-initiator",
+      "version": "0.2.0",
+      "type": "application/agent-skills+zip",
+      "description": "Use when you are participating in, coordinating or facilitating a task that needs a single outcome that satisfies multiple agents with different, conflicting criteria, or who each hold different information about the problem \u2014 a unilateral choice is not enough. Activate on confirmed conflict (agents returned divergent outputs), anticipated conflict (distinct roles on a shared decision make divergence likely), or when you cannot tell whether roles will diverge \u2014 uncertainty is itself the signal. Also activate when you would relay outputs from other agents to a downstream agent whose criteria bear on the decision: include that agent directly instead of forwarding a summary. Apparent agreement upstream is no reason to skip: a downstream recipient may still hold different criteria. Also activate when an upstream protocol (e.g. ACCORD) has handed you a pre-verified conflict frame. Do NOT activate when a single role owns the decision or agents work on separate sub-problems with no shared decision variable.",
+      "tags": [
+        "skill",
+        "claude-code"
+      ],
+      "url": "https://github.com/ioc-project/cognition-protocols/releases/download/concord-initiator-v0.2.0/concord-initiator.zip",
+      "updatedAt": "2026-11-05T17:04:33Z"
     }
   ]
 }
