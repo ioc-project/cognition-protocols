@@ -105,14 +105,15 @@ An agent is owed a message when its own picture shows that the state machine req
 | Once every init reply is in | A score from every participant, on every candidate in the pool |
 | Once the incumbent's weakest score is below τ and `t < B` | A repair from the bottleneck (it contains the bottleneck's own score), then a score on the new candidate from every other participant |
 | Once the agent has computed its own outcome | A result from every other participant |
+| Once the first result has arrived, for an initiator that is not a participant | A result from every other participant |
 
-An agent is never owed its own messages. An initiator that is not a participant is owed the init replies and the results, and the other agents are not owed anything from it. 
+An agent is never owed its own messages. An initiator that is not a participant is owed the init replies and the results, and the other agents are not owed anything from it. It computes no outcome of its own, so its wait for results starts when the first result arrives, not before: the negotiation can take longer than one timeout.
 
 ---
 
 ### One run at a time
 
-An agent takes part in one run at a time. A run is active for an agent from the moment it accepts `<concord-init>` until the run ends for it, the final round included. Keeping the state of an ended run, and answering errors from it, does not count.
+An agent takes part in one run at a time. A run is active for an agent from the moment it accepts `<concord-init>` until it has reached its outcome (`SUCCESS`, `BEST_EFFORT` or `ABORTED`) and holds the result of every participant, the final round included. An aborted or cancelled run ends at once. Keeping the state of an ended run, and answering errors from it, does not count.
 
 When an agent listed in `<participants>` receives a `<concord-init>` for a run it does not know:
 
@@ -122,9 +123,9 @@ When an agent listed in `<participants>` receives a `<concord-init>` for a run i
 | in an active run | Sends `<concord-error what="init" reason="busy">` to the author of the init |
 | the initiator of a run that still waits for init replies | Compares the two run ids. If its own is lower, it sends `busy`. Otherwise it sends `<concord-cancel>` for its own run, naming the new one in `superseded_by`, and joins the new run |
 
-Run ids are compared as UUID text in lower case, and the lower one continues. This settles two inits sent at about the same time: each initiator sees the other's init, and only the one with the higher id gives way. An agent that is not listed in `<participants>` ignores the init. An init for a run the agent already knows is a re-send and is not a new init: the agent answers it as described under `<concord-init>`.
+Run ids are compared as UUID text in lower case, and the lower one continues. This settles two inits sent at about the same time: each initiator sees the other's init, and only the one with the higher id gives way. An agent that is not listed in `<participants>` ignores the init. A `<concord-init>` for a run the agent already knows is ignored. The initiator's re-send of init arrives inside a `<concord-resend>` and is answered as described under `<concord-init>`; for a run the agent does not know, the init inside it is treated like any other init.
 
-A `busy` error does not end the wait of the initiator. It keeps its timer and re-sends `<concord-init>` as usual, so an agent that becomes free can still join, and the run ends `ABORTED` after `retries` if nobody does. An agent that refused a run as busy and is then released by a `<concord-cancel>` that names that run joins it at once.
+A `busy` error does not end the wait of the initiator. It keeps its timer and re-sends `<concord-init>` as usual, so an agent that becomes free can still join, and the run ends `ABORTED` after `retries` if nobody does.
 
 This keeps every agent in at most one run, and every run ends. It does not promise that a run completes: in a race both runs can abort, and the initiators start again with new ids.
 
@@ -320,11 +321,11 @@ Reports a problem with a message and asks for it to be sent again: it never arri
 | `to` | The author of the message that is wanted |
 | `what` | `init-reply`, `score`, `repair` or `result`: what is wanted. `init` goes only with `reason="busy"`: the refused message is the init itself. `result` is the final round; with `reason="mismatch"` no re-send answers it |
 | `candidate` | Required when `what` is `score` or `repair`: the id of the candidate whose score, or whose repair proposal, is missing, for example `r1-security`. Omitted for `init`, `init-reply` and `result` |
-| `reason` | `missing` (never arrived), `check` (arrived, failed its check), `invalid` (arrived intact but breaks a rule, such as the schema; the text says why) `mismatch` (a result differs from the sender's) or `busy` (the sender is in another run and refuses this init) |
+| `reason` | `missing` (never arrived), `check` (arrived, failed its check), `invalid` (arrived intact but breaks a rule, such as the schema; the text says why), `mismatch` (a result differs from the sender's) or `busy` (the sender is in another run and refuses this init) |
 
 Besides the attributes above, an error carries the common attributes; its `uuid` is what the re-send names in `reply_to`. The text inside is optional and for readers only; for `reason="invalid"` it states why the message was refused. A protocol implementation produces this message; it is not written by hand.
 
-Only the author answers an error, and every other agent ignores it. The author sends the stored original, word for word, wrapped in a `<concord-resend>` whose `reply_to` is the `uuid` of the error. Sending a message twice is harmless: a repeated rating or candidate is ignored by the decision engine.
+Only the author answers an error, and every other agent ignores it. The author sends the stored original, word for word, wrapped in a `<concord-resend>` whose `reply_to` is the `uuid` of the error. The exceptions are `reason="mismatch"` and `reason="busy"`, which nobody answers: they only inform the author. Sending a message twice is harmless: a repeated rating or candidate is ignored by the decision engine.
 
 An agent sends each message once and keeps it. It may re-send only that stored original, and never writes a new version of a message it has already sent, except one that was refused as invalid and so was never recorded. A receiver that has recorded a message ignores a different one from the same author for the same item (an init reply; a score for the same candidate; a repair with the same id): the first one recorded stands.
 
@@ -377,7 +378,7 @@ Besides `reply_to`, the wrapper carries the common attributes, with its own `uui
 
 ### `<concord-cancel>`
 
-Sent by the initiator to end its own run before it has started: another run for the same participants has a lower run id (see [One run at a time](#one-run-at-a-time)).
+Sent by the initiator to end its own run while it still waits for init replies: another run for the same participants has a lower run id (see [One run at a time](#one-run-at-a-time)).
 
 ```xml
 <concord-cancel from="alice" run_id="RUNID" uuid="8f3a1c52-6d07-4e9b-b4a8-2c5d7e0f1a36" superseded_by="OTHER-RUNID"/>
@@ -387,7 +388,7 @@ Sent by the initiator to end its own run before it has started: another run for 
 |---|---|---|
 | `superseded_by` | always | The run id of the run that continues |
 
-A participant that receives it ends the run as `ABORTED`, with the reason "cancelled", and sends no result: a cancelled run is not confirmed. A `<concord-cancel>` from any agent other than the author of the run's `<concord-init>` is ignored. It carries no `check`. If it is lost, the participants end the run on their timers, since the initiator sends nothing more.
+A participant that receives it ends the run as `ABORTED`, at whatever stage the run is, with the reason "cancelled", and sends no result: a cancelled run is not confirmed. A cancel for a run the agent has no state for, for example one that arrives before the init, is ignored. A `<concord-cancel>` from any agent other than the author of the run's `<concord-init>` is ignored. It carries no `check`. If it is lost, the participants end the run on their timers, since the initiator sends nothing more.
 
 ---
 
@@ -415,18 +416,20 @@ else:
 
 Ties in floor score are broken by leximin comparison of the full score vector.
 
+The terms used throughout: `floor(x)` is the lowest normalized score any participant gave candidate `x`; `x*` is the incumbent, the candidate that SELECT picks from the pool at the moment (and, at the end of the run, the winner); `t` is the number of repair rounds so far, which counts every repair proposal, whether or not it replaced the incumbent.
+
 ### Incumbent Replacement (ACCEPT)
 
-A new candidate `x_new` replaces the incumbent `x_star` if:
+A new candidate `x_new` replaces the incumbent `x*` if:
 
 ```
-leximin(x_new) beats leximin(x_star) by >= eps at some position k,
+leximin(x_new) beats leximin(x*) by >= eps at some position k,
 without degrading any position before k
 ```
 
 ### Bottleneck Identification
 
-The participant with the lowest normalized score on `x_star` is the bottleneck. Ties are broken by the participant's position in `<participants>` in `<concord-init>`. The bottleneck self-identifies from its own picture of the run without an explicit request from the initiator.
+The participant with the lowest normalized score on `x*` is the bottleneck. Ties are broken by the participant's position in `<participants>` in `<concord-init>`. The bottleneck self-identifies from its own picture of the run without an explicit request from the initiator.
 
 ---
 
@@ -444,7 +447,7 @@ The participant with the lowest normalized score on `x_star` is the bottleneck. 
 | Outcome | Condition |
 |---|---|
 | `SUCCESS` | `floor(x*) >= τ` AND every participant has rated `x*` |
-| `BEST_EFFORT` | `t >= B` (budget exhausted) |
+| `BEST_EFFORT` | `floor(x*) < τ` AND `t >= B` (budget exhausted) |
 | `ABORTED` | An agent still lacks a message it is owed, a result included, after `retries` requests, each after a `timeout` (see below) |
 
 Each participant computes its outcome independently from its own picture, sends it in its `<concord-result>`, and then collects the results of the others. A reader that is not a participant learns how the run ended from those messages. A run is confirmed when every agent holds the same outcome and winner from every participant; a difference is reported, not resolved.
@@ -467,12 +470,12 @@ The report of a run is not a message: nothing is sent. It is complete once the f
 
 Every time an agent is owed a message (see [Messages owed](#messages-owed)) it starts a timer of `timeout` seconds, counted on its own clock. A message that arrives ends the wait.
 
-- **Any agent.** When the timer expires, the agent sends `<concord-error reason="missing">` to the author and restarts the timer. When it expires after `retries` requests, the agent aborts: its run ends with outcome `ABORTED`, and a participant sends its `<concord-result>` (with outcome `ABORTED`, so that the others see it).
+- **Any agent.** When the timer expires, the agent sends `<concord-error reason="missing">` to the author and restarts the timer. When it expires after `retries` requests, the agent aborts: its run ends with outcome `ABORTED`, and a participant sends its `<concord-result>` (with outcome `ABORTED`, so that the others see it). An agent that aborts does not wait for the results of the others: its run has ended.
 - **The initiator, for init replies.** An agent that never received `<concord-init>` does not know the run and cannot answer an error. So when the timer for an init reply expires, the initiator sends `<concord-init>` again, inside a `<concord-resend>`, instead of an error, and restarts the timer. When it expires after `retries` re-sends, the initiator aborts and reports `ABORTED`. For every other message the initiator follows the rule above, like any other agent.
 
 An agent waits at most `(retries + 1) × timeout` seconds for one message. `timeout` must be longer than the slowest turn of any agent. Relaying adds only network delay, which is much shorter.
 
-`ABORTED` is an error, not a result: no candidate is certified. The report (see Result) names the agent and the message that was missing, and has no winner. No message announces the abort: every other agent reaches the same conclusion with its own timer, or stops earlier because the run has ended. A data message that arrives after an abort is ignored, but the agent still answers errors for its own messages from its stored state.
+`ABORTED` certifies no candidate. The report (see Result) names the agent and the message that was missing, and has no winner. An aborting participant announces it with its `<concord-result>`, and the other agents also reach the same conclusion with their own timers, or stop earlier because the run has ended. A data message that arrives after an abort is ignored, but the agent still answers errors for its own messages from its stored state.
 
 A timer is a running process: an implementation must keep one running while the agent waits.
 
@@ -486,9 +489,9 @@ Every message and every `<concord-resend>` carries a `uuid` attribute: a UUID th
 
 An agent that is attached to more than one channel relays. When a transmission arrives on a channel, it sends it on every other channel it is attached to, unless it has already relayed that `uuid`. The protocol does not discover channels and no message describes them. An agent knows its channels from its configuration, the list of channels its deployment attaches it to, which exists before any run starts. This list is local: an agent knows only its own channels, not what is on the other side, who else is attached, or how many agents the run has. The rule needs no more than that. An agent attached to one channel, such as every member of a shared channel, has no other channel to relay to, so nothing is relayed. The centre of a star relays every message to all its spokes, and the middle agent of a line relays between its two sides.
 
-Relaying is mechanical. It looks only at the `uuid` and the `run_id` of the outermost element, never changes the message, and does not wait for the model: an agent that is slow or busy still relays at once, or the agents behind it would time out. An agent relays only the messages of a run it has state for, plus `<concord-init>` and a `<concord-resend>` that carries it, since the agents behind it learn the run only from that message. It keeps the `uuids` it has relayed for at least `(retries + 1) × timeout` seconds. A receiver that gets the same message twice ignores the second copy, so a copy that arrives by two paths is harmless.
+Relaying is mechanical. It looks only at the `uuid` and the `run_id` of the outermost element, never changes the message, and does not wait for the model: an agent that is slow or busy still relays at once, or the agents behind it would time out. An agent relays only the messages of a run it has state for, plus `<concord-init>` and a `<concord-resend>` that carries it, since the agents behind it learn the run only from that message. A run that has ended still counts, since the agent keeps its state (see `<concord-error>`): it goes on relaying the messages of that run, so agents behind it can still finish. It keeps the `uuids` it has relayed for as long as it keeps the state of the run. A receiver that gets the same message twice ignores the second copy, so a copy that arrives by two paths is harmless.
 
-An agent ignores any message of a run it is not part of, and any message whose run id is not one it has state for. Several runs can therefore share a channel.
+An agent ignores any message of a run it is not part of, and any message whose run id is not one it has state for, except `<concord-init>` (see [One run at a time](#one-run-at-a-time)). Several runs can therefore share a channel. Within a run, an agent also ignores any message whose `from` is not listed in `<participants>`. The only agent outside that list that sends messages is the initiator, when it did not list itself: it sends the init and its re-send, errors and a cancel.
 
 ---
 
