@@ -5,13 +5,14 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'protocols/concord/spec/**'
       - 'mkdocs.yml'
-      - 'docs/hooks.py'
       - '.github/workflows/docs.yml'
   pull_request:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'protocols/concord/spec/**'
       - 'README.md'
       - 'mkdocs.yml'
       - 'lychee.toml'
@@ -48,6 +49,8 @@ jobs:
         run: uv sync --project docs/mkdocs --frozen
 
       - name: Build docs site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run --project docs/mkdocs --frozen mkdocs build --strict --site-dir _site
 
       - name: Check links

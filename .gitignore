@@ -2,8 +2,8 @@
 .venv/
 site/
 .build/
-# Generated from source — do not commit
-docs/protocols/concord/spec/CONCORD-SPEC.html
+# Generated at docs build time — do not commit
+docs/protocols/concord/spec/
 
 # Python cache
 __pycache__/
