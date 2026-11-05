@@ -253,8 +253,8 @@ name = "ioc-concord-mce-metrics"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "ioc-scope-mce-core" },
     { name = "openai" },
-    { name = "oxp-mce-core" },
     { name = "python-dotenv" },
 ]
 
@@ -265,12 +265,47 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ioc-scope-mce-core", specifier = ">=2.0.0" },
     { name = "openai" },
-    { name = "oxp-mce-core", git = "ssh://git@github.com/outshift-open/observe-and-explain-platform.git?subdirectory=backend%2Fmce%2Fmce-core&branch=main" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "python-dotenv" },
 ]
 provides-extras = ["dev"]
+
+[[package]]
+name = "ioc-scope-mce-core"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "ioc-scope-ontology" },
+    { name = "networkx" },
+    { name = "packaging" },
+    { name = "pandas" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+    { name = "rdflib" },
+    { name = "requests" },
+    { name = "typer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7c/c8/db3e9656b8cae4a7ab50822e7904bbd953c658bcc8d0a1793d67ebd04f9e/ioc_scope_mce_core-2.0.0.tar.gz", hash = "sha256:e2eb30772feeed0cdc32f3ec97d45b05db6ae07c44ff8910dbc7c5ef4033e4d8", size = 89937, upload-time = "2026-11-05T19:55:14.297Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5c/de/e8a65a6dd265daadcbdb8cf5ffa149b3186cf50a4fd8a32962a1354d4784/ioc_scope_mce_core-2.0.0-py3-none-any.whl", hash = "sha256:5fcf53255d3f914b0a3e09b2943c218e444e05dce9e09c642edfecc8d53f6903", size = 120241, upload-time = "2026-11-05T19:55:12.689Z" },
+]
+
+[[package]]
+name = "ioc-scope-ontology"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "rdflib" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ab/57/4a477c5c61be3475a52350539e6fe6df91e5cb03e94cda8e7b5ced375263/ioc_scope_ontology-1.1.0.tar.gz", hash = "sha256:bb4774200533b73d3dfe9b055e9417fc992dc1749ed95d94fea9a520a463c2cc", size = 39536, upload-time = "2026-11-05T17:51:47.312Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ba/a1/4260c9ec8a78acc3b08782e72f6fbb29e337d5a6164eb5921bb7b65a8d79/ioc_scope_ontology-1.1.0-py3-none-any.whl", hash = "sha256:60a4638d027904f62bde75689632709b793cfeafcade38d0972b3de66788c617", size = 69861, upload-time = "2026-11-05T17:51:45.957Z" },
+]
 
 [[package]]
 name = "jiter"
@@ -456,37 +491,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/87/4c/609b16f2a6e9a99f27a82ce93ff75868e7cb364fe6daff50cc0c1d620772/openai-3.35.1.tar.gz", hash = "sha256:b33e6561b90586e450def8a388e7d364755325da6884fc71348be5542e043bd0", size = 2250942, upload-time = "2026-10-18T01:06:38.964Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/22/7b/6d7e70f0762d1b286051bd7cb2fd0c364c1830d0f8826738673aeec05c2b/openai-3.35.1-py3-none-any.whl", hash = "sha256:264fd0fafc889021f526b7c1e5a2df5ca3e8dea874738ecd31da666434f25967", size = 2280230, upload-time = "2026-10-18T01:06:36.16Z" },
-]
-
-[[package]]
-name = "oxp-mce-core"
-version = "2.0.0rc1"
-source = { git = "ssh://git@github.com/outshift-open/observe-and-explain-platform.git?subdirectory=backend%2Fmce%2Fmce-core&branch=main#c853d1bf8a0c1ccecda0be3762cc6e4d424c6b34" }
-dependencies = [
-    { name = "click" },
-    { name = "networkx" },
-    { name = "oxp-ontology" },
-    { name = "packaging" },
-    { name = "pandas" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "python-dotenv" },
-    { name = "pyyaml" },
-    { name = "rdflib" },
-    { name = "requests" },
-    { name = "typer" },
-]
-
-[[package]]
-name = "oxp-ontology"
-version = "1.0.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "rdflib" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/90/2cf36dc4d2f49d4eef2a5721782b30f1747ec8047f68cb906f58a3bb591e/oxp_ontology-1.0.6.tar.gz", hash = "sha256:74ea6d4697101ba0e916c86dd9cb2e07c309743b3867bcec3cdc9a150f99ab52", size = 39381, upload-time = "2026-10-20T09:54:55.336Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1c/0e/ca844c2bc7f1786cd6e93aaf16a4fdcfba32284076e00cbee7f2ec04f170/oxp_ontology-1.0.6-py3-none-any.whl", hash = "sha256:8184d6243dcc987ffb751e936873638fbfb49964f953c9e5519979848630b9b9", size = 69327, upload-time = "2026-10-20T09:54:53.967Z" },
 ]
 
 [[package]]
