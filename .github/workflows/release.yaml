@@ -38,18 +38,25 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Upload concord-spec release assets
+      - name: Upload concord-spec release assets and update docs
         if: ${{ matrix.path == 'protocols/concord/spec' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="$(jq -r '."protocols/concord/spec"' .github/release-manifest.json)"
           tag="concord-spec-v${version}"
+          html_dest="docs/protocols/concord/spec/CONCORD-SPEC.html"
           python protocols/concord/spec/generate_respec.py \
             protocols/concord/spec/CONCORD-SPEC.md \
-            -o CONCORD-SPEC.html
+            -o "$html_dest"
           gh release upload "$tag" protocols/concord/spec/CONCORD-SPEC.md --clobber
-          gh release upload "$tag" CONCORD-SPEC.html --clobber
+          gh release upload "$tag" "$html_dest" --clobber
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$html_dest"
+          git diff --cached --quiet && exit 0
+          git commit -s -m "chore(concord): update rendered spec HTML for ${tag}"
+          git push
 
       - name: Zip skill and upload to its release
         if: ${{ matrix.path != 'protocols/concord/spec' }}
