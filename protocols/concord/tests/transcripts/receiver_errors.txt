@@ -1,0 +1,254 @@
+=== initiator init (exit 0)
+$ init --quiet --agents a,b --satisfaction-threshold 0.6 --schema {"enum":["X","Y","Z"]} --context Pick one option ⏎
+$ --x-reject nothing is decided --x-ideal a decision everyone accepts
+out| State: <TMP>/agents/concord-state-84fa518a.json
+out| NEXT: Run `concord_initiator.py --state <TMP>/agents/concord-state-84fa518a.json handle` with no input to get the ⏎
+out| first message to send. Use exactly this state path on every call of this run.
+out| 
+out| 
+
+=== initiator handle (exit 0)
+$ --state <TMP>/agents/concord-state-84fa518a.json handle
+out| STATUS: SEND
+out| NEXT: Send each block below to the agent or agents named on its `--- to:` line, exactly as printed and without ⏎
+out| that line. Never write or change a message or a reply yourself. Pass every reply you receive to `handle`, exactly ⏎
+out| as received (several replies in one call is fine). Do not stop before the script prints RUN COMPLETE. If sending ⏎
+out| to an agent fails (an error, or the message did not go out), try once more with the full block as the message; if ⏎
+out| it fails again, stop and report which agent could not be reached and quote the error: do not keep retrying.
+out| --- to: a, b
+out| <concord-delivery seq="1" state="84fa518a"></concord-delivery>
+out| 
+out| <concord-anchor>
+out|   <satisfaction_threshold>0.6</satisfaction_threshold>
+out|   <x_reject>nothing is decided</x_reject>
+out|   <x_ideal>a decision everyone accepts</x_ideal>
+out|   <state_id>84fa518a</state_id>
+out|   <participants>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </participants>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+out|   <addressed_to>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </addressed_to>
+out|   <instructions>Rate the two outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject ⏎
+out| is how satisfied your role would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role ⏎
+out| would be if x_ideal happened (it should be HIGH, above raw_reject). Rate the two outcomes, not the current state. ⏎
+out| Your answer to this message is only the reply the script tells you to send, with nothing before or after it. Pass ⏎
+out| this message to concord_receiver.py handle and do what it says; never write the reply yourself.</instructions>
+out| </concord-anchor>
+out| 
+
+=== receiver a due (exit 0)
+$ --me a due
+out| STATUS: NONE
+out| nothing is due from you; waiting for the lead's first message. Send no message.
+out| NEXT: Send nothing: never write an acknowledgement or any message yourself (when one is due, `handle` prints it ⏎
+out| as a SEND). Pass the next CONCORD message or reply you get to `handle`. When you are done, write nothing more: ⏎
+out| not even a confirmation of what you sent or decided. Your environment may pass anything you write to the other ⏎
+out| participants.
+out| 
+
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| plain words, no concord document
+out| STATUS: NONE
+out| nothing is due from you; waiting for the lead's first message. Send no message.
+out| NEXT: Send nothing: never write an acknowledgement or any message yourself (when one is due, `handle` prints it ⏎
+out| as a SEND). Pass the next CONCORD message or reply you get to `handle`. When you are done, write nothing more: ⏎
+out| not even a confirmation of what you sent or decided. Your environment may pass anything you write to the other ⏎
+out| participants.
+out| [note: no CONCORD message was found in what you passed: nothing was recorded]
+out| 
+
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| <concord-delivery seq="1" state="84fa518a"></concord-delivery>
+ in| 
+ in| <concord-anchor>
+ in|   <satisfaction_threshold>0.6</satisfaction_threshold>
+ in|   <x_reject>nothing is decided</x_reject>
+ in|   <x_ideal>a decision everyone accepts</x_ideal>
+ in|   <state_id>84fa518a</state_id>
+ in|   <participants>
+ in|     <agent>a</agent>
+ in|     <agent>b</agent>
+ in|   </participants>
+ in|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+ in|   <addressed_to>
+ in|     <agent>a</agent>
+ in|     <agent>b</agent>
+ in|   </addressed_to>
+ in|   <instructions>Rate the two outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject ⏎
+ in| is how satisfied your role would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role ⏎
+ in| would be if x_ideal happened (it should be HIGH, above raw_reject). Rate the two outcomes, not the current state. ⏎
+ in| Your answer to this message is only the reply the script tells you to send, with nothing before or after it. Pass ⏎
+ in| this message to concord_receiver.py handle and do what it says; never write the reply yourself.</instructions>
+ in| </concord-anchor>
+out| STATUS: ASK
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so.
+out| 
+out| TASK: anchor
+out| Rate two outcomes on your own raw 0-100 scale, as satisfaction of your role if each happened (not how true it is ⏎
+out| today: answering how true it is now inverts the scale and is refused). x_reject should get a LOW number, x_ideal ⏎
+out| a HIGH one strictly above it. These are satisfaction ratings, not metrics: no error rate or latency in these ⏎
+out| fields. The anchors are rated once and stay fixed for the whole run. Rate your raw scale, never a normalised 0-1 ⏎
+out| score.
+out| x_reject: nothing is decided
+out| x_ideal: a decision everyone accepts
+out| 
+out| Answer by running: python3 <this script> --me a --state-id 84fa518a answer --reject N --ideal N
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --reject 90 --ideal 10
+out| STATUS: ASK
+out| Your answer was not usable: error: raw_ideal (10) must be strictly greater than raw_reject (90). These are ⏎
+out| satisfaction ratings of the two outcomes (higher = better for your role), not measurements of the current state ⏎
+out| or metrics quoted in the anchors: re-rate the two outcomes, then answer again.. Answer again as the task shows ⏎
+out| below (what is due may differ from what you answered).
+out| 
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so.
+out| 
+out| TASK: anchor
+out| Rate two outcomes on your own raw 0-100 scale, as satisfaction of your role if each happened (not how true it is ⏎
+out| today: answering how true it is now inverts the scale and is refused). x_reject should get a LOW number, x_ideal ⏎
+out| a HIGH one strictly above it. These are satisfaction ratings, not metrics: no error rate or latency in these ⏎
+out| fields. The anchors are rated once and stay fixed for the whole run. Rate your raw scale, never a normalised 0-1 ⏎
+out| score.
+out| x_reject: nothing is decided
+out| x_ideal: a decision everyone accepts
+out| 
+out| Answer by running: python3 <this script> --me a --state-id 84fa518a answer --reject N --ideal N
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --reject x --ideal 10
+out| STATUS: ASK
+out| Your answer was not usable: anchor raw_reject must be a number. Nothing was recorded or sent. Fix these and ⏎
+out| answer again as the task shows below (what is due may differ from what you answered).
+out| 
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so.
+out| 
+out| TASK: anchor
+out| Rate two outcomes on your own raw 0-100 scale, as satisfaction of your role if each happened (not how true it is ⏎
+out| today: answering how true it is now inverts the scale and is refused). x_reject should get a LOW number, x_ideal ⏎
+out| a HIGH one strictly above it. These are satisfaction ratings, not metrics: no error rate or latency in these ⏎
+out| fields. The anchors are rated once and stay fixed for the whole run. Rate your raw scale, never a normalised 0-1 ⏎
+out| score.
+out| x_reject: nothing is decided
+out| x_ideal: a decision everyone accepts
+out| 
+out| Answer by running: python3 <this script> --me a --state-id 84fa518a answer --reject N --ideal N
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer
+out| STATUS: ASK
+out| You gave no answer. Run: python3 <this script> --me a --state-id 84fa518a answer --reject N --ideal N
+out| 
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so.
+out| 
+out| TASK: anchor
+out| Rate two outcomes on your own raw 0-100 scale, as satisfaction of your role if each happened (not how true it is ⏎
+out| today: answering how true it is now inverts the scale and is refused). x_reject should get a LOW number, x_ideal ⏎
+out| a HIGH one strictly above it. These are satisfaction ratings, not metrics: no error rate or latency in these ⏎
+out| fields. The anchors are rated once and stay fixed for the whole run. Rate your raw scale, never a normalised 0-1 ⏎
+out| score.
+out| x_reject: nothing is decided
+out| x_ideal: a decision everyone accepts
+out| 
+out| Answer by running: python3 <this script> --me a --state-id 84fa518a answer --reject N --ideal N
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --reject 10 --ideal 90
+out| STATUS: SEND
+out| <concord-anchor-reply agent="a" state="84fa518a" ack="1">
+out|   <raw_reject>10.0</raw_reject>
+out|   <raw_ideal>90.0</raw_ideal>
+out| </concord-anchor-reply>
+out| 
+err| NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or after it, ⏎
+err| no summary of your own. Then pass the next CONCORD message you get to `handle`. When you are done, write nothing ⏎
+err| more: not even a confirmation of what you sent or decided. Your environment may pass anything you write to the ⏎
+err| other participants.
+err| 
+
+=== receiver a due (exit 0)
+$ --me a due
+out| STATUS: NONE
+out| nothing is due from you; waiting for anchors from b. Send no message.
+out| NEXT: Send nothing: never write an acknowledgement or any message yourself (when one is due, `handle` prints it ⏎
+out| as a SEND). Pass the next CONCORD message or reply you get to `handle`. When you are done, write nothing more: ⏎
+out| not even a confirmation of what you sent or decided. Your environment may pass anything you write to the other ⏎
+out| participants.
+out| 
+
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| <concord-delivery seq="1" state="84fa518a"></concord-delivery>
+ in| 
+ in| <concord-anchor>
+ in|   <satisfaction_threshold>0.6</satisfaction_threshold>
+ in|   <x_reject>nothing is decided</x_reject>
+ in|   <x_ideal>a decision everyone accepts</x_ideal>
+ in|   <state_id>84fa518a</state_id>
+ in|   <participants>
+ in|     <agent>a</agent>
+ in|     <agent>b</agent>
+ in|   </participants>
+ in|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params>
+ in|   <addressed_to>
+ in|     <agent>a</agent>
+ in|     <agent>b</agent>
+ in|   </addressed_to>
+ in|   <instructions>Rate the two outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject ⏎
+ in| is how satisfied your role would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role ⏎
+ in| would be if x_ideal happened (it should be HIGH, above raw_reject). Rate the two outcomes, not the current state. ⏎
+ in| Your answer to this message is only the reply the script tells you to send, with nothing before or after it. Pass ⏎
+ in| this message to concord_receiver.py handle and do what it says; never write the reply yourself.</instructions>
+ in| </concord-anchor>
+out| STATUS: SEND
+out| <concord-anchor-reply agent="a" state="84fa518a" ack="1">
+out|   <raw_reject>10.0</raw_reject>
+out|   <raw_ideal>90.0</raw_ideal>
+out| </concord-anchor-reply>
+out| 
+out| <concord-ack agent="a" state="84fa518a" seq="1"></concord-ack>
+out| 
+err| NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or after it, ⏎
+err| no summary of your own. Then pass the next CONCORD message you get to `handle`. When you are done, write nothing ⏎
+err| more: not even a confirmation of what you sent or decided. Your environment may pass anything you write to the ⏎
+err| other participants.
+err| 
+
