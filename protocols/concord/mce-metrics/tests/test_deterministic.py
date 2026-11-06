@@ -9,7 +9,7 @@ from concord_mce_metrics import compliance as cp
 from concord_mce_metrics import protocolcost as pc
 from concord_mce_metrics import rounds as rd
 from concord_mce_metrics import satisfaction as sa
-from fixtures import call, context, llm, scores, tool_spans
+from fixtures import STATE, anchor_reply, call, candidate_reply, context, handle, llm, score_reply, scores, tool_spans
 
 
 def test_a_session_that_never_called_init_is_skipped_by_every_metric():
@@ -46,17 +46,40 @@ def test_a_run_that_stopped_before_complete_fails_the_end_and_is_skipped_elsewhe
 
 
 def test_an_agent_that_never_scored_breaks_used_all_candidates_and_all_steps():
-    spans = [s for s in tool_spans() if s["id"] != "t7"]  # b never scores
+    spans = tool_spans()
+    spans[4] = handle(5, score_reply("a", **{"seed-a": (90, "x"), "seed-b": (20, "y")}))  # b never scores
     ctx = context(spans=spans)
     assert cp.ConcordUsedAllCandidates().compute("s", ctx).value == 0
     all_steps = cp.ConcordAllSteps().compute("s", ctx)
     assert all_steps.value == 0 and "scores" in all_steps.reasoning
 
 
-def test_a_rejected_reply_records_nothing():
+def test_a_rejected_call_records_nothing():
     spans = tool_spans()
-    spans[6] = call(7, spans[6] and ["record-reply", "b", scores(**{"c1-a": (85, "x"), "c2-b": (90, "y")})], "error", exit_code=1)
+    both = (score_reply("a", **{"seed-a": (90, "x"), "seed-b": (20, "y")}), score_reply("b", **{"seed-a": (85, "x"), "seed-b": (90, "y")}))
+    spans[4] = handle(5, *both, exit_code=2, stdout="STATUS: ERROR")
     assert cp.ConcordUsedAllCandidates().compute("s", context(spans=spans)).value == 0
+
+
+def test_a_reply_of_another_run_or_an_unknown_agent_is_ignored():
+    spans = tool_spans()
+    other = score_reply("b", **{"seed-a": (85, "x"), "seed-b": (90, "y")}).replace(f'state="{STATE}"', 'state="other"')
+    spans[4] = handle(5, score_reply("a", **{"seed-a": (90, "x"), "seed-b": (20, "y")}), other, score_reply("zed", **{"seed-a": (1, "x")}))
+    assert cp.ConcordUsedAllCandidates().compute("s", context(spans=spans)).value == 0
+
+
+def test_a_reply_without_its_author_takes_the_one_of_the_from_line():
+    spans = tool_spans()
+    bare = score_reply("b", **{"seed-a": (85, "x"), "seed-b": (90, "y")}).replace(' agent="b"', "")
+    spans[4] = handle(5, score_reply("a", **{"seed-a": (90, "x"), "seed-b": (20, "y")}) + "\n--- from: b\n" + bare)
+    spans[4]["toolOutput"] = tool_spans()[4]["toolOutput"]
+    assert cp.ConcordUsedAllCandidates().compute("s", context(spans=spans)).value == 1
+
+
+def test_the_end_is_read_from_the_error_output_too():
+    spans = tool_spans()
+    assert "RUN COMPLETE" in spans[-1]["toolOutput"] and '"stdout": "STATUS: NONE"' in spans[-1]["toolOutput"]
+    assert cp.ConcordReachedEnd().compute("s", context(spans=spans)).value == 1
 
 
 def test_rounds_count_one_initial_plus_the_repair_rounds():
@@ -69,15 +92,19 @@ def test_rounds_count_one_initial_plus_the_repair_rounds():
 
 
 def test_a_repair_started_by_mark_missing_is_told_apart():
-    spans = tool_spans()
-    spans.insert(7, call(7.5, ["mark-missing", "b", "c1-a"], "Phase: Repair"))
+    spans = tool_spans()[:4]
+    spans.append(handle(5, score_reply("a", **{"seed-a": (90, "x"), "seed-b": (20, "y")}), score_reply("b", **{"seed-b": (90, "y")})))
+    spans.append(call(6, ["--state", f"concord-state-{STATE}.json", "mark-missing", "b", "seed-a"]))  # b never rated seed-a
+    spans.append(handle(7, candidate_reply("b", "r1-b", "new plan"), score_reply("b", **{"r1-b": (95, "mine")}), score_reply("a", **{"r1-b": (90, "fine")}),
+                        stderr="RUN COMPLETE: outcome BEST_EFFORT.\nWinning candidate r1-b (proposed by b): new plan"))
     ctx = context(spans=spans)
     assert rd.ConcordRepairRounds().compute("s", ctx).value == 1
     assert rd.ConcordRepairsAfterMarkMissing().compute("s", ctx).value == 1
+    assert cp.ConcordUsedAllCandidates().compute("s", ctx).value == 0  # seed-a stays MISSING for b
 
 
 def test_worst_off_is_the_lowest_normalised_score_on_the_winner():
-    ctx = context()  # a gave c1-a 90, b gave it 85, both on 0..100
+    ctx = context()  # a gave seed-a 90, b gave it 85, both on 0..100
     w = sa.ConcordWorstOffSatisfaction().compute("s", ctx)
     assert w.value == 0.85 and json.loads(w.reasoning)["worst_agent"] == "b"
     assert sa.ConcordMeanSatisfaction().compute("s", ctx).value == 0.88
@@ -85,19 +112,19 @@ def test_worst_off_is_the_lowest_normalised_score_on_the_winner():
 
 
 def test_below_tau_is_reported():
-    ctx = context(score_b=scores(**{"c1-a": (40, "meh"), "c2-b": (90, "mine")}))
+    ctx = context(score_b=scores(**{"seed-a": (40, "meh"), "seed-b": (90, "mine")}))
     assert sa.ConcordWorstOffAboveTau().compute("s", ctx).value == 0
 
 
 def test_a_degenerate_anchor_range_is_an_outlier_and_is_skipped():
-    spans = tool_spans(score_b=scores(**{"c1-a": (51, "ok"), "c2-b": (52, "mine")}))
-    spans[2] = call(3, ["record-reply", "b", "<raw_reject>50</raw_reject><raw_ideal>53</raw_ideal>"], "Phase: Seed")
+    spans = tool_spans(score_b=scores(**{"seed-a": (51, "ok"), "seed-b": (52, "mine")}))
+    spans[2] = handle(3, anchor_reply("a"), anchor_reply("b", 50, 53))
     result = sa.ConcordWorstOffSatisfaction().compute("s", context(spans=spans))
     assert result.error and "OUTLIER" in result.error and "b" in result.error
 
 
 def test_self_preference_gap_is_own_minus_others():
-    # a: own c1-a 0.90, other c2-b 0.20 -> +0.70. b: own c2-b 0.90, other c1-a 0.85 -> +0.05.
+    # a: own seed-a 0.90, other seed-b 0.20 -> +0.70. b: own seed-b 0.90, other seed-a 0.85 -> +0.05.
     gap = sa.ConcordSelfPreferenceGap().compute("s", context())
     assert abs(gap.value - 0.375) < 1e-9
 
@@ -106,9 +133,9 @@ def test_tokens_are_put_in_the_phase_active_when_the_call_ended():
     llms = [
         llm("l0", 0, 0.5, 100),  # before init (at t=1)
         llm("l1", 2, 2.5, 200),  # anchors
-        llm("l2", 4, 4.2, 300),  # seeds, before the scores began at t=5.5
-        llm("l3", 6, 6.2, 400),  # first scoring round
-        llm("l4", 9, 9.2, 500),  # repair, started at t=8.5
+        llm("l2", 3.6, 3.8, 300),  # seeds: the anchors were in at t=3.5
+        llm("l3", 4.8, 5.0, 400),  # first scoring round: the seeds were in at t=4.5
+        llm("l4", 6.0, 6.2, 500),  # repair: the scores at t=5 left every option below tau
         llm("l5", 20, 20.5, 600),  # after the commit
     ]
     ctx = context(llms=llms, repairs=1)
@@ -126,7 +153,7 @@ def test_tokens_are_put_in_the_phase_active_when_the_call_ended():
 
 
 def test_repair_rounds_are_split_in_the_reasoning():
-    llms = [llm("l1", 9, 9.2, 500), llm("l2", 11, 11.2, 700)]
+    llms = [llm("l1", 6.0, 6.2, 500), llm("l2", 8.0, 8.2, 700)]
     result = pc.ConcordTokensRepair().compute("s", context(llms=llms, repairs=2))
     rounds = json.loads(result.reasoning)["per_round"]
     assert [r["total_tokens"] for r in rounds] == [510, 710]
