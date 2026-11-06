@@ -69,16 +69,8 @@ jobs:
         with:
           version: "latest"
 
-      - name: Install build tools
-        run: |
-          uv tool install build
-          uv tool install twine
-
       - name: Build package
-        run: pyproject-build "${{ needs.resolve.outputs.path }}"
-
-      - name: Check package
-        run: uvx twine check "${{ needs.resolve.outputs.path }}/dist/"*
+        run: uv build --directory "${{ needs.resolve.outputs.path }}"
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
