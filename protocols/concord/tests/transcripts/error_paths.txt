@@ -1,0 +1,310 @@
+=== init bad-json-schema init (exit 2)
+$ init --quiet --agents a,b --satisfaction-threshold 0.6 --schema not json --context Pick one option --x-reject ⏎
+$ nothing is decided --x-ideal a decision everyone accepts
+out| STATUS: ERROR
+out| --schema must be a JSON Schema object, but it is not valid JSON (Expecting value: line 1 column 1 (char 0)). For ⏎
+out| an open format use '{"type": "string", "description": "what one option is, in plain words"}'.
+out| NEXT: Fix what the message says and run the same command again. Never work around it by writing a message, a ⏎
+out| rating or a reply yourself.
+out| 
+err| error: --schema must be a JSON Schema object, but it is not valid JSON (Expecting value: line 1 column 1 (char ⏎
+err| 0)). For an open format use '{"type": "string", "description": "what one option is, in plain words"}'.
+err| 
+
+=== init one-option-enum init (exit 2)
+$ init --quiet --agents a,b --satisfaction-threshold 0.6 --schema {"enum":["X"]} --context Pick one option --x-reject ⏎
+$ nothing is decided --x-ideal a decision everyone accepts
+out| STATUS: ERROR
+out| --schema "enum" must be a list of at least 2 non-empty strings
+out| NEXT: Fix what the message says and run the same command again. Never work around it by writing a message, a ⏎
+out| rating or a reply yourself.
+out| 
+err| error: --schema "enum" must be a list of at least 2 non-empty strings
+err| 
+
+=== init invalid-pattern init (exit 2)
+$ init --quiet --agents a,b --satisfaction-threshold 0.6 --schema {"type":"string","description":"d","pattern":"("} ⏎
+$ --context Pick one option --x-reject nothing is decided --x-ideal a decision everyone accepts
+out| STATUS: ERROR
+out| --schema "pattern" is not a valid regular expression (missing ), unterminated subpattern at position 0)
+out| NEXT: Fix what the message says and run the same command again. Never work around it by writing a message, a ⏎
+out| rating or a reply yourself.
+out| 
+err| error: --schema "pattern" is not a valid regular expression (missing ), unterminated subpattern at position 0)
+err| 
+
+=== init unknown-keyword init (exit 2)
+$ init --quiet --agents a,b --satisfaction-threshold 0.6 --schema {"type":"string","description":"d","color":1} ⏎
+$ --context Pick one option --x-reject nothing is decided --x-ideal a decision everyone accepts
+out| STATUS: ERROR
+out| --schema uses keywords that are not enforced here: color. Supported: type, enum, pattern, minLength, maxLength, ⏎
+out| description, title.
+out| NEXT: Fix what the message says and run the same command again. Never work around it by writing a message, a ⏎
+out| rating or a reply yourself.
+out| 
+err| error: --schema uses keywords that are not enforced here: color. Supported: type, enum, pattern, minLength, ⏎
+err| maxLength, description, title.
+err| 
+
+=== init min-gt-max init (exit 2)
+$ init --quiet --agents a,b --satisfaction-threshold 0.6 --schema ⏎
+$ {"type":"string","description":"d","minLength":5,"maxLength":2} --context Pick one option --x-reject nothing is ⏎
+$ decided --x-ideal a decision everyone accepts
+out| STATUS: ERROR
+out| --schema "minLength" is greater than "maxLength"
+out| NEXT: Fix what the message says and run the same command again. Never work around it by writing a message, a ⏎
+out| rating or a reply yourself.
+out| 
+err| error: --schema "minLength" is greater than "maxLength"
+err| 
+
+=== init missing-args init (exit 2)
+$ init --quiet
+out| STATUS: ERROR
+out| usage error: the following arguments are required: --agents, --context, --x-reject, --x-ideal
+out| NEXT: Run `init --help` to see every argument and how to fill it, then run `init` again with all of them.
+out| 
+
+=== unknown-command frobnicate (exit 2)
+$ frobnicate
+out| STATUS: ERROR
+out| usage error: argument cmd: invalid choice: 'frobnicate' (choose from init, mark-missing, handle, watchdog, status)
+out| NEXT: You need two commands only: `init` once (see `init --help`), then `handle`: with no input for the first ⏎
+out| message, then with each reply on stdin. Use the state path `init` printed. `--help` lists the rest.
+out| 
+
+=== status no-state status (exit 2)
+$ --state <TMP>/nope.json status
+out| STATUS: ERROR
+out| no state file at <TMP>/nope.json — run `concord_initiator.py init` first
+out| NEXT: Use the exact state path `init` printed (its `State:` line) in --state. If this run has no state yet, run ⏎
+out| `init` first: `init --help` says how to fill each argument.
+out| 
+err| error: no state file at <TMP>/nope.json — run `concord_initiator.py init` first
+err| 
+
+=== initiator init (exit 0)
+$ init --quiet --agents a,b --satisfaction-threshold 0.6 --schema {"enum":["X","Y","Z"]} --context Pick one option ⏎
+$ --x-reject nothing is decided --x-ideal a decision everyone accepts
+out| State: <TMP>/agents/concord-state-84fa518a.json
+out| NEXT: Run `concord_initiator.py --state <TMP>/agents/concord-state-84fa518a.json handle` with no input to get the ⏎
+out| first message to send. Use exactly this state path on every call of this run.
+out| 
+out| 
+
+=== handle first handle (exit 0)
+$ --state <TMP>/agents/concord-state-84fa518a.json handle
+out| STATUS: SEND
+out| NEXT: Send each block below to the agent or agents named on its `--- to:` line, exactly as printed and without ⏎
+out| that line. Never write or change a message or a reply yourself. Pass every reply you receive to `handle`, exactly ⏎
+out| as received (several replies in one call is fine). Do not stop before the script prints RUN COMPLETE. If sending ⏎
+out| to an agent fails (an error, or the message did not go out), try once more with the full block as the message; if ⏎
+out| it fails again, stop and report which agent could not be reached and quote the error: do not keep retrying.
+out| --- to: a, b
+out| <concord-delivery seq="1" state="84fa518a"></concord-delivery>
+out| 
+out| <concord-anchor>
+out|   <satisfaction_threshold>0.6</satisfaction_threshold>
+out|   <x_reject>nothing is decided</x_reject>
+out|   <x_ideal>a decision everyone accepts</x_ideal>
+out|   <state_id>84fa518a</state_id>
+out|   <participants>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </participants>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
+out|   <addressed_to>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </addressed_to>
+out|   <instructions>Rate the two outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject ⏎
+out| is how satisfied your role would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role ⏎
+out| would be if x_ideal happened (it should be HIGH, above raw_reject). Rate the two outcomes, not the current state. ⏎
+out| Your answer to this message is only the reply the script tells you to send, with nothing before or after it. Pass ⏎
+out| this message to concord_receiver.py handle and do what it says; never write the reply yourself.</instructions>
+out| </concord-anchor>
+out| 
+
+=== handle prose handle (exit 0)
+$ --state <TMP>/agents/concord-state-84fa518a.json handle
+ in| this is not a concord reply
+out| STATUS: SEND
+out| NEXT: This is a nudge: it makes each agent check what it has to do, and carries what it may have missed. Send ⏎
+out| each block below to the agent or agents named on its `--- to:` line, exactly as printed and without that line. ⏎
+out| Never write or change a message or a reply yourself. Pass every reply you receive to `handle`, exactly as ⏎
+out| received (several replies in one call is fine). Do not stop before the script prints RUN COMPLETE. If sending to ⏎
+out| an agent fails (an error, or the message did not go out), try once more with the full block as the message; if it ⏎
+out| fails again, stop and report which agent could not be reached and quote the error: do not keep retrying.
+out| --- to: a, b
+out| <concord-delivery seq="2" state="84fa518a" full="1" awaiting="a,b"></concord-delivery>
+out| 
+out| <concord-anchor>
+out|   <satisfaction_threshold>0.6</satisfaction_threshold>
+out|   <x_reject>nothing is decided</x_reject>
+out|   <x_ideal>a decision everyone accepts</x_ideal>
+out|   <state_id>84fa518a</state_id>
+out|   <participants>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </participants>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
+out|   <addressed_to>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </addressed_to>
+out|   <instructions>Rate the two outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject ⏎
+out| is how satisfied your role would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role ⏎
+out| would be if x_ideal happened (it should be HIGH, above raw_reject). Rate the two outcomes, not the current state. ⏎
+out| Your answer to this message is only the reply the script tells you to send, with nothing before or after it. Pass ⏎
+out| this message to concord_receiver.py handle and do what it says; never write the reply yourself.</instructions>
+out| </concord-anchor>
+out| 
+err| NOT RECORDED: what you passed holds no CONCORD reply: it is prose (an agent answered in words instead of sending ⏎
+err| the reply its script printed). Nothing was recorded, and the agents still owing a reply are sent their request ⏎
+err| again below
+err| NEXT: Do not fix or rewrite a reply yourself. A reply that was not recorded is as if it had not arrived: the ⏎
+err| agent has to answer again. Send it the message it was asked again, exactly as printed (`handle` with no input ⏎
+err| prints it), and pass its new reply as received.
+err| 
+
+=== handle broken-xml handle (exit 0)
+$ --state <TMP>/agents/concord-state-84fa518a.json handle
+ in| <concord-anchor-reply agent="a"><raw_reject>9</raw_reject>
+out| STATUS: SEND
+out| NEXT: This is a nudge: it makes each agent check what it has to do, and carries what it may have missed. Send ⏎
+out| each block below to the agent or agents named on its `--- to:` line, exactly as printed and without that line. ⏎
+out| Never write or change a message or a reply yourself. Pass every reply you receive to `handle`, exactly as ⏎
+out| received (several replies in one call is fine). Do not stop before the script prints RUN COMPLETE. If sending to ⏎
+out| an agent fails (an error, or the message did not go out), try once more with the full block as the message; if it ⏎
+out| fails again, stop and report which agent could not be reached and quote the error: do not keep retrying.
+out| --- to: a, b
+out| <concord-delivery seq="3" state="84fa518a" full="1" awaiting="a,b"></concord-delivery>
+out| 
+out| <concord-anchor>
+out|   <satisfaction_threshold>0.6</satisfaction_threshold>
+out|   <x_reject>nothing is decided</x_reject>
+out|   <x_ideal>a decision everyone accepts</x_ideal>
+out|   <state_id>84fa518a</state_id>
+out|   <participants>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </participants>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
+out|   <addressed_to>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </addressed_to>
+out|   <instructions>Rate the two outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject ⏎
+out| is how satisfied your role would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role ⏎
+out| would be if x_ideal happened (it should be HIGH, above raw_reject). Rate the two outcomes, not the current state. ⏎
+out| Your answer to this message is only the reply the script tells you to send, with nothing before or after it. Pass ⏎
+out| this message to concord_receiver.py handle and do what it says; never write the reply yourself.</instructions>
+out| </concord-anchor>
+out| 
+err| NOT RECORDED: what you passed holds no CONCORD reply: it is prose (an agent answered in words instead of sending ⏎
+err| the reply its script printed). Nothing was recorded, and the agents still owing a reply are sent their request ⏎
+err| again below
+err| NEXT: Do not fix or rewrite a reply yourself. A reply that was not recorded is as if it had not arrived: the ⏎
+err| agent has to answer again. Send it the message it was asked again, exactly as printed (`handle` with no input ⏎
+err| prints it), and pass its new reply as received.
+err| 
+
+=== handle unknown-agent handle (exit 0)
+$ --state <TMP>/agents/concord-state-84fa518a.json handle
+ in| <concord-anchor-reply agent="zzz"><raw_reject>10</raw_reject><raw_ideal>90</raw_ideal></concord-anchor-reply>
+out| STATUS: NONE
+out| NEXT: Send nothing. Wait for a reply from: a, b. Pass each reply to `handle` as it arrives, exactly as received. ⏎
+out| The run is not over, so do not end your turn just because nothing is due now. If no reply is still on its way ⏎
+out| (you have already collected what the agents answered), run `handle` with no input now: it prints the nudge to ⏎
+out| send, as it would after a lost message. Do not ask the agents for anything yourself (no request for a proposal, a ⏎
+out| rating or a reply, not even to speed things up): each agent works out what it owes.
+out| recorded 0; phase Anchor; awaiting: a, b; not yet acknowledged: a, b. Nothing new to send: wait for the replies ⏎
+out| still awaited.
+out| 
+err| NOT RECORDED: from zzz: zzz is not in the negotiating set
+err| NEXT: Do not fix or rewrite a reply yourself. A reply that was not recorded is as if it had not arrived: the ⏎
+err| agent has to answer again. Send it the message it was asked again, exactly as printed (`handle` with no input ⏎
+err| prints it), and pass its new reply as received.
+err| 
+
+=== handle inverted-anchor handle (exit 0)
+$ --state <TMP>/agents/concord-state-84fa518a.json handle
+ in| <concord-anchor-reply agent="a"><raw_reject>90</raw_reject><raw_ideal>10</raw_ideal></concord-anchor-reply>
+out| STATUS: NONE
+out| NEXT: Send nothing. Wait for a reply from: a, b. Pass each reply to `handle` as it arrives, exactly as received. ⏎
+out| The run is not over, so do not end your turn just because nothing is due now. If no reply is still on its way ⏎
+out| (you have already collected what the agents answered), run `handle` with no input now: it prints the nudge to ⏎
+out| send, as it would after a lost message. Do not ask the agents for anything yourself (no request for a proposal, a ⏎
+out| rating or a reply, not even to speed things up): each agent works out what it owes.
+out| recorded 0; phase Anchor; awaiting: a, b; not yet acknowledged: a, b. Nothing new to send: wait for the replies ⏎
+out| still awaited.
+out| 
+err| NOT RECORDED: from a: raw_ideal (10.0) must exceed raw_reject (90.0); a's scale is inverted
+err| NEXT: Do not fix or rewrite a reply yourself. A reply that was not recorded is as if it had not arrived: the ⏎
+err| agent has to answer again. Send it the message it was asked again, exactly as printed (`handle` with no input ⏎
+err| prints it), and pass its new reply as received.
+err| 
+
+=== handle resend handle (exit 0)
+$ --state <TMP>/agents/concord-state-84fa518a.json handle --resend
+out| STATUS: SEND
+out| NEXT: This is a nudge: it makes each agent check what it has to do, and carries what it may have missed. Send ⏎
+out| each block below to the agent or agents named on its `--- to:` line, exactly as printed and without that line. ⏎
+out| Never write or change a message or a reply yourself. Pass every reply you receive to `handle`, exactly as ⏎
+out| received (several replies in one call is fine). Do not stop before the script prints RUN COMPLETE. If sending to ⏎
+out| an agent fails (an error, or the message did not go out), try once more with the full block as the message; if it ⏎
+out| fails again, stop and report which agent could not be reached and quote the error: do not keep retrying.
+out| --- to: a, b
+out| <concord-delivery seq="4" state="84fa518a" full="1" awaiting="a,b"></concord-delivery>
+out| 
+out| <concord-anchor>
+out|   <satisfaction_threshold>0.6</satisfaction_threshold>
+out|   <x_reject>nothing is decided</x_reject>
+out|   <x_ideal>a decision everyone accepts</x_ideal>
+out|   <state_id>84fa518a</state_id>
+out|   <participants>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </participants>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
+out|   <addressed_to>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </addressed_to>
+out|   <instructions>Rate the two outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject ⏎
+out| is how satisfied your role would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role ⏎
+out| would be if x_ideal happened (it should be HIGH, above raw_reject). Rate the two outcomes, not the current state. ⏎
+out| Your answer to this message is only the reply the script tells you to send, with nothing before or after it. Pass ⏎
+out| this message to concord_receiver.py handle and do what it says; never write the reply yourself.</instructions>
+out| </concord-anchor>
+out| 
+
+=== mark-missing help mark-missing (exit 0)
+$ --state <TMP>/agents/concord-state-84fa518a.json mark-missing --help
+out| usage: concord_initiator.py mark-missing [-h] [--state STATE]
+out|                                          [--format {text,json}]
+out|                                          agent candidate
+out| 
+out| positional arguments:
+out|   agent                 agent name
+out|   candidate             candidate id the agent failed to score
+out| 
+out| options:
+out|   -h, --help            show this help message and exit
+out|   --state STATE
+out|   --format {text,json}
+out| 
+
+=== status status (exit 0)
+$ --state <TMP>/agents/concord-state-84fa518a.json status
+out| Phase: Anchor
+out| NOT FINISHED: there is no outcome yet. Do not run any action and do not report a result until this tool prints ⏎
+out| `Phase: Complete`.
+out| 
+out| Awaiting replies:
+out| 
+out| * a
+out| * b
+out| 
+out| 
+

@@ -11,3 +11,8 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# Local pytest and receiver run state
+.pytest_cache/
+.concord-receiver/
+concord-state-*.json*

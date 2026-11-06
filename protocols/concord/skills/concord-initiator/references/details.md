@@ -196,7 +196,7 @@ how long to wait.
 ```
 scripts/concord_initiator.py init \
   --agents security,cost,reliability \
-  --satisfaction-threshold 0.6 --eps 0.05 -B 10 \
+  --satisfaction-threshold 0.6 --eps 0.05 -B 8 \
   --schema  '{"type": "string", "description": "what one option is, in plain words"}' \
   --context "the problem statement, inline" \
   --x-reject "an outcome the shared context calls unacceptable" \

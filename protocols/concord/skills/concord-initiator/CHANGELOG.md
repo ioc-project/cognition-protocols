@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.2.0](https://github.com/ioc-project/cognition-protocols/compare/concord-initiator-v0.1.0...concord-initiator-v0.2.0) (2026-11-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **concord:** adapt to broadcast style communication ([#75](https://github.com/ioc-project/cognition-protocols/issues/75))
+
+### Features
+
+* **concord:** adapt to broadcast style communication ([#75](https://github.com/ioc-project/cognition-protocols/issues/75)) ([dd743e6](https://github.com/ioc-project/cognition-protocols/commit/dd743e61a13dd2f7502751c9644c16ff4802affa))
+* **concord:** add the ioc-concord library ([#90](https://github.com/ioc-project/cognition-protocols/issues/90)) ([a882d98](https://github.com/ioc-project/cognition-protocols/commit/a882d985fb5b1d39ef9b95769d23a62737178ac4))
+* **concord:** improve chatroom skills ([#82](https://github.com/ioc-project/cognition-protocols/issues/82)) ([47da188](https://github.com/ioc-project/cognition-protocols/commit/47da188c0ac0cbad54510942c3410645304a1f21))
+* **concord:** improve hidden bench outcomes ([#84](https://github.com/ioc-project/cognition-protocols/issues/84)) ([cdc49f7](https://github.com/ioc-project/cognition-protocols/commit/cdc49f747976e77abd82c7bb1cc81e89c00640fb))
+
+
+### Miscellaneous Chores
+
+* **concord:** release concord skills as 0.2.0 ([#96](https://github.com/ioc-project/cognition-protocols/issues/96)) ([675ca24](https://github.com/ioc-project/cognition-protocols/commit/675ca24cba763a6ef324cd589e5fa7d517498806))
+
 ## 0.1.0 (2026-10-23)
 
 

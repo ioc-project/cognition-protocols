@@ -1,0 +1,14 @@
+# Which modules of a library are bundled into which self-contained scripts. Read by tools/bundle.py.
+# Edit the library, then run `just sync`; CI runs `just check-sync`.
+
+[[library]]
+name = "ioc_concord"
+path = "packages/ioc-concord"          # holds pyproject.toml (the version) and src/<name>/
+
+[[library.target]]
+file = "protocols/concord/skills/concord-initiator/scripts/concord_initiator.py"
+modules = ["errors", "xmlutil", "schema", "engine", "wire", "store", "state"]
+
+[[library.target]]
+file = "protocols/concord/skills/concord-receiver/scripts/concord_receiver.py"
+modules = ["errors", "xmlutil", "schema", "engine", "wire", "store", "state"]

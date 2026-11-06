@@ -1,0 +1,529 @@
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| <concord-anchor><satisfaction_threshold>0.6</satisfaction_threshold><x_reject>bad</x_reject><x_ideal>good</x_ideal⏎
+ in| ><state_id>sch1</state_id><participants><agent>a</agent><agent>b</agent></participants><params><satisfaction_thres⏎
+ in| hold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params><addressed_to><agent>a</agent><agent>b⏎
+ in| </agent></addressed_to><instructions>i</instructions></concord-anchor>
+out| STATUS: ASK
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so.
+out| 
+out| TASK: anchor
+out| Rate two outcomes on your own raw 0-100 scale, as satisfaction of your role if each happened (not how true it is ⏎
+out| today: answering how true it is now inverts the scale and is refused). x_reject should get a LOW number, x_ideal ⏎
+out| a HIGH one strictly above it. These are satisfaction ratings, not metrics: no error rate or latency in these ⏎
+out| fields. The anchors are rated once and stay fixed for the whole run. Rate your raw scale, never a normalised 0-1 ⏎
+out| score.
+out| x_reject: bad
+out| x_ideal: good
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --reject N --ideal N
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --reject 10 --ideal 90
+out| STATUS: SEND
+out| <concord-anchor-reply agent="a" state="sch1">
+out|   <raw_reject>10.0</raw_reject>
+out|   <raw_ideal>90.0</raw_ideal>
+out| </concord-anchor-reply>
+out| 
+err| NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or after it, ⏎
+err| no summary of your own. Then pass the next CONCORD message you get to `handle`. When you are done, write nothing ⏎
+err| more: not even a confirmation of what you sent or decided. Your environment may pass anything you write to the ⏎
+err| other participants.
+err| 
+
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| <concord-propose-seed><candidate_schema>s</candidate_schema><schema_json>{&quot;enum&quot;: [&quot;X&quot;, ⏎
+ in| &quot;Y&quot;]}</schema_json><satisfaction_threshold>0.6</satisfaction_threshold><context>c</context><state_id>sch⏎
+ in| 1</state_id><participants><agent>a</agent><agent>b</agent></participants><params><satisfaction_threshold>0.6</sati⏎
+ in| sfaction_threshold><eps>0.05</eps><budget>10</budget></params><addressed_to><agent>a</agent><agent>b</agent></addr⏎
+ in| essed_to><instructions>i</instructions></concord-propose-seed>
+out| STATUS: ASK
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so. Use only facts from your own briefing: do not speculate.
+out| 
+out| TASK: seed
+out| Propose the single candidate that best satisfies your own role, in this format. Do not hedge, do not offer ⏎
+out| alternatives, do not pre-compromise for other roles: this round represents your role's viewpoint undiluted. The ⏎
+out| rationale carries the concrete facts and evidence from your criteria, why the other options in the candidate ⏎
+out| format are less suitable from your role's perspective, but only where you have evidence against them (if you have ⏎
+out| none, say so: never invent a risk to fill the gap), the trade-offs you considered and why it will hold up under ⏎
+out| scrutiny: the other agents use it to detect incorrect logic. Your rationale is your only voice here: anything you ⏎
+out| know and do not write in it is invisible to every other participant. Be detailed and informative, but stay within ⏎
+out| 1000 characters for each part of your answer.
+out| candidate format: s
+out| context: c
+out| options (the candidate must be exactly one of these, written as listed; detail about it goes in the rationale, ⏎
+out| and added wording does not make a different option):
+out|   - X
+out|   - Y
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --candidate "TEXT" --rationale "TEXT with ⏎
+out| the evidence for it"
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --candidate Q --rationale It meets my role criteria on cost, risk and delivery time, as stated in my ⏎
+$ briefing.
+out| STATUS: ASK
+out| Your answer was not usable: the seed candidate must be exactly one of the listed options (X; Y): put any extra ⏎
+out| detail in the rationale. Nothing was recorded or sent. Fix these and answer again as the task shows below (what ⏎
+out| is due may differ from what you answered).
+out| 
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so. Use only facts from your own briefing: do not speculate.
+out| 
+out| TASK: seed
+out| Propose the single candidate that best satisfies your own role, in this format. Do not hedge, do not offer ⏎
+out| alternatives, do not pre-compromise for other roles: this round represents your role's viewpoint undiluted. The ⏎
+out| rationale carries the concrete facts and evidence from your criteria, why the other options in the candidate ⏎
+out| format are less suitable from your role's perspective, but only where you have evidence against them (if you have ⏎
+out| none, say so: never invent a risk to fill the gap), the trade-offs you considered and why it will hold up under ⏎
+out| scrutiny: the other agents use it to detect incorrect logic. Your rationale is your only voice here: anything you ⏎
+out| know and do not write in it is invisible to every other participant. Be detailed and informative, but stay within ⏎
+out| 1000 characters for each part of your answer.
+out| candidate format: s
+out| context: c
+out| options (the candidate must be exactly one of these, written as listed; detail about it goes in the rationale, ⏎
+out| and added wording does not make a different option):
+out|   - X
+out|   - Y
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --candidate "TEXT" --rationale "TEXT with ⏎
+out| the evidence for it"
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --candidate x --rationale It meets my role criteria on cost, risk and delivery time, as stated in my ⏎
+$ briefing.
+out| STATUS: SEND
+out| <concord-candidate-reply id="seed-a" agent="a" state="sch1">
+out|   <candidate>X</candidate>
+out|   <rationale>It meets my role criteria on cost, risk and delivery time, as stated in my briefing.</rationale>
+out| </concord-candidate-reply>
+out| 
+err| NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or after it, ⏎
+err| no summary of your own. Then pass the next CONCORD message you get to `handle`. When you are done, write nothing ⏎
+err| more: not even a confirmation of what you sent or decided. Your environment may pass anything you write to the ⏎
+err| other participants.
+err| 
+
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| <concord-anchor><satisfaction_threshold>0.6</satisfaction_threshold><x_reject>bad</x_reject><x_ideal>good</x_ideal⏎
+ in| ><state_id>sch1</state_id><participants><agent>a</agent><agent>b</agent></participants><params><satisfaction_thres⏎
+ in| hold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params><addressed_to><agent>a</agent><agent>b⏎
+ in| </agent></addressed_to><instructions>i</instructions></concord-anchor>
+out| STATUS: ASK
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so.
+out| 
+out| TASK: anchor
+out| Rate two outcomes on your own raw 0-100 scale, as satisfaction of your role if each happened (not how true it is ⏎
+out| today: answering how true it is now inverts the scale and is refused). x_reject should get a LOW number, x_ideal ⏎
+out| a HIGH one strictly above it. These are satisfaction ratings, not metrics: no error rate or latency in these ⏎
+out| fields. The anchors are rated once and stay fixed for the whole run. Rate your raw scale, never a normalised 0-1 ⏎
+out| score.
+out| x_reject: bad
+out| x_ideal: good
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --reject N --ideal N
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --reject 10 --ideal 90
+out| STATUS: SEND
+out| <concord-anchor-reply agent="a" state="sch1">
+out|   <raw_reject>10.0</raw_reject>
+out|   <raw_ideal>90.0</raw_ideal>
+out| </concord-anchor-reply>
+out| 
+err| NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or after it, ⏎
+err| no summary of your own. Then pass the next CONCORD message you get to `handle`. When you are done, write nothing ⏎
+err| more: not even a confirmation of what you sent or decided. Your environment may pass anything you write to the ⏎
+err| other participants.
+err| 
+
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| <concord-propose-seed><candidate_schema>s</candidate_schema><schema_json>{&quot;type&quot;: &quot;string&quot;, ⏎
+ in| &quot;description&quot;: &quot;d&quot;, &quot;pattern&quot;: ⏎
+ in| &quot;^ok-[0-9]+$&quot;}</schema_json><satisfaction_threshold>0.6</satisfaction_threshold><context>c</context><sta⏎
+ in| te_id>sch1</state_id><participants><agent>a</agent><agent>b</agent></participants><params><satisfaction_threshold>⏎
+ in| 0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params><addressed_to><agent>a</agent><agent>b</age⏎
+ in| nt></addressed_to><instructions>i</instructions></concord-propose-seed>
+out| STATUS: ASK
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so. Use only facts from your own briefing: do not speculate.
+out| 
+out| TASK: seed
+out| Propose the single candidate that best satisfies your own role, in this format. Do not hedge, do not offer ⏎
+out| alternatives, do not pre-compromise for other roles: this round represents your role's viewpoint undiluted. The ⏎
+out| rationale carries the concrete facts and evidence from your criteria, why the other options in the candidate ⏎
+out| format are less suitable from your role's perspective, but only where you have evidence against them (if you have ⏎
+out| none, say so: never invent a risk to fill the gap), the trade-offs you considered and why it will hold up under ⏎
+out| scrutiny: the other agents use it to detect incorrect logic. Your rationale is your only voice here: anything you ⏎
+out| know and do not write in it is invisible to every other participant. Be detailed and informative, but stay within ⏎
+out| 1000 characters for each part of your answer.
+out| candidate format: s
+out| context: c
+out| (the candidate is checked against the format above and refused if it does not satisfy it)
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --candidate "TEXT" --rationale "TEXT with ⏎
+out| the evidence for it"
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --candidate nope --rationale It meets my role criteria on cost, risk and delivery time, as stated in ⏎
+$ my briefing.
+out| STATUS: ASK
+out| Your answer was not usable: the seed candidate must match the regular expression ^ok-[0-9]+$: put any extra ⏎
+out| detail in the rationale. Nothing was recorded or sent. Fix these and answer again as the task shows below (what ⏎
+out| is due may differ from what you answered).
+out| 
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so. Use only facts from your own briefing: do not speculate.
+out| 
+out| TASK: seed
+out| Propose the single candidate that best satisfies your own role, in this format. Do not hedge, do not offer ⏎
+out| alternatives, do not pre-compromise for other roles: this round represents your role's viewpoint undiluted. The ⏎
+out| rationale carries the concrete facts and evidence from your criteria, why the other options in the candidate ⏎
+out| format are less suitable from your role's perspective, but only where you have evidence against them (if you have ⏎
+out| none, say so: never invent a risk to fill the gap), the trade-offs you considered and why it will hold up under ⏎
+out| scrutiny: the other agents use it to detect incorrect logic. Your rationale is your only voice here: anything you ⏎
+out| know and do not write in it is invisible to every other participant. Be detailed and informative, but stay within ⏎
+out| 1000 characters for each part of your answer.
+out| candidate format: s
+out| context: c
+out| (the candidate is checked against the format above and refused if it does not satisfy it)
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --candidate "TEXT" --rationale "TEXT with ⏎
+out| the evidence for it"
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --candidate ok-12 --rationale It meets my role criteria on cost, risk and delivery time, as stated in ⏎
+$ my briefing.
+out| STATUS: SEND
+out| <concord-candidate-reply id="seed-a" agent="a" state="sch1">
+out|   <candidate>ok-12</candidate>
+out|   <rationale>It meets my role criteria on cost, risk and delivery time, as stated in my briefing.</rationale>
+out| </concord-candidate-reply>
+out| 
+err| NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or after it, ⏎
+err| no summary of your own. Then pass the next CONCORD message you get to `handle`. When you are done, write nothing ⏎
+err| more: not even a confirmation of what you sent or decided. Your environment may pass anything you write to the ⏎
+err| other participants.
+err| 
+
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| <concord-anchor><satisfaction_threshold>0.6</satisfaction_threshold><x_reject>bad</x_reject><x_ideal>good</x_ideal⏎
+ in| ><state_id>sch1</state_id><participants><agent>a</agent><agent>b</agent></participants><params><satisfaction_thres⏎
+ in| hold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params><addressed_to><agent>a</agent><agent>b⏎
+ in| </agent></addressed_to><instructions>i</instructions></concord-anchor>
+out| STATUS: ASK
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so.
+out| 
+out| TASK: anchor
+out| Rate two outcomes on your own raw 0-100 scale, as satisfaction of your role if each happened (not how true it is ⏎
+out| today: answering how true it is now inverts the scale and is refused). x_reject should get a LOW number, x_ideal ⏎
+out| a HIGH one strictly above it. These are satisfaction ratings, not metrics: no error rate or latency in these ⏎
+out| fields. The anchors are rated once and stay fixed for the whole run. Rate your raw scale, never a normalised 0-1 ⏎
+out| score.
+out| x_reject: bad
+out| x_ideal: good
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --reject N --ideal N
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --reject 10 --ideal 90
+out| STATUS: SEND
+out| <concord-anchor-reply agent="a" state="sch1">
+out|   <raw_reject>10.0</raw_reject>
+out|   <raw_ideal>90.0</raw_ideal>
+out| </concord-anchor-reply>
+out| 
+err| NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or after it, ⏎
+err| no summary of your own. Then pass the next CONCORD message you get to `handle`. When you are done, write nothing ⏎
+err| more: not even a confirmation of what you sent or decided. Your environment may pass anything you write to the ⏎
+err| other participants.
+err| 
+
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| <concord-propose-seed><candidate_schema>s</candidate_schema><schema_json>{&quot;type&quot;: &quot;string&quot;, ⏎
+ in| &quot;description&quot;: &quot;d&quot;, &quot;minLength&quot;: 3, &quot;maxLength&quot;: ⏎
+ in| 6}</schema_json><satisfaction_threshold>0.6</satisfaction_threshold><context>c</context><state_id>sch1</state_id><⏎
+ in| participants><agent>a</agent><agent>b</agent></participants><params><satisfaction_threshold>0.6</satisfaction_thre⏎
+ in| shold><eps>0.05</eps><budget>10</budget></params><addressed_to><agent>a</agent><agent>b</agent></addressed_to><ins⏎
+ in| tructions>i</instructions></concord-propose-seed>
+out| STATUS: ASK
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so. Use only facts from your own briefing: do not speculate.
+out| 
+out| TASK: seed
+out| Propose the single candidate that best satisfies your own role, in this format. Do not hedge, do not offer ⏎
+out| alternatives, do not pre-compromise for other roles: this round represents your role's viewpoint undiluted. The ⏎
+out| rationale carries the concrete facts and evidence from your criteria, why the other options in the candidate ⏎
+out| format are less suitable from your role's perspective, but only where you have evidence against them (if you have ⏎
+out| none, say so: never invent a risk to fill the gap), the trade-offs you considered and why it will hold up under ⏎
+out| scrutiny: the other agents use it to detect incorrect logic. Your rationale is your only voice here: anything you ⏎
+out| know and do not write in it is invisible to every other participant. Be detailed and informative, but stay within ⏎
+out| 1000 characters for each part of your answer.
+out| candidate format: s
+out| context: c
+out| (the candidate is checked against the format above and refused if it does not satisfy it)
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --candidate "TEXT" --rationale "TEXT with ⏎
+out| the evidence for it"
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --candidate ab --rationale It meets my role criteria on cost, risk and delivery time, as stated in my ⏎
+$ briefing.
+out| STATUS: ASK
+out| Your answer was not usable: the seed candidate must be at least 3 characters: put any extra detail in the ⏎
+out| rationale. Nothing was recorded or sent. Fix these and answer again as the task shows below (what is due may ⏎
+out| differ from what you answered).
+out| 
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so. Use only facts from your own briefing: do not speculate.
+out| 
+out| TASK: seed
+out| Propose the single candidate that best satisfies your own role, in this format. Do not hedge, do not offer ⏎
+out| alternatives, do not pre-compromise for other roles: this round represents your role's viewpoint undiluted. The ⏎
+out| rationale carries the concrete facts and evidence from your criteria, why the other options in the candidate ⏎
+out| format are less suitable from your role's perspective, but only where you have evidence against them (if you have ⏎
+out| none, say so: never invent a risk to fill the gap), the trade-offs you considered and why it will hold up under ⏎
+out| scrutiny: the other agents use it to detect incorrect logic. Your rationale is your only voice here: anything you ⏎
+out| know and do not write in it is invisible to every other participant. Be detailed and informative, but stay within ⏎
+out| 1000 characters for each part of your answer.
+out| candidate format: s
+out| context: c
+out| (the candidate is checked against the format above and refused if it does not satisfy it)
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --candidate "TEXT" --rationale "TEXT with ⏎
+out| the evidence for it"
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --candidate abcdefg --rationale It meets my role criteria on cost, risk and delivery time, as stated ⏎
+$ in my briefing.
+out| STATUS: ASK
+out| Your answer was not usable: the seed candidate must be at most 6 characters: put any extra detail in the ⏎
+out| rationale. Nothing was recorded or sent. Fix these and answer again as the task shows below (what is due may ⏎
+out| differ from what you answered).
+out| 
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so. Use only facts from your own briefing: do not speculate.
+out| 
+out| TASK: seed
+out| Propose the single candidate that best satisfies your own role, in this format. Do not hedge, do not offer ⏎
+out| alternatives, do not pre-compromise for other roles: this round represents your role's viewpoint undiluted. The ⏎
+out| rationale carries the concrete facts and evidence from your criteria, why the other options in the candidate ⏎
+out| format are less suitable from your role's perspective, but only where you have evidence against them (if you have ⏎
+out| none, say so: never invent a risk to fill the gap), the trade-offs you considered and why it will hold up under ⏎
+out| scrutiny: the other agents use it to detect incorrect logic. Your rationale is your only voice here: anything you ⏎
+out| know and do not write in it is invisible to every other participant. Be detailed and informative, but stay within ⏎
+out| 1000 characters for each part of your answer.
+out| candidate format: s
+out| context: c
+out| (the candidate is checked against the format above and refused if it does not satisfy it)
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --candidate "TEXT" --rationale "TEXT with ⏎
+out| the evidence for it"
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --candidate abcd --rationale It meets my role criteria on cost, risk and delivery time, as stated in ⏎
+$ my briefing.
+out| STATUS: SEND
+out| <concord-candidate-reply id="seed-a" agent="a" state="sch1">
+out|   <candidate>abcd</candidate>
+out|   <rationale>It meets my role criteria on cost, risk and delivery time, as stated in my briefing.</rationale>
+out| </concord-candidate-reply>
+out| 
+err| NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or after it, ⏎
+err| no summary of your own. Then pass the next CONCORD message you get to `handle`. When you are done, write nothing ⏎
+err| more: not even a confirmation of what you sent or decided. Your environment may pass anything you write to the ⏎
+err| other participants.
+err| 
+
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| <concord-anchor><satisfaction_threshold>0.6</satisfaction_threshold><x_reject>bad</x_reject><x_ideal>good</x_ideal⏎
+ in| ><state_id>sch1</state_id><participants><agent>a</agent><agent>b</agent></participants><params><satisfaction_thres⏎
+ in| hold>0.6</satisfaction_threshold><eps>0.05</eps><budget>10</budget></params><addressed_to><agent>a</agent><agent>b⏎
+ in| </agent></addressed_to><instructions>i</instructions></concord-anchor>
+out| STATUS: ASK
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so.
+out| 
+out| TASK: anchor
+out| Rate two outcomes on your own raw 0-100 scale, as satisfaction of your role if each happened (not how true it is ⏎
+out| today: answering how true it is now inverts the scale and is refused). x_reject should get a LOW number, x_ideal ⏎
+out| a HIGH one strictly above it. These are satisfaction ratings, not metrics: no error rate or latency in these ⏎
+out| fields. The anchors are rated once and stay fixed for the whole run. Rate your raw scale, never a normalised 0-1 ⏎
+out| score.
+out| x_reject: bad
+out| x_ideal: good
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --reject N --ideal N
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --reject 10 --ideal 90
+out| STATUS: SEND
+out| <concord-anchor-reply agent="a" state="sch1">
+out|   <raw_reject>10.0</raw_reject>
+out|   <raw_ideal>90.0</raw_ideal>
+out| </concord-anchor-reply>
+out| 
+err| NEXT: Send the text printed under STATUS: SEND exactly as it is, and nothing else: no words before or after it, ⏎
+err| no summary of your own. Then pass the next CONCORD message you get to `handle`. When you are done, write nothing ⏎
+err| more: not even a confirmation of what you sent or decided. Your environment may pass anything you write to the ⏎
+err| other participants.
+err| 
+
+=== receiver a handle (exit 0)
+$ --me a handle
+ in| <concord-propose-seed><candidate_schema>s</candidate_schema><schema_json>{&quot;type&quot;: &quot;string&quot;, ⏎
+ in| &quot;description&quot;: &quot;d&quot;, &quot;pattern&quot;: ⏎
+ in| &quot;(&quot;}</schema_json><satisfaction_threshold>0.6</satisfaction_threshold><context>c</context><state_id>sch1⏎
+ in| </state_id><participants><agent>a</agent><agent>b</agent></participants><params><satisfaction_threshold>0.6</satis⏎
+ in| faction_threshold><eps>0.05</eps><budget>10</budget></params><addressed_to><agent>a</agent><agent>b</agent></addre⏎
+ in| ssed_to><instructions>i</instructions></concord-propose-seed>
+out| STATUS: ASK
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so. Use only facts from your own briefing: do not speculate.
+out| 
+out| TASK: seed
+out| Propose the single candidate that best satisfies your own role, in this format. Do not hedge, do not offer ⏎
+out| alternatives, do not pre-compromise for other roles: this round represents your role's viewpoint undiluted. The ⏎
+out| rationale carries the concrete facts and evidence from your criteria, why the other options in the candidate ⏎
+out| format are less suitable from your role's perspective, but only where you have evidence against them (if you have ⏎
+out| none, say so: never invent a risk to fill the gap), the trade-offs you considered and why it will hold up under ⏎
+out| scrutiny: the other agents use it to detect incorrect logic. Your rationale is your only voice here: anything you ⏎
+out| know and do not write in it is invisible to every other participant. Be detailed and informative, but stay within ⏎
+out| 1000 characters for each part of your answer.
+out| candidate format: s
+out| context: c
+out| (the candidate is checked against the format above and refused if it does not satisfy it)
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --candidate "TEXT" --rationale "TEXT with ⏎
+out| the evidence for it"
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+
+=== receiver a answer (exit 0)
+$ --me a answer --candidate anything --rationale It meets my role criteria on cost, risk and delivery time, as stated ⏎
+$ in my briefing.
+out| STATUS: ASK
+out| Your answer was not usable: the schema "pattern" is not a valid regular expression (missing ), unterminated ⏎
+out| subpattern at position 0), so no candidate can be accepted whatever you answer: tell whoever sent you the message ⏎
+out| that its schema is invalid. Nothing was recorded or sent. Fix these and answer again as the task shows below ⏎
+out| (what is due may differ from what you answered).
+out| 
+out| You are the a agent. CONCORD needs your judgement. Decide from YOUR role's criteria. Be honest: never inflate to ⏎
+out| seem agreeable or deflate for leverage, and never soften your criteria to make something look acceptable. If you ⏎
+out| cannot be satisfied, say so. Use only facts from your own briefing: do not speculate.
+out| 
+out| TASK: seed
+out| Propose the single candidate that best satisfies your own role, in this format. Do not hedge, do not offer ⏎
+out| alternatives, do not pre-compromise for other roles: this round represents your role's viewpoint undiluted. The ⏎
+out| rationale carries the concrete facts and evidence from your criteria, why the other options in the candidate ⏎
+out| format are less suitable from your role's perspective, but only where you have evidence against them (if you have ⏎
+out| none, say so: never invent a risk to fill the gap), the trade-offs you considered and why it will hold up under ⏎
+out| scrutiny: the other agents use it to detect incorrect logic. Your rationale is your only voice here: anything you ⏎
+out| know and do not write in it is invisible to every other participant. Be detailed and informative, but stay within ⏎
+out| 1000 characters for each part of your answer.
+out| candidate format: s
+out| context: c
+out| (the candidate is checked against the format above and refused if it does not satisfy it)
+out| 
+out| Answer by running: python3 <this script> --me a --state-id sch1 answer --candidate "TEXT" --rationale "TEXT with ⏎
+out| the evidence for it"
+out| (N is a number; each text is one argument, and may have several lines.)
+out| It prints STATUS: SEND followed by your reply: send exactly that, nothing else. Your judgement goes in these ⏎
+out| values only: never write the reply yourself, and never add text before or after what the script prints. When you ⏎
+out| are done, write nothing more: not even a confirmation of what you sent or decided. Your environment may pass ⏎
+out| anything you write to the other participants.
+out| 
+

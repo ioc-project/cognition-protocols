@@ -1,0 +1,75 @@
+=== initiator init (exit 0)
+$ init --quiet --agents a,b --satisfaction-threshold 0.6 --schema {"enum":["X","Y","Z"]} --context Pick one option ⏎
+$ --x-reject nothing is decided --x-ideal a decision everyone accepts --no-relay
+out| State: <TMP>/agents/concord-state-423da7dd.json
+out| NEXT: Run `concord_initiator.py --state <TMP>/agents/concord-state-423da7dd.json handle` with no input to get the ⏎
+out| first message to send. Use exactly this state path on every call of this run.
+out| 
+out| 
+
+=== initiator handle (exit 0)
+$ --state <TMP>/agents/concord-state-423da7dd.json handle
+out| STATUS: SEND
+out| NEXT: Send each block below to the agent or agents named on its `--- to:` line, exactly as printed and without ⏎
+out| that line. Never write or change a message or a reply yourself. Pass every reply you receive to `handle`, exactly ⏎
+out| as received (several replies in one call is fine). Do not stop before the script prints RUN COMPLETE. If sending ⏎
+out| to an agent fails (an error, or the message did not go out), try once more with the full block as the message; if ⏎
+out| it fails again, stop and report which agent could not be reached and quote the error: do not keep retrying.
+out| --- to: a, b
+out| <concord-anchor>
+out|   <satisfaction_threshold>0.6</satisfaction_threshold>
+out|   <x_reject>nothing is decided</x_reject>
+out|   <x_ideal>a decision everyone accepts</x_ideal>
+out|   <state_id>423da7dd</state_id>
+out|   <participants>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </participants>
+out|   <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>
+out|   <addressed_to>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </addressed_to>
+out|   <instructions>Rate the two outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject ⏎
+out| is how satisfied your role would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role ⏎
+out| would be if x_ideal happened (it should be HIGH, above raw_reject). Rate the two outcomes, not the current state. ⏎
+out| Your answer to this message is only the reply the script tells you to send, with nothing before or after it. Pass ⏎
+out| this message to concord_receiver.py handle and do what it says; never write the reply yourself.</instructions>
+out| </concord-anchor>
+out| 
+
+=== status json --format (exit 0)
+$ --state <TMP>/agents/concord-state-423da7dd.json --format json status
+out| {
+out|   "phase": "Anchor",
+out|   "state_file": "<TMP>/agents/concord-state-423da7dd.json",
+out|   "awaiting": [
+out|     "a",
+out|     "b"
+out|   ],
+out|   "messages": {
+out|     "a": "<concord-anchor>\n  <satisfaction_threshold>0.6</satisfaction_threshold>\n  <x_reject>nothing is ⏎
+out| decided</x_reject>\n  <x_ideal>a decision everyone accepts</x_ideal>\n  <state_id>423da7dd</state_id>\n  ⏎
+out| <participants>\n    <agent>a</agent>\n    <agent>b</agent>\n  </participants>\n  ⏎
+out| <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>\n  ⏎
+out| <addressed_to>\n    <agent>a</agent>\n    <agent>b</agent>\n  </addressed_to>\n  <instructions>Rate the two ⏎
+out| outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject is how satisfied your role ⏎
+out| would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role would be if x_ideal ⏎
+out| happened (it should be HIGH, above raw_reject). Rate the two outcomes, not the current state. Your answer to this ⏎
+out| message is only the reply the script tells you to send, with nothing before or after it. Pass this message to ⏎
+out| concord_receiver.py handle and do what it says; never write the reply yourself.</instructions>\n</concord-anchor>",
+out|     "b": "<concord-anchor>\n  <satisfaction_threshold>0.6</satisfaction_threshold>\n  <x_reject>nothing is ⏎
+out| decided</x_reject>\n  <x_ideal>a decision everyone accepts</x_ideal>\n  <state_id>423da7dd</state_id>\n  ⏎
+out| <participants>\n    <agent>a</agent>\n    <agent>b</agent>\n  </participants>\n  ⏎
+out| <params><satisfaction_threshold>0.6</satisfaction_threshold><eps>0.05</eps><budget>8</budget></params>\n  ⏎
+out| <addressed_to>\n    <agent>a</agent>\n    <agent>b</agent>\n  </addressed_to>\n  <instructions>Rate the two ⏎
+out| outcomes above on your own raw 0-100 scale, from your role's perspective. raw_reject is how satisfied your role ⏎
+out| would be if x_reject happened (it should be LOW). raw_ideal is how satisfied your role would be if x_ideal ⏎
+out| happened (it should be HIGH, above raw_reject). Rate the two outcomes, not the current state. Your answer to this ⏎
+out| message is only the reply the script tells you to send, with nothing before or after it. Pass this message to ⏎
+out| concord_receiver.py handle and do what it says; never write the reply yourself.</instructions>\n</concord-anchor>"
+out|   },
+out|   "finished": false
+out| }
+out| 
+

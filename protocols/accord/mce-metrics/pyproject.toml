@@ -8,14 +8,14 @@ version = "0.1.0"
 description = "ACCORD convergence/correctness/benefit evaluations and ACCORD token cost as MCE metric plugins."
 requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
-dependencies = ["oxp-mce-core"]
+dependencies = ["ioc-scope-mce-core>=2.0.0"]
 
 [project.scripts]
 accord-convergence-trace = "accord_mce_metrics.trace_cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0"]
-# The LLM judge (the benefit metrics): MCE's LLM service needs the openai client, which oxp-mce-core does not install.
+# The LLM judge (the benefit metrics): MCE's LLM service needs the openai client, which ioc-scope-mce-core does not install.
 judge = ["openai"]
 
 # One entry per metric: MCE instantiates each class with no arguments.
@@ -41,9 +41,6 @@ AccordContractOverheadPerCall = "accord_mce_metrics.protocolcost:AccordContractO
 AccordContractOverheadShare = "accord_mce_metrics.protocolcost:AccordContractOverheadShare"
 AccordGlossaryUptake = "accord_mce_metrics.benefit:AccordGlossaryUptake"
 AccordGlossaryInfluence = "accord_mce_metrics.benefit:AccordGlossaryInfluence"
-
-[tool.uv.sources]
-oxp-mce-core = { git = "https://github.com/outshift-open/observe-and-explain-platform.git", subdirectory = "backend/mce/mce-core", branch = "main" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/accord_mce_metrics"]

@@ -19,7 +19,7 @@ license: Apache-2.0
 metadata:
   author: Cisco Systems, Inc.
   copyright: "Copyright 2026 Cisco Systems, Inc. and its affiliates"
-  version: "0.1.0" # x-release-please-version
+  version: "0.2.0" # x-release-please-version
 ---
 
 # CONCORD: initiator
@@ -32,8 +32,8 @@ threshold) or `BEST_EFFORT` (who is short, by how much).
 
 ## How a run goes
 
-Four steps, driven by the script. Every agent speaks for its own role; the
-script computes everything.
+Four steps, driven by the script. Every agent speaks for its own role, and
+the script computes everything.
 
 1. **Anchor.** Each agent says how satisfied it would be with the worst outcome
    (`x_reject`) and the best (`x_ideal`), on its own 0 to 100 scale. Every later

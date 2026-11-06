@@ -1,7 +1,7 @@
 """Read a session's KG spans the way the ACCORD evals read trace events.
 
 MCE hands a session metric ``tool_spans`` / ``llm_spans`` / ``agent_spans``
-(normalised KG nodes, see ``oxp.providers.kg``). Tool arguments and outputs
+(normalised KG nodes, see ``scope.providers.kg``). Tool arguments and outputs
 are stored as State text, so they are decoded here when they are JSON and kept
 as text otherwise.
 """

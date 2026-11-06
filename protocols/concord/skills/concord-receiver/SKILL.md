@@ -16,7 +16,7 @@ license: Apache-2.0
 metadata:
   author: Cisco Systems, Inc.
   copyright: "Copyright 2026 Cisco Systems, Inc. and its affiliates"
-  version: "0.1.0" # x-release-please-version
+  version: "0.2.0" # x-release-please-version
 ---
 
 # CONCORD: receiver
@@ -28,8 +28,8 @@ option. Your criteria are the ones your role already gives you; CONCORD supplies
 none. You may also know things the others do not (facts only you hold), and they
 may know things you do not: what you know and leave out of a rationale or a
 reasoning is invisible to everyone else, and what another agent reports from its
-own evidence is evidence you use in your reasoning. The script `scripts/concord_receiver.py` keeps the picture of the run and
-tells you what is due.
+own evidence is evidence you use in your reasoning. The script `scripts/concord_receiver.py`
+keeps the picture of the run and tells you what is due.
 
 ## How a run goes
 

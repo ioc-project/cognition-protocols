@@ -1,23 +1,18 @@
-#!/usr/bin/env python3
 #
 # Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 # SPDX-License-Identifier: Apache-2.0
 #
-"""CONCORD decision engine: the single source of truth.
+"""The CONCORD decision engine: SELECT, ACCEPT, REPAIR and COMMIT over the ratings the agents give.
 
-The initiator and the receiver both run this engine over the same replies, so they reach the same decision (the
-incumbent, the bottleneck, the outcome). Each script has to be self-contained (a skill must not rely on importing a
-sibling file), so the block between the SHARED CORE markers is COPIED into both scripts by protocols/concord/tools/sync_core.py:
-
-    python3 protocols/concord/tools/sync_core.py            # write the block into both scripts
-    python3 protocols/concord/tools/sync_core.py --check    # fail if either script has drifted from this file (for CI)
-
-Edit this file only, then run the tool. Stdlib only.
+Every participant runs this engine over the same replies, so they all reach the same decision (the incumbent, the
+bottleneck, the outcome). It holds no I/O and no process state: it works on the plain `st` dict that
+`new_engine_state` returns.
 """
-import hashlib  # noqa: F401  (the embedded block uses hashlib and re; both scripts import them already)
-import re  # noqa: F401
+import hashlib
+import re
 
-# >>> SHARED CORE: GENERATED from protocols/concord/shared/concord_core.py by protocols/concord/tools/sync_core.py. Do not edit it here: edit the source and run the tool.
+from ioc_concord.errors import ReplyError
+
 TOL = 1e-9
 
 # --------------------------------------------------------------------------
@@ -184,6 +179,19 @@ def new_engine_state(agents, params):
             "score_reasoning": {}, "x_star": None, "t": 0, "pending": None, "outcome": None, "log": []}
 
 
+def add_anchor(st, agent, raw_reject, raw_ideal, overwrite=False):
+    """Record where an agent's own scale starts and ends: the raw rating of the worst (`raw_reject`) and the best
+    (`raw_ideal`) outcome. Every later rating of that agent is read against it. Raises ReplyError for an inverted scale,
+    and for an agent that is already anchored unless `overwrite` (which invalidates comparisons made before it)."""
+    # `not (a > b)` rather than `a <= b`, so a NaN is refused too.
+    if not (raw_ideal > raw_reject):
+        raise ReplyError(f"raw_ideal ({raw_ideal}) must exceed raw_reject ({raw_reject}); {agent}'s scale is inverted")
+    if agent in st["anchors"] and not overwrite:
+        raise ReplyError(f"{agent} is already anchored; pass --overwrite to re-anchor "
+                         f"(this invalidates comparisons made before it)")
+    st["anchors"][agent] = {"raw_reject": raw_reject, "raw_ideal": raw_ideal}
+
+
 def add_candidate(st, agent, text, rationale=None, cid=None):
     """Append a proposal. A proposal names its own id (seed-<agent>, r<k>-<agent>), so it can be taken in whatever
     order it arrives and is never lost for want of the rest of the picture. Without an id (an older reply), it is the
@@ -228,18 +236,6 @@ def add_ratings(st, agent, ratings):
 # reading CONCORD documents
 # --------------------------------------------------------------------------
 
-_BARE_LT_RE = re.compile(r"<(?![a-zA-Z/?!])")
-_BARE_AMP_RE = re.compile(r"&(?!(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);)")
-
-
-def escape_bare_chars(xml_text):
-    """Escape what an agent un-escaped while copying: a `<` that does not start a tag and an `&` that is not part of an
-    entity. The scripts print `&lt;` and `&amp;`, but a model copying the text often turns them back into `<` and `&`.
-    Applied to every document before it is parsed, so one such character never costs a whole reply; the meaning of
-    the text is unchanged."""
-    return _BARE_LT_RE.sub("&lt;", _BARE_AMP_RE.sub("&amp;", xml_text))
-
-
 def parse_reply_doc(root):
     """-> ('anchor', (reject, ideal)) | ('candidate', (text, rationale)) | ('score', [(id, raw, reasoning)]) | None"""
     def txt(el, tag):
@@ -272,5 +268,3 @@ def reply_check(text):
     if not docs:
         return None
     return hashlib.sha256(re.sub(r"\s+", "", "".join(docs)).encode("utf-8")).hexdigest()[:8]
-
-# <<< END SHARED CORE
