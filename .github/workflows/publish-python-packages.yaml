@@ -1,0 +1,87 @@
+#  Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+#  SPDX-License-Identifier: Apache-2.0
+name: Publish Python Package
+
+on:
+  push:
+    tags:
+      - "ioc-concord-v*"
+      - "ioc-concord-mce-metrics-v*"
+      - "ioc-accord-mce-metrics-v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Build and publish ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-${{ steps.resolve.outputs.name }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve package from tag
+        id: resolve
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          packages = [
+              ("ioc-accord-mce-metrics", "protocols/accord/mce-metrics"),
+              ("ioc-concord-mce-metrics", "protocols/concord/mce-metrics"),
+              ("ioc-concord", "packages/ioc-concord"),
+          ]
+          tag = os.environ["TAG"]
+          for name, path in packages:
+              if tag.startswith(name + "-v"):
+                  print(f"name={name}")
+                  print(f"path={path}")
+                  break
+          PY
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install build tools
+        run: |
+          uv tool install build
+          uv tool install twine
+
+      - name: Build package
+        run: pyproject-build "${{ steps.resolve.outputs.path }}"
+
+      - name: Check package
+        run: uvx twine check "${{ steps.resolve.outputs.path }}/dist/"*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ${{ steps.resolve.outputs.path }}/dist/
+          skip-existing: true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ steps.resolve.outputs.name }}-${{ github.sha }}
+          path: ${{ steps.resolve.outputs.path }}/dist/*
+          retention-days: 30
