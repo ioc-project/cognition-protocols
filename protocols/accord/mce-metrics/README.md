@@ -66,7 +66,7 @@ the prompt messages. A trace without them skips those metrics rather than scorin
 
 ### Run in the MCE worker
 
-Install the package next to `oxp-mce-core`; each metric is registered under `metrics_computation_engine.plugins`
+Install the package next to `ioc-scope-mce-core`; each metric is registered under `metrics_computation_engine.plugins`
 in `pyproject.toml`, one entry per class. List the ones you want under `metrics: Session:` of an MCE config:
 
 ```yaml

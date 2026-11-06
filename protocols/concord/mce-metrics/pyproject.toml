@@ -11,7 +11,7 @@ version = "0.1.0"
 description = "CONCORD compliance, rounds, satisfaction, fairness and token cost as MCE metric plugins."
 requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
-dependencies = ["oxp-mce-core", "openai", "python-dotenv"]
+dependencies = ["ioc-scope-mce-core>=2.0.0", "openai", "python-dotenv"]
 
 [project.scripts]
 concord-mce-trace = "concord_mce_metrics.trace_cli:main"
@@ -46,10 +46,6 @@ ConcordTokensRepair = "concord_mce_metrics.protocolcost:ConcordTokensRepair"
 ConcordTokensAfterCommit = "concord_mce_metrics.protocolcost:ConcordTokensAfterCommit"
 ConcordProtocolTokens = "concord_mce_metrics.protocolcost:ConcordProtocolTokens"
 ConcordProtocolShare = "concord_mce_metrics.protocolcost:ConcordProtocolShare"
-
-[tool.uv.sources]
-# Temporary, until we release the scope pypi packages
-oxp-mce-core = { git = "https://github.com/outshift-open/observe-and-explain-platform.git", subdirectory = "backend/mce/mce-core", branch = "main" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/concord_mce_metrics"]
