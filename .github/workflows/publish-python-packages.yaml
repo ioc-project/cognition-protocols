@@ -1,0 +1,85 @@
+#  Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+#  SPDX-License-Identifier: Apache-2.0
+name: Publish Python Package
+
+on:
+  push:
+    tags:
+      - "ioc-concord-v*"
+      - "ioc-concord-mce-metrics-v*"
+      - "ioc-accord-mce-metrics-v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  resolve:
+    name: Resolve package from tag
+    runs-on: ubuntu-latest
+    outputs:
+      name: ${{ steps.resolve.outputs.name }}
+      path: ${{ steps.resolve.outputs.path }}
+    steps:
+      - name: Resolve package
+        id: resolve
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          packages = [
+              ("ioc-accord-mce-metrics", "protocols/accord/mce-metrics"),
+              ("ioc-concord-mce-metrics", "protocols/concord/mce-metrics"),
+              ("ioc-concord", "packages/ioc-concord"),
+          ]
+          tag = os.environ["TAG"]
+          for name, path in packages:
+              if tag.startswith(name + "-v"):
+                  print(f"name={name}")
+                  print(f"path={path}")
+                  break
+          PY
+
+  publish:
+    name: Build and publish ${{ needs.resolve.outputs.name }}
+    needs: resolve
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-${{ needs.resolve.outputs.name }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+
+      - name: Build package
+        run: uv build --directory "${{ needs.resolve.outputs.path }}"
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
+        with:
+          packages-dir: ${{ needs.resolve.outputs.path }}/dist/
+          skip-existing: true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist-${{ needs.resolve.outputs.name }}-${{ github.sha }}
+          path: ${{ needs.resolve.outputs.path }}/dist/*
+          retention-days: 30

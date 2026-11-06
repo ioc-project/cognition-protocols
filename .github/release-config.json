@@ -55,6 +55,18 @@
                     "path": "CONCORD-SPEC.md"
                 }
             ]
+        },
+        "packages/ioc-concord": {
+            "package-name": "ioc-concord",
+            "release-type": "python"
+        },
+        "protocols/concord/mce-metrics": {
+            "package-name": "ioc-concord-mce-metrics",
+            "release-type": "python"
+        },
+        "protocols/accord/mce-metrics": {
+            "package-name": "ioc-accord-mce-metrics",
+            "release-type": "python"
         }
     }
 }
