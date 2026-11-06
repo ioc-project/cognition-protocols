@@ -45,6 +45,16 @@
                     "path": "SKILL.md"
                 }
             ]
+        },
+        "protocols/concord/spec": {
+            "package-name": "concord-spec",
+            "release-type": "simple",
+            "extra-files": [
+                {
+                    "type": "generic",
+                    "path": "CONCORD-SPEC.md"
+                }
+            ]
         }
     }
 }

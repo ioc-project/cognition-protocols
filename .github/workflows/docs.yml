@@ -5,13 +5,14 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'protocols/concord/spec/**'
       - 'mkdocs.yml'
-      - 'docs/hooks.py'
       - '.github/workflows/docs.yml'
   pull_request:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'protocols/concord/spec/**'
       - 'README.md'
       - 'mkdocs.yml'
       - 'lychee.toml'
