@@ -14,12 +14,12 @@ A run goes like this:
 
 1. Any agent can start a run by sending one message, `<concord-init>`, that describes the problem and sets up the run.
 2. Every participant answers with its anchors, which fix its personal scoring scale, a seed candidate and its own score for it.
-3. Every participant scores every candidate. The candidate whose weakest score is highest (ties go to the next weakest, and so on) becomes the incumbent. A later candidate replaces it only if it is clearly better, or if it clears the threshold where the incumbent does not.
+3. Every participant scores every candidate. The candidate whose weakest score is highest becomes the incumbent. A later candidate replaces it only if it is clearly better, or if it clears the threshold where the incumbent does not.
 4. If the incumbent's weakest score is below the threshold and the budget allows, the participant that is least satisfied with it (the bottleneck) proposes a repair. Everyone scores the new candidate and the incumbent is evaluated again.
-5. A participant that stays silent after repeated requests is marked missing by each agent that is waiting for it, and the run goes on without it as long as two participants remain (so a run of two participants cannot survive a missing one). The run ends in one of three ways: `SUCCESS` (every participant clears the threshold), `BEST_EFFORT` (the budget of repair rounds is spent, or every remaining participant clears the threshold but some participant is missing) or `ABORTED` (fewer than two participants remain, or the run is cancelled).
-6. One participant, the reporter, then sends its result to all the others. Every other participant compares that result with the outcome it computed, and reports any difference. The reporter is the first participant in `<participants>` that is not missing (see [`<concord-result>`](#concord-result)).
+5. The run ends with `SUCCESS` when every participant clears the threshold, or with `BEST_EFFORT` when the budget of repair rounds is spent. A run that cannot complete ends with `ABORTED`.
+6. One participant then sends its result to all the others. Every other participant compares that result with the outcome it computed, and reports any difference.
 
-There is no central decision-maker and no coordinator that the run depends on: the initiator only starts the run, the reporter only sends the result, and the centre of a star only passes messages on. Each participant runs the same decision engine over the same messages and reaches the same decision. The messages travel over a network that delivers every message to every agent: a broadcast channel, a full mesh, or a star whose centre relays (see [Transport](#transport)).
+There is no central decision-maker and no coordinator that the run depends on. Each participant runs the same decision engine over the same messages and reaches the same decision.
 
 Activate CONCORD when:
 - An outcome must satisfy agents whose criteria may conflict.
@@ -32,12 +32,12 @@ Conflict may be confirmed, anticipated, or merely uncertain — all three cases 
 
 ## Roles
 
-All agents run the same protocol. The only thing that sets the initiator apart is that it sends the first message.
+All agents run the same protocol.
 
-- **The initiator** is the agent that starts the run by sending `<concord-init>`. After that it is an ordinary agent. If it is listed in `<participants>`, it takes part like any other participant. If it is not listed, it does not negotiate. Its only own duty is sending init again when init replies are missing (see [Timeouts and missing agents](#timeouts-and-missing-agents)); besides that it sends only what any agent may send, such as errors and a cancel. It also receives the result of the run, so it can report how the run ended.
-- **Participants** are the agents listed in `<participants>`, at least 2. Each holds a role-specific scoring perspective, maintains its own copy of the run state, and self-determines when to score, repair, or terminate.
+- **The initiator** is the agent that starts the run by sending `<concord-init>`. If it is listed in `<participants>`, it is also a participant; otherwise it does not negotiate. It sends `<concord-init>` again when init replies are missing (see [Timeouts and missing agents](#timeouts-and-missing-agents)), and it receives the result of the run so that it can report how the run ended.
+- **Participants** are the agents listed in `<participants>`, at least two. Each holds a role-specific scoring perspective, maintains its own copy of the run state, and decides for itself when to score, repair or compute its outcome.
 
-The state machine is distributed. Each participant moves as soon as its own copy of the run state says it is its turn — it scores once the seeds have reached it, and repairs when every score is in and it is the bottleneck. Each participant detects a gap in its own copy of the run state and asks the author of the missing message for it. If the author stays silent, the participant marks it missing and goes on without it (see [Timeouts and missing agents](#timeouts-and-missing-agents)).
+The state machine is distributed. Each participant moves as soon as its own copy of the run state says it is its turn. It scores once the seeds have reached it, and repairs when every score is in and it is the bottleneck. Each participant detects a gap in its own copy of the run state and asks the author of the missing message for it. If the author stays silent, the participant marks that author missing and goes on without it (see [Timeouts and missing agents](#timeouts-and-missing-agents)).
 
 ---
 
@@ -69,7 +69,7 @@ These are supplied once at run start and are immutable for the run. The second c
 ```
 START
  └─ INIT   (the initiator sends <concord-init> to all participants)
-      every participant answers with one init reply (its anchors, its seed candidate and its own score for it)
+      every participant answers with one init reply
       all init replies received (or their authors marked missing)
       └─ each participant scores the seeds of the others independently
            all scores received (from the participants not missing)
@@ -82,7 +82,7 @@ START
                 └─ (repeat evaluate)
 
 SUCCESS or BEST_EFFORT  →  the reporter (the first participant in `<participants>` that is not missing) sends its <concord-result>;
-                           the others wait for it and compare it with their own outcome (CONFIRM)
+                           the others wait for it and compare it with their own outcome
 an agent stays silent after retries requests  →  it is marked missing, and the evaluation is made again without it
 fewer than two participants left, or the run is cancelled  →  ABORTED
 ```
