@@ -17,21 +17,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  publish:
-    name: Build and publish ${{ github.ref_name }}
+  resolve:
+    name: Resolve package from tag
     runs-on: ubuntu-latest
-    environment:
-      name: pypi-${{ steps.resolve.outputs.name }}
-    permissions:
-      contents: read
-      id-token: write
-
+    outputs:
+      name: ${{ steps.resolve.outputs.name }}
+      path: ${{ steps.resolve.outputs.path }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Resolve package from tag
+      - name: Resolve package
         id: resolve
         env:
           TAG: ${{ github.ref_name }}
@@ -51,6 +44,21 @@ jobs:
                   break
           PY
 
+  publish:
+    name: Build and publish ${{ needs.resolve.outputs.name }}
+    needs: resolve
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-${{ needs.resolve.outputs.name }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -67,21 +75,21 @@ jobs:
           uv tool install twine
 
       - name: Build package
-        run: pyproject-build "${{ steps.resolve.outputs.path }}"
+        run: pyproject-build "${{ needs.resolve.outputs.path }}"
 
       - name: Check package
-        run: uvx twine check "${{ steps.resolve.outputs.path }}/dist/"*
+        run: uvx twine check "${{ needs.resolve.outputs.path }}/dist/"*
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: ${{ steps.resolve.outputs.path }}/dist/
+          packages-dir: ${{ needs.resolve.outputs.path }}/dist/
           skip-existing: true
 
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dist-${{ steps.resolve.outputs.name }}-${{ github.sha }}
-          path: ${{ steps.resolve.outputs.path }}/dist/*
+          name: dist-${{ needs.resolve.outputs.name }}-${{ github.sha }}
+          path: ${{ needs.resolve.outputs.path }}/dist/*
           retention-days: 30
