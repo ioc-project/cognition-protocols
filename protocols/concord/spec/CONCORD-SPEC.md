@@ -173,10 +173,11 @@ The participant, among those that are not missing, with the lowest normalized sc
 | Outcome | Condition |
 |---|---|
 | `SUCCESS` | `floor(x*) >= τ` AND every participant has rated `x*` AND no participant was marked missing before the outcome was computed |
-| `BEST_EFFORT` | `floor(x*) < τ` AND `t >= B` (budget exhausted); or `floor(x*) >= τ` for the participants that are not missing, AND at least one participant is missing |
+| `BEST_EFFORT` | `floor(x*) < τ` AND `t >= B` (budget exhausted) |
+| `BEST_EFFORT` | At least one participant is missing, AND `floor(x*) >= τ` for all the others |
 | `ABORTED` | Fewer than two participants are left that are not missing (see [Timeouts and missing agents](#timeouts-and-missing-agents)); or the run is cancelled (see `<concord-cancel>`) |
 
-The second `BEST_EFFORT` case ends the run at once, since no repair is needed for the participants that remain. The winner may be a good candidate, but a participant was not taken into account, so the run never reports `SUCCESS`.
+The second `BEST_EFFORT` row applies as soon as it holds, without waiting for the budget to run out: everyone still in the run is satisfied, so a repair would gain nothing. The outcome is not `SUCCESS`, because the missing participant never had its say on the winner.
 
 Each participant computes its outcome from its own copy of the run state, and the reporter's `<concord-result>` confirms it (see [`<concord-result>`](#concord-result)). A reader that is not a participant learns how the run ended from that message.
 
