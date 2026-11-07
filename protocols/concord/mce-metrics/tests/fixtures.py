@@ -7,63 +7,80 @@ import json
 
 from concord_mce_metrics import protocolcost, session
 
+STATE = "abc123"
+TEXTS = ("restart api", "enable debug logging")
 
-def reply(agent, body, before=None):
-    return ["record-reply", agent, body]
+
+def anchor_reply(agent, reject=0, ideal=100):
+    return f'<concord-anchor-reply agent="{agent}" state="{STATE}" ack="1"><raw_reject>{reject}</raw_reject><raw_ideal>{ideal}</raw_ideal></concord-anchor-reply>'
 
 
-def anchor(reject=0, ideal=100):
-    return f"<raw_reject>{reject}</raw_reject><raw_ideal>{ideal}</raw_ideal>"
+def candidate_reply(agent, cid, text):
+    return f'<concord-candidate-reply id="{cid}" agent="{agent}" state="{STATE}" ack="2"><candidate>{text}</candidate><rationale>fits {agent}</rationale></concord-candidate-reply>'
+
+
+def score_reply(agent, **by_candidate):
+    """score_reply("a", **{"seed-a": (80, "good fit")}) -> a score reply."""
+    inner = "".join(f'<score candidate_id="{cid}"><raw>{raw}</raw><reasoning>{why}</reasoning></score>' for cid, (raw, why) in by_candidate.items())
+    return f'<concord-score-reply agent="{agent}" state="{STATE}" ack="3">{inner}</concord-score-reply>'
 
 
 def scores(**by_candidate):
-    """scores(c1=(80, 'good fit')) -> a score reply."""
-    return "".join(
-        f'<score candidate_id="{cid}"><raw>{raw}</raw><reasoning>{why}</reasoning></score>' for cid, (raw, why) in by_candidate.items()
-    )
+    """scores(**{"seed-a": (80, "good fit")}) -> what an agent rates; the fixture wraps it in a reply."""
+    return by_candidate
 
 
-CANDIDATES = (
-    '<candidate id="c1-a"><text>restart api | RATIONALE fast</text></candidate>'
-    '<candidate id="c2-b"><text>enable debug logging | RATIONALE safe</text></candidate>'
-)
-
-
-def call(t, args, stdout, exit_code=0, stdin=""):
+def call(t, args, stdout="STATUS: SEND", exit_code=0, stdin="", stderr=""):
     return {
         "id": f"t{t}",
         "startTime": t,
         "endTime": t + 0.5,
         "toolName": "run_skill_script",
-        "toolArguments": json.dumps({"script": "concordv2.py", "args": args, "stdin": stdin}),
-        "toolOutput": json.dumps({"exit_code": exit_code, "stdout": stdout}),
+        "toolArguments": json.dumps({"script": "concord_initiator.py", "args": args, "stdin": stdin}),
+        "toolOutput": json.dumps({"exit_code": exit_code, "stdout": stdout, "stderr": stderr}),
     }
 
 
-def tool_spans(finish="SUCCESS", repairs=0, score_a=None, score_b=None):
-    """init, anchors, seeds, scoring, `repairs` repair rounds, then Complete (or stop at Score when finish is None)."""
-    score_a = score_a or scores(**{"c1-a": (90, "I favour this"), "c2-b": (20, "this is wrong")})
-    score_b = score_b or scores(**{"c1-a": (85, "works for me"), "c2-b": (90, "my own")})
-    def after_scoring(left):
-        return "Phase: Repair" if left else "Phase: Score"
+def handle(t, *replies, **kw):
+    return call(t, ["--state", f"concord-state-{STATE}.json", "handle"], stdin="\n\n".join(replies), **kw)
 
+
+COMPLETE = "RUN COMPLETE: outcome {outcome}.\nWinning candidate {winner} (proposed by a): x\nFinal scores: a 0.90, b 0.85 (threshold 0.7)"
+
+
+def tool_spans(finish="SUCCESS", repairs=0, score_a=None, score_b=None, texts=TEXTS):
+    """init, anchors, seeds, scoring, `repairs` repair rounds, then the end.
+
+    finish: SUCCESS or BEST_EFFORT (the engine decides, from the scores: BEST_EFFORT needs a budget of 2 spent), or None
+    to leave the last agent unscored. With `repairs` the first scores are below tau (0.7), so the engine asks for a
+    repair; the last round's scores clear tau for SUCCESS and stay below it for BEST_EFFORT.
+    """
+    clears = finish != "BEST_EFFORT"
+    repairs = 2 if finish == "BEST_EFFORT" else repairs
+    low = repairs > 0
+    a_seed = score_a or scores(**{"seed-a": (90, "I favour this"), "seed-b": (20, "this is wrong")})
+    b_seed = score_b or scores(**{"seed-a": (40 if low else 85, "works for me"), "seed-b": (90, "my own")})
     spans = [
-        call(1, ["init", "--agents", "a,b", "--satisfaction-threshold", "0.7", "-B", "2", "--schema", "pick an action"], "Phase: Anchor"),
-        call(2, ["record-reply", "a", anchor()], "Phase: Anchor"),
-        call(3, ["record-reply", "b", anchor()], "Phase: Seed"),
-        call(4, ["record-reply", "a", "restart api"], "Phase: Seed"),
-        call(5, ["record-reply", "b", "enable debug logging"], "Phase: Score\n" + CANDIDATES),
-        call(6, ["record-reply", "a", score_a], "Phase: Score"),
-        call(7, ["record-reply", "b", score_b], after_scoring(repairs)),
+        call(1, ["init", "--quiet", "--agents", "a,b", "--satisfaction-threshold", "0.7", "-B", "2", "--schema", '{"type": "string", "description": "an action"}'],
+             stdout=f"State: concord-state-{STATE}.json\nNEXT: run handle"),
+        call(2, ["--state", f"concord-state-{STATE}.json", "handle"]),
+        handle(3, anchor_reply("a"), anchor_reply("b")),
+        handle(4, candidate_reply("a", "seed-a", texts[0]), candidate_reply("b", "seed-b", texts[1])),
+        handle(5, score_reply("a", **a_seed), score_reply("b", **b_seed)),
     ]
-    t = 8
-    for left in range(repairs - 1, -1, -1):
-        # the least-satisfied agent answers the repair, then everyone scores the new candidate; the last scoring decides
-        spans.append(call(t, ["record-reply", "a", "new candidate"], "Phase: Score\n" + CANDIDATES))
-        spans.append(call(t + 1, ["record-reply", "b", score_b], after_scoring(left)))
+    t = 6
+    for k in range(1, repairs + 1):
+        # the least-satisfied agent (b) answers the repair and rates its own candidate, then a rates it
+        last = k == repairs
+        a_raw = 90 if (last and clears) else 30
+        spans.append(handle(t, candidate_reply("b", f"r{k}-b", f"new plan {k}"), score_reply("b", **{f"r{k}-b": (95, "my own")})))
+        spans.append(handle(t + 1, score_reply("a", **{f"r{k}-b": (a_raw, "a's view")})))
         t += 2
-    if finish:
-        spans.append(call(t, ["status"], f"Phase: Complete - {finish}\n<winning_candidate_id>c1-a</winning_candidate_id>"))
+    if finish is None:
+        spans.pop()  # the last reply never came
+    else:
+        winner = f"r{repairs}-b" if repairs and clears else "seed-a"
+        spans[-1]["toolOutput"] = json.dumps({"exit_code": 0, "stdout": "STATUS: NONE", "stderr": COMPLETE.format(outcome=finish, winner=winner)})
     return spans
 
 

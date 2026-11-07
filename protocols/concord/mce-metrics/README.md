@@ -14,6 +14,11 @@ The metrics are computed from the trace of a multi-agent system (MAS) to which C
 is an `events.jsonl` file, the format in which [MAS-Lab](https://github.com/outshift-open/mas-lab) writes the trace of
 a run. It holds one JSON line per event, such as the start and the end of each tool call and each LLM call.
 
+The metrics read the calls of the CONCORD initiator script (`concord_initiator.py`): `init`, `handle`, with the replies of
+the agents on its input, and `mark-missing`. They replay those calls through the
+[`ioc-concord`](../../../packages/ioc-concord) engine, the code the script itself runs, so the pool, the ratings, the
+repair rounds and the outcome are the ones the run had.
+
 From the `events.jsonl`, the session trace is ingested into the knowledge graph (KG), where the calls are stored as
 `LLMCall` and `ToolCall` nodes. MCE then reads every tool and LLM call of a session and returns each metric computed
 for that session.
@@ -40,7 +45,10 @@ uv sync --extra dev
 uv run pytest
 ```
 
-The tests use a small synthetic session and a canned judge answer, so they need no KG and no LLM.
+`ioc-concord` is installed from this repository (`[tool.uv.sources]` in `pyproject.toml`) until it is published.
+
+The tests use a small synthetic session, the initiator calls of five real runs (`tests/traces/`) and a canned judge answer,
+so they need no KG and no LLM.
 
 ## Run
 
