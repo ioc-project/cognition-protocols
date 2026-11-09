@@ -98,6 +98,7 @@ nav:
       - protocols/index.md
       - ACCORD:
           - protocols/accord/index.md
+          - A2A Binding: protocols/accord/a2a-binding.md
       - CONCORD:
           - protocols/concord/index.md
           - Configuration: protocols/concord/configuration.md

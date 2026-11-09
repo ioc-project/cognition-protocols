@@ -131,4 +131,5 @@ Cisco, October 2026.
 ## Next steps
 
 - [Getting Started](../../getting-started.md) — how to add ACCORD to an existing multi-agent system
+- [A2A Binding](a2a-binding.md) — running ACCORD over the Agent-to-Agent protocol
 - [Evaluation](../../evaluation/accord.md) — measured results across 150 scenarios: convergence, correctness, cost, and benefit
