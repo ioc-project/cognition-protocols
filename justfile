@@ -35,3 +35,7 @@ test-scripts:
 
 # Run all the CONCORD tests (not the sync check: that is `just check-sync`)
 test-concord: test-bundler test-lib test-scripts
+
+# Run the ACCORD tests: the initiator script, against the recorded transcripts
+test-accord:
+    uv run --no-project --with pytest python -m pytest protocols/accord/tests -q -p no:cacheprovider

@@ -1,0 +1,240 @@
+=== unknown-command (exit 2)
+$ frobnicate
+err| usage: accord_initiator.py [-h] [--state STATE]
+err|                            {init,roster,frame,glossary,verify,lock,execution-message,status,handle} ...
+err| accord_initiator.py: error: argument phase: invalid choice: 'frobnicate' (choose from init, roster, frame, ⏎
+err| glossary, verify, lock, execution-message, status, handle)
+err| 
+
+=== init no-specialists (exit 2)
+$ init
+err| usage: accord_initiator.py init [-h] --specialists SPECIALISTS
+err|                                 [--key-terms KEY_TERMS]
+err|                                 [--action-tool ACTION_TOOL] [--task TASK]
+err| accord_initiator.py init: error: the following arguments are required: --specialists
+err| 
+
+=== status before-init (exit 0)
+$ status
+out| {
+out|   "ok": true,
+out|   "phase": "status",
+out|   "data": {
+out|     "specialists": [],
+out|     "key_terms": [],
+out|     "action_tool": "",
+out|     "roster": 0,
+out|     "frame_atoms": 0,
+out|     "frame_rounds": 0,
+out|     "glossary_terms": 0,
+out|     "checks": 0,
+out|     "locked": false
+out|   }
+out| }
+out| 
+
+=== handle before-init (exit 1)
+$ handle --agent telemetry --reply {}
+err| handle: no task in state — run init --task first
+err| 
+
+=== lock before-init (exit 0)
+$ lock
+out| {
+out|   "ok": true,
+out|   "phase": "lock",
+out|   "data": {
+out|     "status": "INTENT-LOCKED",
+out|     "roster": [],
+out|     "problem_frame": [],
+out|     "glossary": [],
+out|     "verifiable_objective": {
+out|       "owners": {},
+out|       "uncovered": [],
+out|       "checks": []
+out|     },
+out|     "flagged_items": []
+out|   }
+out| }
+out| 
+
+=== init (exit 0)
+$ init --specialists telemetry,database --key-terms error_rate,rollback_target --action-tool remediate --task Checkout ⏎
+$ error rate rose after the 14:02 deploy; decide what to roll back
+out| {
+out|   "ok": true,
+out|   "phase": "init",
+out|   "data": {
+out|     "specialists": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "key_terms": [
+out|       "error_rate",
+out|       "rollback_target"
+out|     ],
+out|     "action_tool": "remediate",
+out|     "next_command": "roster",
+out|     "protocol_status": "IN_PROGRESS",
+out|     "locked_contract_exists": false,
+out|     "normal_execution_allowed": false,
+out|     "app_execution_allowed": false,
+out|     "phase": "convene",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "messages": {
+out|       "telemetry": "<accord-delivery state=\"2daef4df\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nSPECIALISTS: telemetry, database",
+out|       "database": "<accord-delivery state=\"2daef4df\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nSPECIALISTS: telemetry, database"
+out|     },
+out|     "status": "SEND",
+out|     "hint": "Use `accord_initiator.py handle --agent <id> --reply <text>` for each incoming reply. No separate ⏎
+out| phase commands needed."
+out|   }
+out| }
+out| 
+
+=== handle unknown-agent (exit 0)
+$ handle --agent nobody --reply {}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "convene",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "telemetry",
+out|       "database"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle prose (exit 0)
+$ handle --agent telemetry --reply this is prose, not a reply
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "convene",
+out|     "awaiting": [
+out|       "database"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "database"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle broken-json (exit 0)
+$ handle --agent telemetry --reply {"agent": "telemetry", 
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "convene",
+out|     "awaiting": [
+out|       "database"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "database"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== lock before-verify (exit 0)
+$ lock
+out| {
+out|   "ok": true,
+out|   "phase": "lock",
+out|   "data": {
+out|     "status": "INTENT-LOCKED",
+out|     "roster": [],
+out|     "problem_frame": [],
+out|     "glossary": [],
+out|     "verifiable_objective": {
+out|       "owners": {},
+out|       "uncovered": [],
+out|       "checks": []
+out|     },
+out|     "flagged_items": []
+out|   }
+out| }
+out| 
+
+=== roster bad-json (exit 1)
+$ roster --responses not json
+out| {"ok": false, "phase": "roster", "error": "FileNotFoundError: [Errno 2] No such file or directory: 'not json'"}
+out| 
+
+=== frame bad-stdin (exit 1)
+$ frame --responses [] --current-frame -
+ in| also not json
+err| invalid JSON in -: Expecting value: line 1 column 1 (char 0)
+err| 
+
+=== glossary missing-file (exit 1)
+$ glossary --responses /nope/missing.json
+out| {"ok": false, "phase": "glossary", "error": "FileNotFoundError: [Errno 2] No such file or directory: ⏎
+out| '/nope/missing.json'"}
+out| 
+
+=== execution-message before-lock (exit 0)
+$ execution-message --agent telemetry --assignment-file -
+ in| a
+out| {
+out|   "ok": true,
+out|   "phase": "execution-message",
+out|   "data": {
+out|     "agent": "telemetry",
+out|     "message": "EXECUTION_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| EXECUTION_REQUEST\nhandler before starting the assignment. Report values in the units fixed by the\ncontract ⏎
+out| Glossary, complete the acceptance checks assigned to you in the\nVerifiable Objective, and begin your reply with ⏎
+out| `LOCK_STATUS: RECEIVED`.\n\nLOCKED_INTENT_CONTRACT: ⏎
+out| {\"flagged_items\":[],\"glossary\":[],\"problem_frame\":[],\"roster\":[],\"status\":\"INTENT-LOCKED\",\"verifiable⏎
+out| _objective\":{\"checks\":[],\"owners\":{},\"uncovered\":[]}}\n\nASSIGNMENT: a"
+out|   }
+out| }
+out| 
+
+=== status (exit 0)
+$ status
+out| {
+out|   "ok": true,
+out|   "phase": "status",
+out|   "data": {
+out|     "specialists": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "key_terms": [
+out|       "error_rate",
+out|       "rollback_target"
+out|     ],
+out|     "action_tool": "remediate",
+out|     "roster": 0,
+out|     "frame_atoms": 0,
+out|     "frame_rounds": 0,
+out|     "glossary_terms": 0,
+out|     "checks": 0,
+out|     "locked": false
+out|   }
+out| }
+out| 
+
