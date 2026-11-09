@@ -1,26 +1,13 @@
 #  Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 #  SPDX-License-Identifier: Apache-2.0
-name: Publish Package
+name: Publish Python Package
 
 on:
-  workflow_dispatch:
-    inputs:
-      package:
-        description: "Package to publish"
-        required: true
-        type: choice
-        options:
-          - all
-          - ioc-accord-mce-metrics
-          - ioc-concord-mce-metrics
-      publish:
-        description: "Upload artifacts to public PyPI"
-        required: false
-        type: boolean
-        default: false
   push:
     tags:
-      - "package-v*"
+      - "ioc-concord-v*"
+      - "ioc-concord-mce-metrics-v*"
+      - "ioc-accord-mce-metrics-v*"
 
 permissions:
   contents: read
@@ -30,83 +17,69 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  plan:
-    name: Select packages
+  resolve:
+    name: Resolve package from tag
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.select.outputs.matrix }}
+      name: ${{ steps.resolve.outputs.name }}
+      path: ${{ steps.resolve.outputs.path }}
     steps:
-      - name: Select packages to publish
-        id: select
+      - name: Resolve package
+        id: resolve
         env:
-          INPUT: ${{ github.event.inputs.package || 'all' }}
+          TAG: ${{ github.ref_name }}
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import json, os
+          import os
           packages = [
               ("ioc-accord-mce-metrics", "protocols/accord/mce-metrics"),
               ("ioc-concord-mce-metrics", "protocols/concord/mce-metrics"),
+              ("ioc-concord", "packages/ioc-concord"),
           ]
-          sel = os.environ["INPUT"]
-          main = [
-              {"name": n, "path": p}
-              for n, p in packages
-              if sel == "all" or sel == n
-          ]
-          print("matrix=" + json.dumps({"include": main}))
+          tag = os.environ["TAG"]
+          for name, path in packages:
+              if tag.startswith(name + "-v"):
+                  print(f"name={name}")
+                  print(f"path={path}")
+                  break
           PY
 
   publish:
-    needs: plan
+    name: Build and publish ${{ needs.resolve.outputs.name }}
+    needs: resolve
     runs-on: ubuntu-latest
-    # One GitHub environment per package (pypi-<name>), so each PyPI project
-    # can have its own trusted publisher and protection rules.
     environment:
-      name: pypi-${{ matrix.name }}
+      name: pypi-${{ needs.resolve.outputs.name }}
     permissions:
       contents: read
       id-token: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
-      - name: Install build tools
-        run: |
-          uv tool install build
-          uv tool install twine
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       - name: Build package
-        run: pyproject-build "${{ matrix.path }}"
-
-      - name: Check package
-        run: uvx twine check "${{ matrix.path }}/dist/"*
+        run: uv build --directory "${{ needs.resolve.outputs.path }}"
 
       - name: Publish to PyPI
-        if: github.event_name == 'push' || inputs.publish == true
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
         with:
-          packages-dir: ${{ matrix.path }}/dist/
+          packages-dir: ${{ needs.resolve.outputs.path }}/dist/
           skip-existing: true
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: dist-${{ matrix.name }}-${{ github.sha }}
-          path: ${{ matrix.path }}/dist/*
+          name: dist-${{ needs.resolve.outputs.name }}-${{ github.sha }}
+          path: ${{ needs.resolve.outputs.path }}/dist/*
           retention-days: 30

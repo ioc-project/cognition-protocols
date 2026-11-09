@@ -8,3 +8,4 @@ structure, and normative conformance requirements.
 
 [:octicons-file-code-24: Open CONCORD Specification](spec/CONCORD-SPEC.html){ .md-button }
 
+[:octicons-tag-24: Previous releases](https://github.com/ioc-project/cognition-protocols/releases?q=concord-spec){ .md-button .md-button--secondary }
