@@ -15,6 +15,7 @@ Modules:
     xmlutil   escaping, and the integrity check of a document (computed on its text, never on a parsed copy)
     schema    the candidate schema: parse, validate, check a proposal, describe it
     engine    the decision engine: record the messages, evaluate (SELECT / ACCEPT / bottleneck / outcome) from the seeds
+    wire      the messages: build each one (the author's checks), and read each one in the layers of the Order of checks
     store     the Store protocol, and FileStore (atomic writes) as one implementation
 
 A module that is bundled into a script follows the rules in `tools/bundle.py`: stdlib imports at the top, intra-package
