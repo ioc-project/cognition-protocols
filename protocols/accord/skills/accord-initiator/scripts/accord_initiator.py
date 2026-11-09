@@ -59,9 +59,11 @@ DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 DEFAULT_VERIFIER_ID = "verifier"
 GROUP_THRESHOLD = 0.72
 SIM_MERGE = 0.72
-# Equal to SIM_MERGE so the near-match band [SIM_CLARIFY, SIM_MERGE) is empty.
-# Glossary pairs either agree or stay flagged. Nothing is sent to CLARIFY.
-SIM_CLARIFY = SIM_MERGE
+# Lower bound of the near-match band [SIM_CLARIFY, SIM_MERGE). Cross-cluster
+# pairs in this band are sent to CLARIFY.
+# To skip CLARIFY entirely, set SIM_CLARIFY = SIM_MERGE so the band is empty.
+# Glossary pairs then either agree or stay flagged.
+SIM_CLARIFY = 0.55
 MAX_UNCOVERED_HOLDINGS = 1
 MAX_FRAME_ATOMS = 6
 MAX_FRAME_ROUNDS = 2
