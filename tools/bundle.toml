@@ -7,8 +7,8 @@ path = "packages/ioc-concord"          # holds pyproject.toml (the version) and 
 
 [[library.target]]
 file = "protocols/concord/skills/concord-initiator/scripts/concord_initiator.py"
-modules = ["errors", "xmlutil", "schema", "engine", "wire", "store", "state"]
+modules = ["errors", "protocol", "xmlutil", "schema", "engine", "store"]
 
 [[library.target]]
 file = "protocols/concord/skills/concord-receiver/scripts/concord_receiver.py"
-modules = ["errors", "xmlutil", "schema", "engine", "wire", "store", "state"]
+modules = ["errors", "protocol", "xmlutil", "schema", "engine", "store"]

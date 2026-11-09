@@ -31,7 +31,7 @@ def test_a_supported_schema_is_returned_as_parsed(schema):
     ("{}", 'needs a "description"'),
     ('{"enum": ["A"]}', '"enum" must be a list of at least 2 non-empty strings'),
     ('{"enum": ["A", " "]}', '"enum" must be a list of at least 2 non-empty strings'),
-    ('{"enum": ["A", "a "]}', '"enum" holds the same option twice'),
+    ('{"enum": ["A", "A"]}', '"enum" holds the same option twice'),
     ('{"description": "d", "pattern": 1}', '"pattern" must be a string'),
     ('{"description": "d", "pattern": "("}', '"pattern" is not a valid regular expression'),
     ('{"description": "d", "minLength": -1}', '"minLength" must be a non-negative integer'),
@@ -49,7 +49,9 @@ def test_the_label_names_the_schema_the_way_the_caller_does(schema):
 
 def test_check_candidate_enforces_each_keyword(schema):
     enum = {"enum": ["Plan A", "Plan B"]}
-    assert schema.check_candidate(enum, "plan   a") is None
+    assert schema.check_candidate(enum, "  Plan A \n") is None
+    assert schema.check_candidate(enum, "plan a") is not None
+    assert schema.check_candidate({"enum": ["A", "a"]}, "a") is None
     assert "exactly one of the listed options (Plan A; Plan B)" in schema.check_candidate(enum, "Plan C")
     pat = {"description": "d", "pattern": "^ok-[0-9]+$"}
     assert schema.check_candidate(pat, "ok-12") is None

@@ -57,5 +57,5 @@ def _fixture(module):
     return fixture
 
 
-engine, xmlutil, schema, errors, wire, store, state = (_fixture(m) for m in (
-    "engine", "xmlutil", "schema", "errors", "wire", "store", "state"))
+engine, xmlutil, schema, errors, protocol, store = (_fixture(m) for m in (
+    "engine", "xmlutil", "schema", "errors", "protocol", "store"))

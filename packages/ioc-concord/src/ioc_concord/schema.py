@@ -42,7 +42,7 @@ def validate_schema(spec, label="schema"):
         e = spec["enum"]
         if not (isinstance(e, list) and len(e) >= 2 and all(isinstance(x, str) and x.strip() for x in e)):
             raise SchemaError(f'{label} "enum" must be a list of at least 2 non-empty strings')
-        if len({" ".join(x.lower().split()) for x in e}) != len(e):
+        if len(set(e)) != len(e):
             raise SchemaError(f'{label} "enum" holds the same option twice')
     if "pattern" in spec:
         if not isinstance(spec["pattern"], str):
@@ -60,12 +60,12 @@ def validate_schema(spec, label="schema"):
 
 
 def check_candidate(spec, text):
-    """Why `text` does not satisfy the schema `spec` (None when it does). Raises SchemaError if `spec` carries a
-    pattern that is not a valid regular expression: a schema that cannot be enforced accepts nothing."""
-    t = " ".join(str(text).split()) if "enum" in spec else str(text).strip()
-    if "enum" in spec and not any(" ".join(str(o).lower().split()) == t.lower() for o in spec["enum"]):
+    """Why `text` does not satisfy the schema `spec` (None when it does). The candidate is the text without the whitespace
+    around it; an option of a closed list must match exactly. Raises SchemaError if `spec` carries a pattern that is not a
+    valid regular expression: a schema that cannot be enforced accepts nothing."""
+    t = str(text).strip()
+    if "enum" in spec and t not in spec["enum"]:
         return "must be exactly one of the listed options (" + "; ".join(spec["enum"]) + ")"
-    t = next((o for o in spec.get("enum", []) if " ".join(str(o).lower().split()) == t.lower()), t)
     if "pattern" in spec:
         try:
             if not re.search(spec["pattern"], t):

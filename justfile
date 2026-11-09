@@ -24,3 +24,7 @@ check-sync:
 test-concord:
     uv run --no-project --with pytest python -m pytest tools protocols/concord/tests -q -p no:cacheprovider
     uv run --directory packages/ioc-concord pytest -q -p no:cacheprovider
+
+# Run only the ioc-concord library tests (as imported and as bundled), skipping the check that the scripts are in sync
+test-lib:
+    uv run --directory packages/ioc-concord pytest -q -p no:cacheprovider --deselect tests/test_bundled_scripts.py

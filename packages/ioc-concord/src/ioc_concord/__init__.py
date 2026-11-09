@@ -11,12 +11,11 @@ other integration can import the same code.
 Modules:
 
     errors    ConcordError and its subclasses: what the library raises (it never prints or exits)
-    xmlutil   escaping, element building, repairing copied text, the patterns that find a document in free text
+    protocol  the protocol version, the default parameters and the outcomes: one place to change them
+    xmlutil   escaping, and the integrity check of a document (computed on its text, never on a parsed copy)
     schema    the candidate schema: parse, validate, check a proposal, describe it
-    engine    the decision engine (SELECT / ACCEPT / REPAIR / COMMIT) over the ratings the agents give
-    wire      the documents: build and read every request and reply, the notices, and the tag vocabulary
+    engine    the decision engine: record the messages, evaluate (SELECT / ACCEPT / bottleneck / outcome) from the seeds
     store     the Store protocol, and FileStore (atomic writes) as one implementation
-    state     the run state and the agent state: constructors and checks
 
 A module that is bundled into a script follows the rules in `tools/bundle.py`: stdlib imports at the top, intra-package
 imports of the form `from ioc_concord.<module> import <names>`, and top-level names that are unique across modules.
