@@ -1,0 +1,477 @@
+=== initiator init (exit 0)
+$ init --specialists telemetry,database --key-terms error_rate,rollback_target --action-tool remediate
+out| {
+out|   "ok": true,
+out|   "phase": "init",
+out|   "data": {
+out|     "specialists": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "key_terms": [
+out|       "error_rate",
+out|       "rollback_target"
+out|     ],
+out|     "action_tool": "remediate",
+out|     "next_command": "roster",
+out|     "protocol_status": "IN_PROGRESS",
+out|     "locked_contract_exists": false,
+out|     "normal_execution_allowed": false,
+out|     "app_execution_allowed": false
+out|   }
+out| }
+out| 
+
+=== roster (exit 0)
+$ roster --responses -
+ in| ["{\"agent\": \"telemetry\", \"roles\": [\"telemetry analyst\"], \"capabilities\": [\"query metrics and ⏎
+ in| traces\"], \"access_scopes\": [\"prometheus\"], \"holdings_summary\": \"telemetry analyst knowledge\"}", ⏎
+ in| "{\"agent\": \"database\", \"roles\": [\"database specialist\"], \"capabilities\": [\"inspect query plans and ⏎
+ in| locks\"], \"access_scopes\": [\"pg-stat\"], \"holdings_summary\": \"database specialist knowledge\"}"]
+out| {
+out|   "ok": true,
+out|   "phase": "roster",
+out|   "data": {
+out|     "roster": [
+out|       {
+out|         "identity": "telemetry",
+out|         "roles": [
+out|           "telemetry analyst"
+out|         ],
+out|         "capabilities": [
+out|           "query metrics and traces"
+out|         ],
+out|         "accessScopes": [
+out|           "prometheus"
+out|         ],
+out|         "holdingsSummary": "telemetry analyst knowledge"
+out|       },
+out|       {
+out|         "identity": "database",
+out|         "roles": [
+out|           "database specialist"
+out|         ],
+out|         "capabilities": [
+out|           "inspect query plans and locks"
+out|         ],
+out|         "accessScopes": [
+out|           "pg-stat"
+out|         ],
+out|         "holdingsSummary": "database specialist knowledge"
+out|       }
+out|     ],
+out|     "flagged_items": [],
+out|     "next_command": "frame",
+out|     "protocol_status": "IN_PROGRESS",
+out|     "locked_contract_exists": false,
+out|     "normal_execution_allowed": false,
+out|     "app_execution_allowed": false
+out|   }
+out| }
+out| 
+
+=== frame round 1 (exit 0)
+$ frame --responses - --current-frame []
+ in| ["{\"agent\": \"telemetry\", \"atoms\": [{\"text\": \"checkout error rate rose from 0.4 to 8.7 after 14:02\", ⏎
+ in| \"type\": \"objective\"}, {\"text\": \"the regression is confined to the checkout path\", \"type\": ⏎
+ in| \"assumption\"}]}", "{\"agent\": \"database\", \"atoms\": [{\"text\": \"checkout error rate rose from 0.4 to 8.7 ⏎
+ in| after 14:02\", \"type\": \"objective\"}, {\"text\": \"connection pool saturation began at 14:03\", \"type\": ⏎
+ in| \"constraint\"}]}"]
+out| {
+out|   "ok": true,
+out|   "phase": "frame",
+out|   "data": {
+out|     "atoms": [
+out|       {
+out|         "id": "s1",
+out|         "text": "checkout error rate rose from 0.4 to 8.7 after 14:02",
+out|         "type": "objective",
+out|         "support": 2,
+out|         "agents": [
+out|           "telemetry",
+out|           "database"
+out|         ],
+out|         "flagged_singleton": false
+out|       },
+out|       {
+out|         "id": "s2",
+out|         "text": "the regression is confined to the checkout path",
+out|         "type": "assumption",
+out|         "support": 1,
+out|         "agents": [
+out|           "telemetry"
+out|         ],
+out|         "flagged_singleton": true
+out|       },
+out|       {
+out|         "id": "s3",
+out|         "text": "connection pool saturation began at 14:03",
+out|         "type": "constraint",
+out|         "support": 1,
+out|         "agents": [
+out|           "database"
+out|         ],
+out|         "flagged_singleton": true
+out|       }
+out|     ],
+out|     "new_this_round": 4,
+out|     "round": 1,
+out|     "next_command": "frame",
+out|     "protocol_status": "IN_PROGRESS",
+out|     "locked_contract_exists": false,
+out|     "normal_execution_allowed": false,
+out|     "app_execution_allowed": false,
+out|     "atoms_by_agent": {
+out|       "telemetry": [
+out|         "checkout error rate rose from 0.4 to 8.7 after 14:02",
+out|         "the regression is confined to the checkout path"
+out|       ],
+out|       "database": [
+out|         "checkout error rate rose from 0.4 to 8.7 after 14:02",
+out|         "connection pool saturation began at 14:03"
+out|       ]
+out|     },
+out|     "truncated": [],
+out|     "coverage": {
+out|       "good_turing_missing_mass": 0.5,
+out|       "chao1": 5.0,
+out|       "coverage": 0.5
+out|     }
+out|   }
+out| }
+out| 
+
+=== glossary (exit 0)
+$ glossary --responses -
+ in| ["{\"agent\": \"telemetry\", \"units\": {\"error_rate\": \"fraction 0-1\", \"rollback_target\": \"deployment ⏎
+ in| id\"}}", "{\"agent\": \"database\", \"units\": {\"error_rate\": \"percent 0-100\", \"rollback_target\": ⏎
+ in| \"deployment id\"}}"]
+out| {
+out|   "ok": true,
+out|   "phase": "glossary",
+out|   "data": {
+out|     "glossary": [
+out|       {
+out|         "term": "error_rate",
+out|         "status": "flagged",
+out|         "variants": [
+out|           {
+out|             "agent": "telemetry",
+out|             "definition": "fraction 0-1"
+out|           },
+out|           {
+out|             "agent": "database",
+out|             "definition": "percent 0-100"
+out|           }
+out|         ]
+out|       },
+out|       {
+out|         "term": "rollback_target",
+out|         "status": "agreed",
+out|         "definition": "deployment id",
+out|         "agents": [
+out|           "telemetry",
+out|           "database"
+out|         ]
+out|       }
+out|     ],
+out|     "ambiguous": [
+out|       {
+out|         "term": "error_rate",
+out|         "agents": [
+out|           "telemetry",
+out|           "database"
+out|         ],
+out|         "units": [
+out|           "fraction 0-1",
+out|           "percent 0-100"
+out|         ],
+out|         "sim": 0.56
+out|       }
+out|     ],
+out|     "next_command": "glossary",
+out|     "protocol_status": "IN_PROGRESS",
+out|     "locked_contract_exists": false,
+out|     "normal_execution_allowed": false,
+out|     "app_execution_allowed": false
+out|   }
+out| }
+out| 
+
+=== verify (exit 0)
+$ verify --responses - --required-knowledge ["the 14:02 deployment manifest", "checkout error budget policy"] ⏎
+$ --objective-clauses ["checkout error rate returns below 0.01", "no unrelated service is rolled back"]
+ in| ["{\"agent\": \"telemetry\", \"holds\": [\"the 14:02 deployment manifest\"], \"checks\": [{\"criterion\": ⏎
+ in| \"checkout error rate below 0.01 for 5 minutes\", \"covers\": [\"checkout error rate returns below 0.01\"]}]}", ⏎
+ in| "{\"agent\": \"database\", \"holds\": [], \"checks\": [{\"criterion\": \"connection pool wait time returns to ⏎
+ in| baseline\", \"covers\": [\"checkout error rate returns below 0.01\"]}]}"]
+out| {
+out|   "ok": true,
+out|   "phase": "verify",
+out|   "data": {
+out|     "knowledge_map": [
+out|       {
+out|         "item": "the 14:02 deployment manifest",
+out|         "held_by": [
+out|           "telemetry"
+out|         ],
+out|         "gap": false
+out|       },
+out|       {
+out|         "item": "checkout error budget policy",
+out|         "held_by": [],
+out|         "gap": true
+out|       }
+out|     ],
+out|     "checks": [
+out|       {
+out|         "atom": "checkout error rate returns below 0.01",
+out|         "criterion": "checkout error rate below 0.01 for 5 minutes",
+out|         "assigned_to": "telemetry",
+out|         "covers": [
+out|           "checkout error rate returns below 0.01"
+out|         ]
+out|       }
+out|     ],
+out|     "gaps": [
+out|       "checkout error budget policy"
+out|     ],
+out|     "unverifiable_clauses": [
+out|       "no unrelated service is rolled back"
+out|     ],
+out|     "locked_intent_contract": {
+out|       "status": "INTENT-LOCKED",
+out|       "roster": [
+out|         {
+out|           "identity": "telemetry",
+out|           "roles": [
+out|             "telemetry analyst"
+out|           ],
+out|           "capabilities": [
+out|             "query metrics and traces"
+out|           ],
+out|           "accessScopes": [
+out|             "prometheus"
+out|           ],
+out|           "holdingsSummary": "telemetry analyst knowledge"
+out|         },
+out|         {
+out|           "identity": "database",
+out|           "roles": [
+out|             "database specialist"
+out|           ],
+out|           "capabilities": [
+out|             "inspect query plans and locks"
+out|           ],
+out|           "accessScopes": [
+out|             "pg-stat"
+out|           ],
+out|           "holdingsSummary": "database specialist knowledge"
+out|         }
+out|       ],
+out|       "problem_frame": [
+out|         {
+out|           "id": "s1",
+out|           "text": "checkout error rate rose from 0.4 to 8.7 after 14:02",
+out|           "support": 2,
+out|           "flagged_singleton": false
+out|         },
+out|         {
+out|           "id": "s2",
+out|           "text": "the regression is confined to the checkout path",
+out|           "support": 1,
+out|           "flagged_singleton": true
+out|         },
+out|         {
+out|           "id": "s3",
+out|           "text": "connection pool saturation began at 14:03",
+out|           "support": 1,
+out|           "flagged_singleton": true
+out|         }
+out|       ],
+out|       "glossary": [
+out|         {
+out|           "term": "error_rate",
+out|           "status": "flagged",
+out|           "variants": [
+out|             {
+out|               "agent": "telemetry",
+out|               "definition": "fraction 0-1"
+out|             },
+out|             {
+out|               "agent": "database",
+out|               "definition": "percent 0-100"
+out|             }
+out|           ]
+out|         },
+out|         {
+out|           "term": "rollback_target",
+out|           "status": "agreed",
+out|           "definition": "deployment id",
+out|           "agents": [
+out|             "telemetry",
+out|             "database"
+out|           ]
+out|         }
+out|       ],
+out|       "verifiable_objective": {
+out|         "owners": {
+out|           "the 14:02 deployment manifest": "telemetry"
+out|         },
+out|         "uncovered": [
+out|           "checkout error budget policy"
+out|         ],
+out|         "checks": [
+out|           {
+out|             "atom": "checkout error rate returns below 0.01",
+out|             "criterion": "checkout error rate below 0.01 for 5 minutes",
+out|             "assigned_to": "telemetry"
+out|           }
+out|         ]
+out|       },
+out|       "flagged_items": [
+out|         "ambiguous_term: error_rate",
+out|         "uncovered_atom: checkout error budget policy"
+out|       ]
+out|     },
+out|     "next": {
+out|       "command": "execution-message",
+out|       "agents": [
+out|         "telemetry",
+out|         "database"
+out|       ],
+out|       "note": "flagged_items do not end the protocol: render one execution message per agent, delegate ⏎
+out| data.message unchanged, then call remediate once the replies arrive"
+out|     }
+out|   }
+out| }
+out| 
+
+=== lock (exit 0)
+$ lock
+out| {
+out|   "ok": true,
+out|   "phase": "lock",
+out|   "data": {
+out|     "status": "INTENT-LOCKED",
+out|     "roster": [
+out|       {
+out|         "identity": "telemetry",
+out|         "roles": [
+out|           "telemetry analyst"
+out|         ],
+out|         "capabilities": [
+out|           "query metrics and traces"
+out|         ],
+out|         "accessScopes": [
+out|           "prometheus"
+out|         ],
+out|         "holdingsSummary": "telemetry analyst knowledge"
+out|       },
+out|       {
+out|         "identity": "database",
+out|         "roles": [
+out|           "database specialist"
+out|         ],
+out|         "capabilities": [
+out|           "inspect query plans and locks"
+out|         ],
+out|         "accessScopes": [
+out|           "pg-stat"
+out|         ],
+out|         "holdingsSummary": "database specialist knowledge"
+out|       }
+out|     ],
+out|     "problem_frame": [
+out|       {
+out|         "id": "s1",
+out|         "text": "checkout error rate rose from 0.4 to 8.7 after 14:02",
+out|         "support": 2,
+out|         "flagged_singleton": false
+out|       },
+out|       {
+out|         "id": "s2",
+out|         "text": "the regression is confined to the checkout path",
+out|         "support": 1,
+out|         "flagged_singleton": true
+out|       },
+out|       {
+out|         "id": "s3",
+out|         "text": "connection pool saturation began at 14:03",
+out|         "support": 1,
+out|         "flagged_singleton": true
+out|       }
+out|     ],
+out|     "glossary": [
+out|       {
+out|         "term": "error_rate",
+out|         "status": "flagged",
+out|         "variants": [
+out|           {
+out|             "agent": "telemetry",
+out|             "definition": "fraction 0-1"
+out|           },
+out|           {
+out|             "agent": "database",
+out|             "definition": "percent 0-100"
+out|           }
+out|         ]
+out|       },
+out|       {
+out|         "term": "rollback_target",
+out|         "status": "agreed",
+out|         "definition": "deployment id",
+out|         "agents": [
+out|           "telemetry",
+out|           "database"
+out|         ]
+out|       }
+out|     ],
+out|     "verifiable_objective": {
+out|       "owners": {
+out|         "the 14:02 deployment manifest": "telemetry"
+out|       },
+out|       "uncovered": [
+out|         "checkout error budget policy"
+out|       ],
+out|       "checks": [
+out|         {
+out|           "atom": "checkout error rate returns below 0.01",
+out|           "criterion": "checkout error rate below 0.01 for 5 minutes",
+out|           "assigned_to": "telemetry"
+out|         }
+out|       ]
+out|     },
+out|     "flagged_items": [
+out|       "ambiguous_term: error_rate",
+out|       "uncovered_atom: checkout error budget policy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== status (exit 0)
+$ status
+out| {
+out|   "ok": true,
+out|   "phase": "status",
+out|   "data": {
+out|     "specialists": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "key_terms": [
+out|       "error_rate",
+out|       "rollback_target"
+out|     ],
+out|     "action_tool": "remediate",
+out|     "roster": 2,
+out|     "frame_atoms": 3,
+out|     "frame_rounds": 1,
+out|     "glossary_terms": 2,
+out|     "checks": 1,
+out|     "locked": true
+out|   }
+out| }
+out| 
+

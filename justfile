@@ -20,6 +20,10 @@ sync:
 check-sync:
     python3 tools/bundle.py --check
 
+# Run the ACCORD tests: the initiator script, against the recorded transcripts
+test-accord:
+    uv run --no-project --with pytest python -m pytest protocols/accord/tests -q -p no:cacheprovider
+
 # Run the CONCORD tests: the bundler, the ioc-concord library (also as bundled in each script) and the scripts
 test-concord:
     uv run --no-project --with pytest python -m pytest tools protocols/concord/tests -q -p no:cacheprovider

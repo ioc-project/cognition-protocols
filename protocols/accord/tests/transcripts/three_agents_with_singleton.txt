@@ -1,0 +1,926 @@
+=== initiator init (exit 0)
+$ init --specialists telemetry,database,deploy --key-terms error_rate,rollback_target --action-tool remediate --task ⏎
+$ Checkout error rate rose after the 14:02 deploy; decide what to roll back
+out| {
+out|   "ok": true,
+out|   "phase": "init",
+out|   "data": {
+out|     "specialists": [
+out|       "telemetry",
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "key_terms": [
+out|       "error_rate",
+out|       "rollback_target"
+out|     ],
+out|     "action_tool": "remediate",
+out|     "next_command": "roster",
+out|     "protocol_status": "IN_PROGRESS",
+out|     "locked_contract_exists": false,
+out|     "normal_execution_allowed": false,
+out|     "app_execution_allowed": false,
+out|     "phase": "convene",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {
+out|       "telemetry": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nSPECIALISTS: telemetry, database, deploy",
+out|       "database": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nSPECIALISTS: telemetry, database, deploy",
+out|       "deploy": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nSPECIALISTS: telemetry, database, deploy"
+out|     },
+out|     "status": "SEND",
+out|     "hint": "Use `accord_initiator.py handle --agent <id> --reply <text>` for each incoming reply. No separate ⏎
+out| phase commands needed."
+out|   }
+out| }
+out| 
+
+=== handle convene telemetry (exit 0)
+$ handle --agent telemetry --reply {"agent": "telemetry", "roles": ["telemetry analyst"], "capabilities": ["query ⏎
+$ metrics and traces"], "access_scopes": ["prometheus"], "holdings_summary": "telemetry analyst knowledge for this ⏎
+$ incident"}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "convene",
+out|     "awaiting": [
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "database",
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle convene database (exit 0)
+$ handle --agent database --reply {"agent": "database", "roles": ["database specialist"], "capabilities": ["inspect ⏎
+$ query plans and locks"], "access_scopes": ["pg-stat"], "holdings_summary": "database specialist knowledge for this ⏎
+$ incident"}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "convene",
+out|     "awaiting": [
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle convene deploy (exit 0)
+$ handle --agent deploy --reply {"agent": "deploy", "roles": ["deployment engineer"], "capabilities": ["read ⏎
+$ deployment history"], "access_scopes": ["argo"], "holdings_summary": "deployment engineer knowledge for this ⏎
+$ incident"}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "SEND",
+out|     "phase": "frame_0",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {
+out|       "telemetry": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nCURRENT_FRAME: []",
+out|       "database": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nCURRENT_FRAME: []",
+out|       "deploy": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nCURRENT_FRAME: []"
+out|     },
+out|     "still_waiting_this_phase": [],
+out|     "roster": [
+out|       {
+out|         "identity": "telemetry",
+out|         "roles": [
+out|           "telemetry analyst"
+out|         ],
+out|         "capabilities": [
+out|           "query metrics and traces"
+out|         ],
+out|         "accessScopes": [
+out|           "prometheus"
+out|         ],
+out|         "holdingsSummary": "telemetry analyst knowledge for this incident"
+out|       },
+out|       {
+out|         "identity": "database",
+out|         "roles": [
+out|           "database specialist"
+out|         ],
+out|         "capabilities": [
+out|           "inspect query plans and locks"
+out|         ],
+out|         "accessScopes": [
+out|           "pg-stat"
+out|         ],
+out|         "holdingsSummary": "database specialist knowledge for this incident"
+out|       },
+out|       {
+out|         "identity": "deploy",
+out|         "roles": [
+out|           "deployment engineer"
+out|         ],
+out|         "capabilities": [
+out|           "read deployment history"
+out|         ],
+out|         "accessScopes": [
+out|           "argo"
+out|         ],
+out|         "holdingsSummary": "deployment engineer knowledge for this incident"
+out|       }
+out|     ],
+out|     "flagged_items": []
+out|   }
+out| }
+out| 
+
+=== handle frame_0 telemetry (exit 0)
+$ handle --agent telemetry --reply {"agent": "telemetry", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 ⏎
+$ after 14:02", "type": "objective"}, {"text": "the regression is confined to the checkout path", "type": ⏎
+$ "assumption"}]}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "frame_0",
+out|     "awaiting": [
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "database",
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle frame_0 database (exit 0)
+$ handle --agent database --reply {"agent": "database", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 ⏎
+$ after 14:02", "type": "objective"}, {"text": "connection pool saturation began at 14:03", "type": "constraint"}]}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "frame_0",
+out|     "awaiting": [
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle frame_0 deploy (exit 0)
+$ handle --agent deploy --reply {"agent": "deploy", "atoms": [{"text": "two services shipped at 14:02, checkout and ⏎
+$ cart", "type": "objective"}, {"text": "rolling back cart alone leaves checkout on the new build", "type": ⏎
+$ "constraint"}]}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "SEND",
+out|     "phase": "frame_1",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {
+out|       "telemetry": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nCURRENT_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error ⏎
+out| rate rose from 0.4 to 8.7 after 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n  ⏎
+out|     \"telemetry\",\n      \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is ⏎
+out| confined to the checkout path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      ⏎
+out| \"telemetry\"\n    ]\n  },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at ⏎
+out| 14:03\",\n    \"type\": \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  ⏎
+out| },\n  {\n    \"id\": \"s4\",\n    \"text\": \"two services shipped at 14:02, checkout and cart\",\n    \"type\": ⏎
+out| \"objective\",\n    \"support\": 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  },\n  {\n    \"id\": \"s5\",\n ⏎
+out|    \"text\": \"rolling back cart alone leaves checkout on the new build\",\n    \"type\": \"constraint\",\n    ⏎
+out| \"support\": 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  }\n]\n\nYOUR_PREVIOUS_ATOMS: [\n  \"checkout error ⏎
+out| rate rose from 0.4 to 8.7 after 14:02\",\n  \"the regression is confined to the checkout path\"\n]",
+out|       "database": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nCURRENT_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error ⏎
+out| rate rose from 0.4 to 8.7 after 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n  ⏎
+out|     \"telemetry\",\n      \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is ⏎
+out| confined to the checkout path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      ⏎
+out| \"telemetry\"\n    ]\n  },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at ⏎
+out| 14:03\",\n    \"type\": \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  ⏎
+out| },\n  {\n    \"id\": \"s4\",\n    \"text\": \"two services shipped at 14:02, checkout and cart\",\n    \"type\": ⏎
+out| \"objective\",\n    \"support\": 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  },\n  {\n    \"id\": \"s5\",\n ⏎
+out|    \"text\": \"rolling back cart alone leaves checkout on the new build\",\n    \"type\": \"constraint\",\n    ⏎
+out| \"support\": 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  }\n]\n\nYOUR_PREVIOUS_ATOMS: [\n  \"checkout error ⏎
+out| rate rose from 0.4 to 8.7 after 14:02\",\n  \"connection pool saturation began at 14:03\"\n]",
+out|       "deploy": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
+out| deploy; decide what to roll back\n\nCURRENT_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error ⏎
+out| rate rose from 0.4 to 8.7 after 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n  ⏎
+out|     \"telemetry\",\n      \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is ⏎
+out| confined to the checkout path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      ⏎
+out| \"telemetry\"\n    ]\n  },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at ⏎
+out| 14:03\",\n    \"type\": \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  ⏎
+out| },\n  {\n    \"id\": \"s4\",\n    \"text\": \"two services shipped at 14:02, checkout and cart\",\n    \"type\": ⏎
+out| \"objective\",\n    \"support\": 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  },\n  {\n    \"id\": \"s5\",\n ⏎
+out|    \"text\": \"rolling back cart alone leaves checkout on the new build\",\n    \"type\": \"constraint\",\n    ⏎
+out| \"support\": 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  }\n]\n\nYOUR_PREVIOUS_ATOMS: [\n  \"two services ⏎
+out| shipped at 14:02, checkout and cart\",\n  \"rolling back cart alone leaves checkout on the new build\"\n]"
+out|     },
+out|     "still_waiting_this_phase": [],
+out|     "frame": [
+out|       {
+out|         "id": "s1",
+out|         "text": "checkout error rate rose from 0.4 to 8.7 after 14:02",
+out|         "type": "objective",
+out|         "support": 2,
+out|         "agents": [
+out|           "telemetry",
+out|           "database"
+out|         ]
+out|       },
+out|       {
+out|         "id": "s2",
+out|         "text": "the regression is confined to the checkout path",
+out|         "type": "assumption",
+out|         "support": 1,
+out|         "agents": [
+out|           "telemetry"
+out|         ]
+out|       },
+out|       {
+out|         "id": "s3",
+out|         "text": "connection pool saturation began at 14:03",
+out|         "type": "constraint",
+out|         "support": 1,
+out|         "agents": [
+out|           "database"
+out|         ]
+out|       },
+out|       {
+out|         "id": "s4",
+out|         "text": "two services shipped at 14:02, checkout and cart",
+out|         "type": "objective",
+out|         "support": 1,
+out|         "agents": [
+out|           "deploy"
+out|         ]
+out|       },
+out|       {
+out|         "id": "s5",
+out|         "text": "rolling back cart alone leaves checkout on the new build",
+out|         "type": "constraint",
+out|         "support": 1,
+out|         "agents": [
+out|           "deploy"
+out|         ]
+out|       }
+out|     ],
+out|     "round": 1,
+out|     "truncated": []
+out|   }
+out| }
+out| 
+
+=== handle frame_1 telemetry (exit 0)
+$ handle --agent telemetry --reply {"agent": "telemetry", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 ⏎
+$ after 14:02", "type": "objective"}, {"text": "the regression is confined to the checkout path", "type": ⏎
+$ "assumption"}]}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "frame_1",
+out|     "awaiting": [
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "database",
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle frame_1 database (exit 0)
+$ handle --agent database --reply {"agent": "database", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 ⏎
+$ after 14:02", "type": "objective"}, {"text": "connection pool saturation began at 14:03", "type": "constraint"}]}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "frame_1",
+out|     "awaiting": [
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle frame_1 deploy (exit 0)
+$ handle --agent deploy --reply {"agent": "deploy", "atoms": [{"text": "two services shipped at 14:02, checkout and ⏎
+$ cart", "type": "objective"}, {"text": "rolling back cart alone leaves checkout on the new build", "type": ⏎
+$ "constraint"}]}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "SEND",
+out|     "phase": "ground",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {
+out|       "telemetry": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nGROUND_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its GROUND_REQUEST handler.\n\nKEY_TERMS: [\n  \"error_rate\",\n  ⏎
+out| \"rollback_target\"\n]",
+out|       "database": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nGROUND_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its GROUND_REQUEST handler.\n\nKEY_TERMS: [\n  \"error_rate\",\n  ⏎
+out| \"rollback_target\"\n]",
+out|       "deploy": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nGROUND_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its GROUND_REQUEST handler.\n\nKEY_TERMS: [\n  \"error_rate\",\n  ⏎
+out| \"rollback_target\"\n]"
+out|     },
+out|     "still_waiting_this_phase": [],
+out|     "frame": [
+out|       {
+out|         "id": "s1",
+out|         "text": "checkout error rate rose from 0.4 to 8.7 after 14:02",
+out|         "type": "objective",
+out|         "support": 2,
+out|         "agents": [
+out|           "telemetry",
+out|           "database"
+out|         ]
+out|       },
+out|       {
+out|         "id": "s2",
+out|         "text": "the regression is confined to the checkout path",
+out|         "type": "assumption",
+out|         "support": 1,
+out|         "agents": [
+out|           "telemetry"
+out|         ]
+out|       },
+out|       {
+out|         "id": "s3",
+out|         "text": "connection pool saturation began at 14:03",
+out|         "type": "constraint",
+out|         "support": 1,
+out|         "agents": [
+out|           "database"
+out|         ]
+out|       },
+out|       {
+out|         "id": "s4",
+out|         "text": "two services shipped at 14:02, checkout and cart",
+out|         "type": "objective",
+out|         "support": 1,
+out|         "agents": [
+out|           "deploy"
+out|         ]
+out|       },
+out|       {
+out|         "id": "s5",
+out|         "text": "rolling back cart alone leaves checkout on the new build",
+out|         "type": "constraint",
+out|         "support": 1,
+out|         "agents": [
+out|           "deploy"
+out|         ]
+out|       }
+out|     ],
+out|     "round": 2,
+out|     "truncated": []
+out|   }
+out| }
+out| 
+
+=== handle ground telemetry (exit 0)
+$ handle --agent telemetry --reply {"agent": "telemetry", "units": {"error_rate": "fraction 0-1", "rollback_target": ⏎
+$ "deployment id"}}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "ground",
+out|     "awaiting": [
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "database",
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle ground database (exit 0)
+$ handle --agent database --reply {"agent": "database", "units": {"error_rate": "percent 0-100", "rollback_target": ⏎
+$ "deployment id"}}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "ground",
+out|     "awaiting": [
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle ground deploy (exit 0)
+$ handle --agent deploy --reply {"agent": "deploy", "units": {"error_rate": "percent 0-100", "rollback_target": ⏎
+$ "deployment id"}}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "SEND",
+out|     "phase": "clarify",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {
+out|       "telemetry": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nCLARIFY_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its CLARIFY_REQUEST handler.\n\nAMBIGUOUS_PAIR: [\n  {\n    \"term\": ⏎
+out| \"error_rate\",\n    \"agents\": [\n      \"telemetry\",\n      \"database\"\n    ],\n    \"units\": [\n      ⏎
+out| \"fraction 0-1\",\n      \"percent 0-100\"\n    ],\n    \"sim\": 0.56\n  },\n  {\n    \"term\": \"error_rate\",\n ⏎
+out|    \"agents\": [\n      \"telemetry\",\n      \"deploy\"\n    ],\n    \"units\": [\n      \"fraction 0-1\",\n     ⏎
+out|  \"percent 0-100\"\n    ],\n    \"sim\": 0.56\n  }\n]\n\nDEFINITIONS_SO_FAR: [\n  {\n    \"term\": ⏎
+out| \"error_rate\",\n    \"status\": \"flagged\",\n    \"variants\": [\n      {\n        \"agent\": \"telemetry\",\n  ⏎
+out|       \"definition\": \"fraction 0-1\"\n      },\n      {\n        \"agent\": \"database\",\n        ⏎
+out| \"definition\": \"percent 0-100\"\n      },\n      {\n        \"agent\": \"deploy\",\n        \"definition\": ⏎
+out| \"percent 0-100\"\n      }\n    ]\n  },\n  {\n    \"term\": \"rollback_target\",\n    \"status\": \"agreed\",\n   ⏎
+out|  \"definition\": \"deployment id\",\n    \"agents\": [\n      \"telemetry\",\n      \"database\",\n      ⏎
+out| \"deploy\"\n    ]\n  }\n]",
+out|       "database": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nCLARIFY_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its CLARIFY_REQUEST handler.\n\nAMBIGUOUS_PAIR: [\n  {\n    \"term\": ⏎
+out| \"error_rate\",\n    \"agents\": [\n      \"telemetry\",\n      \"database\"\n    ],\n    \"units\": [\n      ⏎
+out| \"fraction 0-1\",\n      \"percent 0-100\"\n    ],\n    \"sim\": 0.56\n  },\n  {\n    \"term\": \"error_rate\",\n ⏎
+out|    \"agents\": [\n      \"telemetry\",\n      \"deploy\"\n    ],\n    \"units\": [\n      \"fraction 0-1\",\n     ⏎
+out|  \"percent 0-100\"\n    ],\n    \"sim\": 0.56\n  }\n]\n\nDEFINITIONS_SO_FAR: [\n  {\n    \"term\": ⏎
+out| \"error_rate\",\n    \"status\": \"flagged\",\n    \"variants\": [\n      {\n        \"agent\": \"telemetry\",\n  ⏎
+out|       \"definition\": \"fraction 0-1\"\n      },\n      {\n        \"agent\": \"database\",\n        ⏎
+out| \"definition\": \"percent 0-100\"\n      },\n      {\n        \"agent\": \"deploy\",\n        \"definition\": ⏎
+out| \"percent 0-100\"\n      }\n    ]\n  },\n  {\n    \"term\": \"rollback_target\",\n    \"status\": \"agreed\",\n   ⏎
+out|  \"definition\": \"deployment id\",\n    \"agents\": [\n      \"telemetry\",\n      \"database\",\n      ⏎
+out| \"deploy\"\n    ]\n  }\n]",
+out|       "deploy": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nCLARIFY_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its CLARIFY_REQUEST handler.\n\nAMBIGUOUS_PAIR: [\n  {\n    \"term\": ⏎
+out| \"error_rate\",\n    \"agents\": [\n      \"telemetry\",\n      \"database\"\n    ],\n    \"units\": [\n      ⏎
+out| \"fraction 0-1\",\n      \"percent 0-100\"\n    ],\n    \"sim\": 0.56\n  },\n  {\n    \"term\": \"error_rate\",\n ⏎
+out|    \"agents\": [\n      \"telemetry\",\n      \"deploy\"\n    ],\n    \"units\": [\n      \"fraction 0-1\",\n     ⏎
+out|  \"percent 0-100\"\n    ],\n    \"sim\": 0.56\n  }\n]\n\nDEFINITIONS_SO_FAR: [\n  {\n    \"term\": ⏎
+out| \"error_rate\",\n    \"status\": \"flagged\",\n    \"variants\": [\n      {\n        \"agent\": \"telemetry\",\n  ⏎
+out|       \"definition\": \"fraction 0-1\"\n      },\n      {\n        \"agent\": \"database\",\n        ⏎
+out| \"definition\": \"percent 0-100\"\n      },\n      {\n        \"agent\": \"deploy\",\n        \"definition\": ⏎
+out| \"percent 0-100\"\n      }\n    ]\n  },\n  {\n    \"term\": \"rollback_target\",\n    \"status\": \"agreed\",\n   ⏎
+out|  \"definition\": \"deployment id\",\n    \"agents\": [\n      \"telemetry\",\n      \"database\",\n      ⏎
+out| \"deploy\"\n    ]\n  }\n]"
+out|     },
+out|     "still_waiting_this_phase": [],
+out|     "glossary": [
+out|       {
+out|         "term": "error_rate",
+out|         "status": "flagged",
+out|         "variants": [
+out|           {
+out|             "agent": "telemetry",
+out|             "definition": "fraction 0-1"
+out|           },
+out|           {
+out|             "agent": "database",
+out|             "definition": "percent 0-100"
+out|           },
+out|           {
+out|             "agent": "deploy",
+out|             "definition": "percent 0-100"
+out|           }
+out|         ]
+out|       },
+out|       {
+out|         "term": "rollback_target",
+out|         "status": "agreed",
+out|         "definition": "deployment id",
+out|         "agents": [
+out|           "telemetry",
+out|           "database",
+out|           "deploy"
+out|         ]
+out|       }
+out|     ],
+out|     "ambiguous": [
+out|       {
+out|         "term": "error_rate",
+out|         "agents": [
+out|           "telemetry",
+out|           "database"
+out|         ],
+out|         "units": [
+out|           "fraction 0-1",
+out|           "percent 0-100"
+out|         ],
+out|         "sim": 0.56
+out|       },
+out|       {
+out|         "term": "error_rate",
+out|         "agents": [
+out|           "telemetry",
+out|           "deploy"
+out|         ],
+out|         "units": [
+out|           "fraction 0-1",
+out|           "percent 0-100"
+out|         ],
+out|         "sim": 0.56
+out|       }
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle clarify telemetry (exit 0)
+$ handle --agent telemetry --reply {"agent": "telemetry", "term": "error_rate", "extended_definition": "failed HTTP ⏎
+$ requests divided by total requests, a fraction between 0 and 1", "distinguishing_context": "the sense used in ⏎
+$ telemetry's own tooling"}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "clarify",
+out|     "awaiting": [
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "database",
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle clarify database (exit 0)
+$ handle --agent database --reply {"agent": "database", "term": "error_rate", "extended_definition": "failed ⏎
+$ statements as a percentage of statements executed, 0 to 100", "distinguishing_context": "the sense used in ⏎
+$ database's own tooling"}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "clarify",
+out|     "awaiting": [
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle clarify deploy (exit 0)
+$ handle --agent deploy --reply {"agent": "deploy", "term": "error_rate", "extended_definition": "failed rollouts as a ⏎
+$ percentage of rollouts attempted, 0 to 100", "distinguishing_context": "the sense used in deploy's own tooling"}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "SEND",
+out|     "phase": "verify",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {
+out|       "telemetry": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nVERIFY_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its VERIFY_REQUEST handler.\n\nREQUIRED_KNOWLEDGE: []\n\nOBJECTIVE_CLAUSES: ⏎
+out| []\n\nPROBLEM_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error rate rose from 0.4 to 8.7 after ⏎
+out| 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n      \"telemetry\",\n      ⏎
+out| \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is confined to the checkout ⏎
+out| path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      \"telemetry\"\n    ]\n  ⏎
+out| },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at 14:03\",\n    \"type\": ⏎
+out| \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  },\n  {\n    \"id\": ⏎
+out| \"s4\",\n    \"text\": \"two services shipped at 14:02, checkout and cart\",\n    \"type\": \"objective\",\n    ⏎
+out| \"support\": 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  },\n  {\n    \"id\": \"s5\",\n    \"text\": ⏎
+out| \"rolling back cart alone leaves checkout on the new build\",\n    \"type\": \"constraint\",\n    \"support\": ⏎
+out| 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  }\n]",
+out|       "database": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nVERIFY_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its VERIFY_REQUEST handler.\n\nREQUIRED_KNOWLEDGE: []\n\nOBJECTIVE_CLAUSES: ⏎
+out| []\n\nPROBLEM_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error rate rose from 0.4 to 8.7 after ⏎
+out| 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n      \"telemetry\",\n      ⏎
+out| \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is confined to the checkout ⏎
+out| path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      \"telemetry\"\n    ]\n  ⏎
+out| },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at 14:03\",\n    \"type\": ⏎
+out| \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  },\n  {\n    \"id\": ⏎
+out| \"s4\",\n    \"text\": \"two services shipped at 14:02, checkout and cart\",\n    \"type\": \"objective\",\n    ⏎
+out| \"support\": 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  },\n  {\n    \"id\": \"s5\",\n    \"text\": ⏎
+out| \"rolling back cart alone leaves checkout on the new build\",\n    \"type\": \"constraint\",\n    \"support\": ⏎
+out| 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  }\n]",
+out|       "deploy": "<accord-delivery state=\"b235a3f6\"></accord-delivery>\n\nVERIFY_REQUEST\n\nActivate your ⏎
+out| `accord-receiver` skill and follow its VERIFY_REQUEST handler.\n\nREQUIRED_KNOWLEDGE: []\n\nOBJECTIVE_CLAUSES: ⏎
+out| []\n\nPROBLEM_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error rate rose from 0.4 to 8.7 after ⏎
+out| 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n      \"telemetry\",\n      ⏎
+out| \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is confined to the checkout ⏎
+out| path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      \"telemetry\"\n    ]\n  ⏎
+out| },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at 14:03\",\n    \"type\": ⏎
+out| \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  },\n  {\n    \"id\": ⏎
+out| \"s4\",\n    \"text\": \"two services shipped at 14:02, checkout and cart\",\n    \"type\": \"objective\",\n    ⏎
+out| \"support\": 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  },\n  {\n    \"id\": \"s5\",\n    \"text\": ⏎
+out| \"rolling back cart alone leaves checkout on the new build\",\n    \"type\": \"constraint\",\n    \"support\": ⏎
+out| 1,\n    \"agents\": [\n      \"deploy\"\n    ]\n  }\n]"
+out|     },
+out|     "still_waiting_this_phase": [],
+out|     "glossary": [
+out|       {
+out|         "term": "rollback_target",
+out|         "status": "agreed",
+out|         "definition": "deployment id",
+out|         "agents": [
+out|           "telemetry",
+out|           "database",
+out|           "deploy"
+out|         ]
+out|       },
+out|       {
+out|         "term": "error_rate",
+out|         "status": "flagged",
+out|         "variants": [
+out|           {
+out|             "agent": "telemetry",
+out|             "definition": "failed HTTP requests divided by total requests, a fraction between 0 and 1"
+out|           },
+out|           {
+out|             "agent": "database",
+out|             "definition": "failed statements as a percentage of statements executed, 0 to 100"
+out|           },
+out|           {
+out|             "agent": "deploy",
+out|             "definition": "failed rollouts as a percentage of rollouts attempted, 0 to 100"
+out|           }
+out|         ]
+out|       }
+out|     ],
+out|     "remaining_ambiguous": []
+out|   }
+out| }
+out| 
+
+=== handle verify telemetry (exit 0)
+$ handle --agent telemetry --reply {"agent": "telemetry", "holds": [], "checks": [{"criterion": "checkout error rate ⏎
+$ below 0.01 for 5 minutes", "covers": []}]}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "verify",
+out|     "awaiting": [
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "database",
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle verify database (exit 0)
+$ handle --agent database --reply {"agent": "database", "holds": [], "checks": [{"criterion": "connection pool wait ⏎
+$ time returns to baseline", "covers": []}]}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "verify",
+out|     "awaiting": [
+out|       "deploy"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "deploy"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle verify deploy (exit 0)
+$ handle --agent deploy --reply {"agent": "deploy", "holds": [], "checks": [{"criterion": "the rolled-back revision is ⏎
+$ the 14:02 checkout build", "covers": []}]}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "LOCKED",
+out|     "phase": "locked",
+out|     "awaiting": [],
+out|     "messages": {},
+out|     "locked_intent_contract": {
+out|       "status": "INTENT-LOCKED",
+out|       "roster": [
+out|         {
+out|           "identity": "telemetry",
+out|           "roles": [
+out|             "telemetry analyst"
+out|           ],
+out|           "capabilities": [
+out|             "query metrics and traces"
+out|           ],
+out|           "accessScopes": [
+out|             "prometheus"
+out|           ],
+out|           "holdingsSummary": "telemetry analyst knowledge for this incident"
+out|         },
+out|         {
+out|           "identity": "database",
+out|           "roles": [
+out|             "database specialist"
+out|           ],
+out|           "capabilities": [
+out|             "inspect query plans and locks"
+out|           ],
+out|           "accessScopes": [
+out|             "pg-stat"
+out|           ],
+out|           "holdingsSummary": "database specialist knowledge for this incident"
+out|         },
+out|         {
+out|           "identity": "deploy",
+out|           "roles": [
+out|             "deployment engineer"
+out|           ],
+out|           "capabilities": [
+out|             "read deployment history"
+out|           ],
+out|           "accessScopes": [
+out|             "argo"
+out|           ],
+out|           "holdingsSummary": "deployment engineer knowledge for this incident"
+out|         }
+out|       ],
+out|       "problem_frame": [
+out|         {
+out|           "id": "s1",
+out|           "text": "checkout error rate rose from 0.4 to 8.7 after 14:02",
+out|           "support": 2,
+out|           "flagged_singleton": false
+out|         },
+out|         {
+out|           "id": "s2",
+out|           "text": "the regression is confined to the checkout path",
+out|           "support": 1,
+out|           "flagged_singleton": true
+out|         },
+out|         {
+out|           "id": "s3",
+out|           "text": "connection pool saturation began at 14:03",
+out|           "support": 1,
+out|           "flagged_singleton": true
+out|         },
+out|         {
+out|           "id": "s4",
+out|           "text": "two services shipped at 14:02, checkout and cart",
+out|           "support": 1,
+out|           "flagged_singleton": true
+out|         },
+out|         {
+out|           "id": "s5",
+out|           "text": "rolling back cart alone leaves checkout on the new build",
+out|           "support": 1,
+out|           "flagged_singleton": true
+out|         }
+out|       ],
+out|       "glossary": [
+out|         {
+out|           "term": "rollback_target",
+out|           "status": "agreed",
+out|           "definition": "deployment id",
+out|           "agents": [
+out|             "telemetry",
+out|             "database",
+out|             "deploy"
+out|           ]
+out|         },
+out|         {
+out|           "term": "error_rate",
+out|           "status": "flagged",
+out|           "variants": [
+out|             {
+out|               "agent": "telemetry",
+out|               "definition": "failed HTTP requests divided by total requests, a fraction between 0 and 1"
+out|             },
+out|             {
+out|               "agent": "database",
+out|               "definition": "failed statements as a percentage of statements executed, 0 to 100"
+out|             },
+out|             {
+out|               "agent": "deploy",
+out|               "definition": "failed rollouts as a percentage of rollouts attempted, 0 to 100"
+out|             }
+out|           ]
+out|         }
+out|       ],
+out|       "verifiable_objective": {
+out|         "owners": {},
+out|         "uncovered": [],
+out|         "checks": []
+out|       },
+out|       "flagged_items": [
+out|         "ambiguous_term: error_rate"
+out|       ]
+out|     },
+out|     "gaps": []
+out|   }
+out| }
+out| 
+
+=== initiator status (exit 0)
+$ status
+out| {
+out|   "ok": true,
+out|   "phase": "status",
+out|   "data": {
+out|     "specialists": [
+out|       "telemetry",
+out|       "database",
+out|       "deploy"
+out|     ],
+out|     "key_terms": [
+out|       "error_rate",
+out|       "rollback_target"
+out|     ],
+out|     "action_tool": "remediate",
+out|     "roster": 3,
+out|     "frame_atoms": 5,
+out|     "frame_rounds": 2,
+out|     "glossary_terms": 2,
+out|     "checks": 0,
+out|     "locked": true
+out|   }
+out| }
+out| 
+

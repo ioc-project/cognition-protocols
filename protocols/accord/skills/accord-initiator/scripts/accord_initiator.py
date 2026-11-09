@@ -473,6 +473,19 @@ def resolve_state_path(path: str) -> str:
     return str(state_dir / f"{p.stem}-{suffix}{p.suffix}")
 
 
+def mint_state_id() -> str:
+    """The session id carried by every phase message.
+
+    Random by default. Under ACCORD_RUN_KEY it is derived from the run key, for
+    the same reason `resolve_state_path` is: a record/replay pair must produce
+    byte-identical messages, or the ids embedded in them split the LLM cache.
+    """
+    run_key = os.environ.get("ACCORD_RUN_KEY")
+    if not run_key:
+        return uuid.uuid4().hex[:8]
+    return uuid.uuid5(uuid.NAMESPACE_URL, f"{run_key}:state_id").hex[:8]
+
+
 def blank_state() -> dict:
     return {
         "specialists": [], "key_terms": [], "action_tool": "", "coverage_warnings": [],
@@ -869,7 +882,7 @@ def cmd_init(a: argparse.Namespace, st: dict) -> dict:
     task = (getattr(a, "task", None) or "").strip()
     if task:
         st["task"] = task
-        st["state_id"] = uuid.uuid4().hex[:8]
+        st["state_id"] = mint_state_id()
     a._state_out = st
     result: dict = {
         "specialists": st["specialists"],
@@ -925,7 +938,7 @@ def cmd_frame(a: argparse.Namespace, st: dict) -> dict:
         st["obs"].extend(atoms)
     st["frame_rounds"] += 1
     st["frame"] = group_atoms(st["obs"]) if st["obs"] else []
-    atoms_by_agent = {agent: [] for agent in submitted}
+    atoms_by_agent = {agent: [] for agent in by_agent}   # submission order; `submitted` is a set, so it has none
     for obs in st["obs"]:
         atoms_by_agent.setdefault(obs["agent"], []).append(obs["text"])
     support = [s["support"] for s in st["frame"]]
