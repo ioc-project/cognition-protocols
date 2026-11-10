@@ -60,6 +60,10 @@
             "package-name": "ioc-concord",
             "release-type": "python"
         },
+        "packages/ioc-accord": {
+            "package-name": "ioc-accord",
+            "release-type": "python"
+        },
         "protocols/concord/mce-metrics": {
             "package-name": "ioc-concord-mce-metrics",
             "release-type": "python"

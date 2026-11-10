@@ -12,3 +12,11 @@ modules = ["errors", "xmlutil", "schema", "engine", "wire", "store", "state"]
 [[library.target]]
 file = "protocols/concord/skills/concord-receiver/scripts/concord_receiver.py"
 modules = ["errors", "xmlutil", "schema", "engine", "wire", "store", "state"]
+
+[[library]]
+name = "ioc_accord"
+path = "packages/ioc-accord"
+
+[[library.target]]
+file = "protocols/accord/skills/accord-initiator/scripts/accord_initiator.py"
+modules = ["errors", "similarity", "ingest", "engine", "wire", "state", "store", "flow"]
