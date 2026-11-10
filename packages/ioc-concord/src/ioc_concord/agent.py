@@ -172,10 +172,7 @@ class Agent:
         if tag in DATA_TAGS and not check_ok(doc):
             step.note("ignored", reason="check", **where)
             if run is not None and tag != INIT:
-                who = f"{attrs.get('from')}|{KIND_OF_TAG[tag]}"
-                if (run["damaged"].get(who, 0) < run["params"]["retries"]
-                        and self._error(step, attrs.get("from"), attrs.get("run_id"), KIND_OF_TAG[tag], "check", ref=attrs.get("uuid"))):
-                    run["damaged"][who] = run["damaged"].get(who, 0) + 1          # only a request that was sent counts
+                self._ask_damaged(run, info, step)
             return False
         try:
             msg = parse_message(doc, run["schema"] if run is not None else None)
@@ -191,6 +188,9 @@ class Agent:
         kept = self._record(run, msg, doc, step)
         if kept is None:                                  # it cannot be judged before the run state is complete
             if doc not in run["held"]:
+                if len(run["held"]) >= len(run["participants"]) * (run["params"]["B"] + 1):
+                    step.note("ignored", reason="too many messages held", kind=msg["kind"], **{"from": msg["from"]})
+                    return False
                 run["held"].append(doc)
             step.note("held", kind=msg["kind"], reason="the run state is incomplete", **{"from": msg["from"]})
             self._ask_keys(run, self._lacking_keys(run), step)
@@ -381,6 +381,10 @@ class Agent:
         ignored = msg["ignored"] + ignored
         if ignored:
             step.note("entries ignored", kind="score", candidates=ignored, **{"from": author})
+        mine = [cid for cid in unknown if parse_candidate_id(cid)[1] == self.me]       # this agent never proposed it: not a gap
+        if mine:
+            step.note("entries ignored", kind="score", candidates=mine, **{"from": author})
+        unknown = [cid for cid in unknown if cid not in mine]
         if unknown:
             step.note("gap", kind="score", candidates=unknown, **{"from": author})
             keys = []
@@ -539,7 +543,7 @@ class Agent:
         have = {c["id"] for c in st["pool"]}
         for cid in run["expected"]:
             rnd, author = parse_candidate_id(cid)
-            if cid not in have:
+            if cid not in have and author != me:             # an agent is never owed its own messages
                 if rnd == 0:
                     owe(f"init-reply|{author}", author, "init-reply")
                 else:
@@ -558,23 +562,42 @@ class Agent:
         for key in [k for k in timers if k not in owed]:
             del timers[key]
         for key, o in owed.items():
-            if key not in timers:
+            t = timers.get(key)
+            if t is None or t["candidate"] != o["candidate"]:
+                # a new wait: the batch is new, or the message that was first lacking has arrived and the next one is still owed
                 deadline = step.now + run["params"]["timeout"] if timers_enabled(run["params"]) else None
-                timers[key] = {"requests": 0, "asked": False, "deadline": deadline}
-            timers[key].update(o)
+                t = timers[key] = {"requests": 0, "asked": False, "deadline": deadline, "candidate": o["candidate"]}
+            t.update(o)
 
-    def _request(self, run, key, step):
-        """Ask the author of the batch for the first message it lacks, and restart the timer. It counts against `retries`."""
+    def _request(self, run, key, step, ref=None, from_timer=False):
+        """Ask the author of the batch for the first message it lacks, and restart the timer. It counts against `retries`, once the
+        request has been sent. With `ref` the request is `check`: the document of that uuid arrived damaged. An initiator whose timer
+        expires for an init reply sends the init again, in a resend, since an agent that never received it cannot answer an error.
+        Returns whether a request was sent."""
         t = run["timers"][key]
+        if ref is None and from_timer and t["what"] == "init-reply" and run["initiator"] == self.me:
+            step.send.append(build_resend(self.me, run["run_id"], run["sent"][item_key("init", self.me)], uid=self.new_uuid()))
+        elif ref is not None:
+            if not self._error(step, t["author"], run["run_id"], t["what"], "check", ref=ref):
+                return False
+        elif not self._error(step, t["author"], run["run_id"], t["what"], "missing", candidate=t["candidate"]):
+            return False
         t["requests"] += 1
         if timers_enabled(run["params"]):
             t["deadline"] = step.now + run["params"]["timeout"]
         step.note("asked", author=t["author"], what=t["what"], candidate=t["candidate"], request=t["requests"], run_id=run["run_id"])
-        if t["what"] == "init-reply" and run["initiator"] == self.me:
-            # an agent that never received the init cannot answer an error: the initiator sends the init again, in a resend
-            step.send.append(build_resend(self.me, run["run_id"], run["sent"][item_key("init", self.me)], uid=self.new_uuid()))
-            return
-        self._error(step, t["author"], run["run_id"], t["what"], "missing", candidate=t["candidate"])
+        return True
+
+    def _ask_damaged(self, run, info, step):
+        """A document arrived damaged. If this agent is owed that kind of message from its author, ask for it again, naming the uuid
+        of the damaged document; the request counts against `retries` with the others for that batch. A document that is not owed (it
+        is early, or the agent holds it already) is not asked for: the timer will ask when it is owed."""
+        author, kind = info["attrs"].get("from"), KIND_OF_TAG[info["tag"]]
+        self._sync_timers(run, step)
+        for key, t in sorted(run["timers"].items(), key=lambda kv: (kv[1]["deadline"] is None, kv[1]["deadline"] or 0, kv[0])):
+            if t["author"] == author and t["what"] == kind and t["requests"] < run["params"]["retries"]:
+                if self._request(run, key, step, ref=info["attrs"].get("uuid")):
+                    return
 
     def _lacking_keys(self, run):
         return [k for k, o in self._owed(run).items() if o["what"] != "result"]
@@ -606,7 +629,7 @@ class Agent:
                 if t["requests"] >= run["params"]["retries"]:
                     self._abort(run, step, "missing-agent", agent=t["author"])
                     break
-                self._request(run, key, step)
+                self._request(run, key, step, from_timer=True)
         self._save()
         return step
 
@@ -679,8 +702,10 @@ class Agent:
         run id is made when none is given. Raises StateError when the agent is in a run, and InvalidMessage when the run is not valid."""
         if active_run(self.state) is not None:
             raise StateError("start: the agent is in a run already")
-        text = build_init(self.me, participants, context, x_reject, x_ideal, spec, params=params,
-                          run_id=run_id or self.new_uuid(), uid=self.new_uuid())
+        run_id = run_id or self.new_uuid()
+        if run_id in self.state["runs"]:
+            raise StateError(f"start: the agent knows the run {run_id} already")
+        text = build_init(self.me, participants, context, x_reject, x_ideal, spec, params=params, run_id=run_id, uid=self.new_uuid())
         init = parse_message(text)
         run = self.state["runs"][init["run_id"]] = new_run(self.me, init, text)
         self.state["active"] = init["run_id"]

@@ -300,12 +300,65 @@ def test_a_message_that_was_stored_but_never_sent_is_still_sent_when_it_is_asked
         W.peek(sent)["attrs"]["uuid"]
 
 
-def test_a_damaged_message_whose_uuid_cannot_be_read_does_not_use_up_the_requests_for_damaged_copies(agent):
+def test_a_damaged_message_whose_uuid_cannot_be_read_does_not_use_up_the_requests(agent):
     net = Net(agent, ["cost", "security"])
     net.start(init_doc(params=PARAMS))
     a = net.agents["cost"]
     reply = W.build_init_reply("security", RUN, 0, 100, "plan", "because", 80, "good", uid="55555555-5555-4555-8555-555555555555")
     for i in range(5):                                                       # no uuid to name: no request can be sent
         step = a.receive(reply.replace("because", f"becauz{i}").replace('uuid="55555555-5555-4555-8555-555555555555"', 'uuid="x"'))
-        assert step.send == [] and a.state["runs"][RUN]["damaged"] == {}
+        assert step.send == [] and a.state["runs"][RUN]["timers"]["init-reply|security"]["requests"] == 0
     assert len(a.receive(reply.replace("because", "becauze")).send) == 1       # the budget is intact
+
+
+def test_a_check_request_and_the_timer_requests_share_the_retries_of_the_batch(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start(init_doc(params=PARAMS))                                       # retries = 2
+    a = net.agents["cost"]
+    reply = W.build_init_reply("security", RUN, 0, 100, "plan", "because", 80, "good", uid="55555555-5555-4555-8555-555555555555")
+    asked = [len(a.receive(reply.replace("because", f"becauz{i}"), now=1 + i).send) for i in range(4)]
+    assert asked == [1, 1, 0, 0] and a.state["runs"][RUN]["timers"]["init-reply|security"]["requests"] == 2
+    assert [W.parse_message(t)["reason"] for t in a.receive(reply.replace("because", "becauzz"), now=5).send] == []
+    step = a.tick(5 + 10)                                                    # the two requests are used: the next expiry gives up
+    assert kinds(step) == ["cancel"] and a.status()["status"] == "aborted"
+
+
+def test_one_damaged_copy_and_one_timer_request_make_two_of_the_retries(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start(init_doc(params=PARAMS))
+    a = net.agents["cost"]
+    reply = W.build_init_reply("security", RUN, 0, 100, "plan", "because", 80, "good", uid="55555555-5555-4555-8555-555555555555")
+    assert len(errors(a.receive(reply.replace("because", "becauze"), now=1))) == 1        # request 1, deadline 11
+    assert [e["reason"] for e in errors(a.tick(11))] == ["missing"]                        # request 2, deadline 21
+    assert kinds(a.tick(21)) == ["cancel"]
+
+
+def test_a_batch_whose_first_lacking_message_has_arrived_starts_a_new_wait(agent):
+    net = Net(agent, ["cost", "security", "legal"])
+    net.start(init_doc(["cost", "security", "legal"], params=PARAMS))
+    for n in ("cost", "security", "legal"):
+        net.answer_init(n)
+    cost = net.agents["cost"]
+    net.now = 0
+    cost.tick(0)
+    assert cost.status()["timers"]["score|legal|seeds"] == 10
+    (e,) = [e for e in errors(cost.tick(10)) if e["to"] == "legal"]
+    assert cost.status()["timers"]["score|legal|seeds"] == 20 and e["candidate"] == "seed-cost"
+    cost.receive(W.build_score("legal", RUN, [("seed-cost", 70, "r")]), now=15)                 # only part of the batch arrives
+    assert cost.status()["timers"]["score|legal|seeds"] == 25                                  # the next one is a new wait
+    assert cost.state["runs"][RUN]["timers"]["score|legal|seeds"]["requests"] == 0
+    assert [e for e in errors(cost.tick(20)) if e["to"] == "legal"] == []                       # legal has its new wait until 25
+
+
+def test_a_held_message_is_bounded(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start(init_doc(params={"timeout": 10, "retries": 2, "B": 1}))
+    net.answer_init("cost")
+    net.answer_init("security")
+    a = net.agents["cost"]
+    a.receive(W.build_score("security", RUN, [("seed-cost", 20, "r")]))                         # cost's own score is not in: wait
+    seen = []
+    for i in range(1, 8):
+        doc = W.build_repair("security", RUN, i, f"c{i}", "r", 50, "w", uid=f"7{i}777777-7777-4777-8777-777777777777")
+        seen.append(a.receive(doc).events[0].get("reason") or a.receive(doc).events[0]["event"])
+    assert len(a.state["runs"][RUN]["held"]) == 4 and "too many messages held" in seen

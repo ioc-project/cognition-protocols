@@ -21,7 +21,6 @@
                   timers         {timer key: {author, what, candidate, requests, deadline, asked}} for the messages the agent is owed
                   held           the repairs and results that cannot be judged yet, as received, judged again as the state fills
                   expected       the ids of candidates that other messages prove to exist, whose proposal this agent lacks
-                  damaged        {author|kind: how many times this agent has asked for a damaged message}
                   abort          why the run aborted, as {"reason", "agent", "superseded_by", "note"}, or None; the note is for the initiator
                                  that gave up on a version refusal: {"agent", "text"}
                   cancel_sent    whether this agent has sent its cancel (it sends it once)
@@ -63,7 +62,7 @@ def new_run(me, init, doc):
             "sent": {item_key("init", me): doc} if mine else {},
             "received": {} if mine else {item_key("init", init["from"]): doc},
             "uuids": [init["uuid"]], "outcome": None, "reported": None, "mismatches": {"sent": [], "received": []},
-            "timers": {}, "held": [], "expected": [], "damaged": {}, "abort": None, "cancel_sent": False, "disputed": False,
+            "timers": {}, "held": [], "expected": [], "abort": None, "cancel_sent": False, "disputed": False,
             "status": RUN_ACTIVE}
 
 

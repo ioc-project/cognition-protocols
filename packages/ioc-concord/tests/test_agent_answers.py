@@ -93,8 +93,24 @@ def test_a_damaged_message_of_a_known_run_is_answered_with_a_check_error_naming_
     assert (e["from"], e["to"], e["what"], e["reason"], e["ref"], e["candidate"]) == (
         "cost", "security", "init-reply", "check", "55555555-5555-4555-8555-555555555555", None)
     assert net.agents["cost"].receive(reply).events[0]["event"] == "recorded"       # the intact copy is still processed
+    net.answer_init("cost")                                                          # now the scores of security are owed
     score = W.build_score("security", RUN, [("seed-cost", 5, "r")], uid="66666666-6666-4666-8666-666666666666")
     assert error_of(net.agents["cost"].receive(score.replace("5.0", "6.0")))["what"] == "score"
+
+
+def test_a_damaged_message_that_is_not_owed_yet_is_not_asked_for_and_a_stranger_is_never_asked(agent):
+    net = Net(agent, ["cost", "security", "legal"])
+    net.start(init_doc(["cost", "security", "legal"]))
+    cost = net.agents["cost"]
+    early = W.build_score("security", RUN, [("seed-cost", 5, "r")], uid="66666666-6666-4666-8666-666666666666")
+    step = cost.receive(early.replace("5.0", "6.0"))                                  # no score is owed before every init reply
+    assert step.send == [] and step.events[0]["reason"] == "check"
+    inner = W.build_init_reply("mallory", RUN, 0, 100, "p", "r", 5, "w")
+    wrapper = W.build_resend("mallory", RUN, inner.replace("<raw>5.0", "<raw>6.0"))
+    assert cost.receive(wrapper).events[0]["reason"] == "sender is not in the run"
+    stolen = W.build_resend("mallory", RUN, inner).replace('from="mallory"', 'from="security"', 1)
+    step = cost.receive(stolen)                                                       # a member's wrapper around a stranger's message
+    assert step.send == [] and step.events[0]["reason"] == "invalid"
 
 
 # --- an error that asks for a stored message ----------------------------------------

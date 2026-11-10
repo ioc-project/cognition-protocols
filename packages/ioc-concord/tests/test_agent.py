@@ -299,12 +299,25 @@ def test_score_entries_for_the_senders_own_candidate_are_ignored_and_the_others_
 
 
 def test_a_rating_of_a_candidate_the_agent_does_not_hold_is_a_gap_not_an_invalid_message(agent):
-    net = Net(agent, ["cost", "security"])
-    net.start()
+    net = Net(agent, ["cost", "security", "legal"])
+    net.start(init_doc(["cost", "security", "legal"]))
     net.answer_init("cost")
     a = net.agents["cost"]
-    step = a.receive(W.build_score("security", RUN, [("r1-cost", 5, "r")]))
-    assert step.events[0]["event"] == "gap" and step.events[0]["candidates"] == ["r1-cost"]
+    step = a.receive(W.build_score("security", RUN, [("r1-legal", 5, "r")]))
+    assert step.events[0]["event"] == "gap" and step.events[0]["candidates"] == ["r1-legal"]
+
+
+def test_a_rating_of_a_candidate_of_the_agent_that_it_never_proposed_is_ignored_and_never_owed_to_itself(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start(init_doc(params={"timeout": 10, "retries": 2}))
+    net.answer_init("cost")
+    net.answer_init("security")
+    a = net.agents["cost"]
+    step = a.receive(W.build_score("security", RUN, [("seed-cost", 70, "r"), ("r1-cost", 50, "a faulty peer")]), now=1)
+    assert [e["event"] for e in step.events] == ["entries ignored", "recorded"] and step.events[0]["candidates"] == ["r1-cost"]
+    assert a.state["runs"][RUN]["expected"] == [] and a.status()["timers"] == {}
+    net.now = 1000
+    assert a.tick(1000).send == [] and a.status()["status"] == "active"                  # nobody is missing
 
 
 # --- what the model submits ---------------------------------------------------
