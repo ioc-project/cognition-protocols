@@ -22,7 +22,7 @@ of UUIDs are injected, with the standard library as default, so that a run can b
 """
 import time
 
-from ioc_concord.engine import add_anchor, add_proposal, add_ratings, evaluate, lacking
+from ioc_concord.engine import add_anchor, add_proposal, add_ratings, evaluate, lacking, parse_candidate_id, timers_enabled
 from ioc_concord.errors import InvalidMessage, StateError
 from ioc_concord.protocol import ABORTED, PROTOCOL_VERSION, format_number
 from ioc_concord.state import PARTICIPANT, RUN_ABORTED, RUN_ACTIVE, RUN_ENDED, active_run, item_key, members, new_agent_state, new_run
@@ -161,7 +161,10 @@ class Agent:
         if tag in DATA_TAGS and not check_ok(doc):
             step.note("ignored", reason="check", **where)
             if run is not None and tag != INIT:
-                self._error(step, attrs.get("from"), attrs.get("run_id"), KIND_OF_TAG[tag], "check", ref=attrs.get("uuid"))
+                who = f"{attrs.get('from')}|{KIND_OF_TAG[tag]}"
+                if run["damaged"].get(who, 0) < run["params"]["retries"]:
+                    run["damaged"][who] = run["damaged"].get(who, 0) + 1
+                    self._error(step, attrs.get("from"), attrs.get("run_id"), KIND_OF_TAG[tag], "check", ref=attrs.get("uuid"))
             return False
         try:
             msg = parse_message(doc, run["schema"] if run is not None else None)
@@ -172,7 +175,14 @@ class Agent:
             return False
         if run is None:
             return self._join(msg, doc, step)
-        return self._record(run, msg, doc, step, resent)
+        kept = self._record(run, msg, doc, step, resent)
+        if kept is None:                                  # it cannot be judged before the run state is complete
+            if doc not in run["held"]:
+                run["held"].append(doc)
+            step.note("held", kind=msg["kind"], reason="the run state is incomplete", **{"from": msg["from"]})
+            self._ask_keys(run, self._lacking_keys(run), step)
+            return False
+        return kept
 
     def _refuse_version(self, info, step):
         """An init of another version: the agent does not join, and tells the author which version it speaks."""
@@ -273,6 +283,7 @@ class Agent:
         if run["status"] == RUN_ACTIVE:
             run["status"], run["outcome"], run["abort"] = RUN_ABORTED, ABORTED, {"reason": reason, "agent": agent,
                                                                                  "superseded_by": superseded_by}
+            run["timers"], run["held"] = {}, []
             step.note("aborted", **why)
         elif run["status"] == RUN_ENDED:
             run["disputed"] = True
@@ -313,12 +324,20 @@ class Agent:
             step.note("entries ignored", kind="score", candidates=ignored, **{"from": author})
         if unknown:
             step.note("gap", kind="score", candidates=unknown, **{"from": author})
+            keys = []
+            for cid in unknown:
+                rnd, proposer = parse_candidate_id(cid)
+                if proposer in run["participants"]:
+                    if cid not in run["expected"]:
+                        run["expected"].append(cid)
+                    keys.append(f"init-reply|{proposer}" if rnd == 0 else f"repair|{proposer}|{rnd}")
+            self._ask_keys(run, keys, step)
         step.note("recorded", kind="score", candidates=recorded, **{"from": author})
         return True
 
     def _record_repair(self, run, msg, doc, step):
         """A repair counts only from the bottleneck of the round, and only when one is owed. A copy of the run state that is not
-        complete cannot tell, so the repair is held: not recorded, its uuid not kept."""
+        complete cannot tell: None says the repair is to be held (see `_accept`) and judged again later."""
         author, p = msg["from"], msg["proposal"]
         where = {"kind": "repair", "from": author, "candidate": p["id"]}
         key = item_key("repair", author, p["id"])
@@ -327,8 +346,7 @@ class Agent:
             return True
         ev = evaluate(run["engine"])
         if ev["state"] == "wait":
-            step.note("held", reason="the run state is incomplete", **where)
-            return False
+            return None
         if ev["state"] != "repair" or ev["bottleneck"] != author or p["round"] != ev["round"]:
             step.note("ignored", reason="no repair owed from this agent", **where)
             return False
@@ -343,7 +361,7 @@ class Agent:
 
     def _record_result(self, run, msg, doc, step):
         """The result counts only from the reporter, and its winner must be a candidate of the run. Until this agent has computed
-        its own outcome it cannot say whether the winner exists, so the result is held, not recorded."""
+        its own outcome it cannot say whether the winner exists: None says the result is to be held (see `_accept`)."""
         author, winner = msg["from"], msg["winning_candidate_id"]
         where = {"kind": "result", "from": author}
         if author != run["participants"][0]:
@@ -354,9 +372,8 @@ class Agent:
             return True
         if winner not in {c["id"] for c in run["engine"]["pool"]}:
             if run["outcome"] is None:
-                step.note("held", reason="the run state is incomplete", **where)
-            else:
-                step.note("ignored", reason="invalid", detail=f"{winner} is not a candidate of the run", **where)
+                return None
+            step.note("ignored", reason="invalid", detail=f"{winner} is not a candidate of the run", **where)
             return False
         run["reported"] = {"outcome": msg["outcome"], "winning_candidate_id": winner}
         run["received"][item_key("result", author)] = doc
@@ -378,6 +395,7 @@ class Agent:
         the reporter sends its result, any other participant compares the result it holds with its outcome."""
         if run["status"] != RUN_ACTIVE:
             return
+        self._replay_held(run, step)
         ev = evaluate(run["engine"])
         if ev["state"] == "done" and run["outcome"] is None:
             run["outcome"] = ev["outcome"]
@@ -386,6 +404,22 @@ class Agent:
             step.note("repair owed", bottleneck=ev["bottleneck"], round=ev["round"], run_id=run["run_id"])
         if run["outcome"] is not None and run["status"] == RUN_ACTIVE:
             self._confirm(run, ev, step)
+        self._sync_timers(run, step)
+
+    def _replay_held(self, run, step):
+        """Judge again the repairs and results that were held, now that the run state may be complete."""
+        moved = True
+        while moved and run["held"]:
+            moved = False
+            for doc in list(run["held"]):
+                kept = self._record(run, parse_message(doc, run["schema"]), doc, step)
+                if kept is None:
+                    continue
+                run["held"].remove(doc)
+                moved = True
+                uid = peek(doc)["attrs"]["uuid"]
+                if kept and uid not in run["uuids"]:
+                    run["uuids"].append(uid)
 
     def _confirm(self, run, ev, step):
         """The reporter ends its run by sending its result; another participant ends it when it holds that result, and a result
@@ -408,6 +442,106 @@ class Agent:
             return
         run["status"] = RUN_ENDED
         step.note("ended", outcome=run["outcome"], **where)
+
+    # ------------------------------------------------------------------
+    # the messages owed, and the timers
+    # ------------------------------------------------------------------
+
+    def _owed(self, run):
+        """{timer key: {author, what, candidate}}: the batches of messages this agent is owed now, worked out from the state (see
+        Messages owed in the spec). A batch is owed until nothing in it is lacking; the `candidate` is the first one lacking, which
+        is what a request names."""
+        out = {}
+        if run["role"] != PARTICIPANT or run["status"] != RUN_ACTIVE:
+            return out
+        st, me, reporter = run["engine"], self.me, run["participants"][0]
+
+        def owe(key, author, what, candidate=None):
+            out[key] = {"author": author, "what": what, "candidate": candidate}
+
+        for a in run["participants"]:
+            if a != me and a not in st["anchors"]:
+                owe(f"init-reply|{a}", a, "init-reply")
+        if len(st["anchors"]) == len(st["agents"]):
+            for a, cid in lacking(st):
+                if a != me:
+                    batch = "seeds" if parse_candidate_id(cid)[0] == 0 else cid
+                    out.setdefault(f"score|{a}|{batch}", {"author": a, "what": "score", "candidate": cid})
+        have = {c["id"] for c in st["pool"]}
+        for cid in run["expected"]:
+            rnd, author = parse_candidate_id(cid)
+            if cid not in have:
+                if rnd == 0:
+                    owe(f"init-reply|{author}", author, "init-reply")
+                else:
+                    owe(f"repair|{author}|{rnd}", author, "repair", cid)
+        ev = evaluate(st)
+        if ev["state"] == "repair" and ev["bottleneck"] != me:
+            owe(f"repair|{ev['bottleneck']}|{ev['round']}", ev["bottleneck"], "repair", f"r{ev['round']}-{ev['bottleneck']}")
+        if run["outcome"] not in (None, ABORTED) and me != reporter and run["reported"] is None:
+            owe(f"result|{reporter}", reporter, "result")
+        return out
+
+    def _sync_timers(self, run, step):
+        """Start the timer of every batch that has become owed, and drop the timer of every batch that is complete. The timers are
+        in the state, so a restart keeps them. With a `timeout` of 0 they have no deadline: nothing is ever triggered."""
+        owed, timers = self._owed(run), run["timers"]
+        for key in [k for k in timers if k not in owed]:
+            del timers[key]
+        for key, o in owed.items():
+            if key not in timers:
+                deadline = step.now + run["params"]["timeout"] if timers_enabled(run["params"]) else None
+                timers[key] = {"requests": 0, "asked": False, "deadline": deadline}
+            timers[key].update(o)
+
+    def _request(self, run, key, step):
+        """Ask the author of the batch for the first message it lacks, and restart the timer. It counts against `retries`."""
+        t = run["timers"][key]
+        t["requests"] += 1
+        if timers_enabled(run["params"]):
+            t["deadline"] = step.now + run["params"]["timeout"]
+        step.note("asked", author=t["author"], what=t["what"], candidate=t["candidate"], request=t["requests"], run_id=run["run_id"])
+        self._error(step, t["author"], run["run_id"], t["what"], "missing", candidate=t["candidate"])
+
+    def _lacking_keys(self, run):
+        return [k for k, o in self._owed(run).items() if o["what"] != "result"]
+
+    def _ask_keys(self, run, keys, step):
+        """Ask at once for the batches of `keys`, since a message that has just arrived proves they exist, without waiting for their
+        timers. A batch is asked this way once; the timer repeats the request. Each request counts against `retries`."""
+        self._sync_timers(run, step)
+        for key in keys:
+            t = run["timers"].get(key)
+            if t is not None and not t["asked"] and t["requests"] < run["params"]["retries"]:
+                t["asked"] = True
+                self._request(run, key, step)
+
+    def tick(self, now=None):
+        """Time has passed: for every timer that has expired, ask again, or, when `retries` requests have not been answered, give up on
+        the author: the run ends `ABORTED` with the reason "missing-agent" and the cancel goes out. Returns a Step. A run with a
+        `timeout` of 0 has no timers."""
+        step = self._step(now)
+        for run in list(self.state["runs"].values()):
+            if run["status"] != RUN_ACTIVE or not timers_enabled(run["params"]):
+                continue
+            self._sync_timers(run, step)
+            expired = sorted((t["deadline"], key) for key, t in run["timers"].items() if t["deadline"] <= step.now)
+            for _, key in expired:
+                t = run["timers"].get(key)
+                if t is None:
+                    break                                   # the run was aborted
+                if t["requests"] >= run["params"]["retries"]:
+                    self._abort(run, step, "missing-agent", agent=t["author"])
+                    break
+                self._request(run, key, step)
+        self._save()
+        return step
+
+    def next_wakeup(self):
+        """The time of the earliest timer of an active run, or None: when to call `tick` next."""
+        due = [t["deadline"] for run in self.state["runs"].values() if run["status"] == RUN_ACTIVE
+               for t in run["timers"].values() if t["deadline"] is not None]
+        return min(due) if due else None
 
     # ------------------------------------------------------------------
     # what the model must write
@@ -538,7 +672,8 @@ class Agent:
         return {"run_id": run["run_id"], "role": run["role"], "status": run["status"], "outcome": run["outcome"],
                 "state": ev["state"], "x_star": ev["x_star"], "floor": ev["floor"], "scores": ev["scores"],
                 "bottleneck": ev["bottleneck"], "round": ev["round"], "reporter": ev["reporter"],
-                "lacking": lacking(run["engine"]), "anchors_in": sorted(run["engine"]["anchors"])}
+                "lacking": lacking(run["engine"]), "anchors_in": sorted(run["engine"]["anchors"]),
+                "timers": {k: t["deadline"] for k, t in run["timers"].items()}}
 
     def report(self, run_id=None):
         """The report of a run (the active one when `run_id` is None; None when there is none), as the spec describes it:

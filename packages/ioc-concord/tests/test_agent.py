@@ -53,9 +53,13 @@ class Net:
     """A channel on which every message reaches every agent, the sender included (a broadcast)."""
 
     def __init__(self, agent_mod, names, **kw):
-        self.agents = {n: agent_mod.Agent(n, uuid_fn=uuids(f"{i:08x}"), **kw) for i, n in enumerate(names, 1)}
+        self.now = 0                                  # the clock of every agent, moved by the test
+        self.agents = {n: agent_mod.Agent(n, uuid_fn=uuids(f"{i:08x}"), clock=lambda: self.now, **kw)
+                       for i, n in enumerate(names, 1)}
         self.events = []
         self.log = []
+        self.drop = lambda text, name: False          # whether the channel loses `text` on its way to the agent `name`
+        self.dead = set()                             # agents that hear nothing, say nothing and are never ticked
 
     def broadcast(self, step, who=None):
         """Deliver what `step` sends to every agent, then what the agents send in answer, in the order it was sent."""
@@ -65,6 +69,8 @@ class Net:
             text = queue.pop(0)
             self.log.append(text)
             for name, a in self.agents.items():
+                if name in self.dead or self.drop(text, name):
+                    continue
                 got = a.receive(text)
                 self.events += [(name, e) for e in got.events]
                 queue += got.send
@@ -443,7 +449,7 @@ def test_a_repair_from_another_agent_or_when_none_is_owed_is_ignored(agent):
     assert cost.status()["lacking"] == []
 
 
-def test_a_repair_that_arrives_before_the_state_is_complete_is_held_and_still_accepted_later(agent):
+def test_a_repair_that_arrives_before_the_state_is_complete_is_held_and_judged_when_it_is(agent):
     net = Net(agent, ["cost", "security"])
     net.start()
     net.answer_init("cost")
@@ -453,9 +459,10 @@ def test_a_repair_that_arrives_before_the_state_is_complete_is_held_and_still_ac
     cost = net.agents["cost"]
     step = cost.receive(repair_doc)
     assert step.events[0]["event"] == "held" and cost.status()["state"] == "wait"
-    net.answer_score("security", seed_cost=30)
-    again = cost.receive(repair_doc)
-    assert again.events[0]["event"] == "recorded" and cost.due()[0]["kind"] == "score"
+    assert [e["event"] for e in cost.receive(repair_doc).events][:1] == ["held"]       # still held, and not asked for again
+    net.answer_score("security", seed_cost=30)                          # now the state is complete: the held repair is judged
+    assert cost.status()["lacking"] == [("cost", "r1-security")] and cost.due()[0]["kind"] == "score"
+    assert cost.receive(repair_doc).events[0]["reason"] == "duplicate"
 
 
 # --- the result and the confirmation --------------------------------------------
