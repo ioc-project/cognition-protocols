@@ -16,7 +16,7 @@ def to_rate(run, me):
 
 
 def tasks_of(run, me):
-    """The tasks `me` owes in `run` (None when it has no active run), as dicts with a `kind`: `init-reply`, `score` or `repair`. See
+    """The tasks `me` owes in `run` (none when `run` is None, or `me` does not negotiate in it), as dicts with a `kind`: `init-reply`, `score` or `repair`. See
     `Agent.due` for what each holds."""
     if run is None or run["role"] != PARTICIPANT:
         return []

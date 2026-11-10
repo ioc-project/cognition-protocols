@@ -138,7 +138,6 @@ class Agent:
         run = self.state["runs"].get(run_id)             # the init may have started it
         if keep and run is not None:
             keep_uuid(run, uid)
-        if keep and run is not None:
             self._advance(run, step)
 
     def _unwrap(self, doc, info, run, step):
@@ -440,40 +439,44 @@ class Agent:
         step.note("recorded", **where)
         return True
 
+    def _result_to_take(self, run, msg, step):
+        """Whether the result `msg` is to be taken: only the result of the reporter counts, and the first one stands. Returns None when it
+        is to be taken, else what the caller returns (False: ignored, True: already held)."""
+        where = {"kind": "result", "from": msg["from"]}
+        if msg["from"] != run["participants"][0]:
+            step.note("ignored", reason="not the reporter", **where)
+            return False
+        return True if self._already(run, item_key("result", msg["from"]), step, where) else None
+
+    def _take_result(self, run, msg, doc, step):
+        run["reported"] = {"outcome": msg["outcome"], "winning_candidate_id": msg["winning_candidate_id"]}
+        run["received"][item_key("result", msg["from"])] = doc
+        step.note("recorded", kind="result", outcome=msg["outcome"], winner=msg["winning_candidate_id"], **{"from": msg["from"]})
+
     def _record_result(self, run, msg, doc, step):
         """The result counts only from the reporter, and its winner must be a candidate of the run. Until this agent has computed
         its own outcome it cannot say whether the winner exists: None says the result is to be held (see `_accept`)."""
+        taken = self._result_to_take(run, msg, step)
+        if taken is not None:
+            return taken
         author, winner = msg["from"], msg["winning_candidate_id"]
         where = {"kind": "result", "from": author}
-        if author != run["participants"][0]:
-            step.note("ignored", reason="not the reporter", **where)
-            return False
-        if self._already(run, item_key("result", author), step, where):
-            return True
         if winner not in {c["id"] for c in run["engine"]["pool"]}:
             if run["outcome"] is None:
                 return None
             step.note("ignored", reason="invalid", detail=f"{winner} is not a candidate of the run", **where)
             return False
-        run["reported"] = {"outcome": msg["outcome"], "winning_candidate_id": winner}
-        run["received"][item_key("result", author)] = doc
-        step.note("recorded", outcome=msg["outcome"], winner=winner, **where)
+        self._take_result(run, msg, doc, step)
         return True
 
     def _observe_result(self, run, msg, doc, step):
         """The result as an initiator that is not a participant takes it: from the reporter, as it is, since it holds no copy of the run
         state to judge the winner by. It ends the run for the initiator."""
-        author, winner = msg["from"], msg["winning_candidate_id"]
-        where = {"kind": "result", "from": author}
-        if author != run["participants"][0]:
-            step.note("ignored", reason="not the reporter", **where)
-            return False
-        if self._already(run, item_key("result", author), step, where):
-            return True
-        run["reported"] = {"outcome": msg["outcome"], "winning_candidate_id": winner}
-        run["received"][item_key("result", author)] = doc
+        taken = self._result_to_take(run, msg, step)
+        if taken is not None:
+            return taken
+        self._take_result(run, msg, doc, step)
         run["status"], run["outcome"], run["timers"] = RUN_ENDED, msg["outcome"], {}
-        step.note("recorded", outcome=msg["outcome"], winner=winner, **where)
         step.note("ended", outcome=msg["outcome"], run_id=run["run_id"])
         return True
 
@@ -546,10 +549,14 @@ class Agent:
     # the messages owed, and the timers
     # ------------------------------------------------------------------
 
+    def _evaluation(self, run):
+        """The evaluation of the engine over `run`; an initiator that does not negotiate has none, and nothing reads it."""
+        return None if run["role"] == INITIATOR else evaluate(run["engine"])
+
     def _sync_timers(self, run, step, ev=None):
         """Start the timer of every batch that has become owed, and drop the timer of every batch that is complete (see liveness.py).
         The timers are in the state, so a restart keeps them."""
-        sync_timers(run, self.me, step.now, ev or evaluate(run["engine"]))
+        sync_timers(run, self.me, step.now, ev or self._evaluation(run))
 
     def _request(self, run, key, step, ref=None, from_timer=False):
         """Ask the author of the batch for the first message it lacks, and restart the timer. It counts against `retries`, once the
@@ -582,7 +589,7 @@ class Agent:
                     return
 
     def _lacking_keys(self, run):
-        return [k for k, o in owed_batches(run, self.me, evaluate(run["engine"])).items() if o["what"] != "result"]
+        return [k for k, o in owed_batches(run, self.me, self._evaluation(run)).items() if o["what"] != "result"]
 
     def _ask_keys(self, run, keys, step):
         """Ask at once for the batches of `keys`, since a message that has just arrived proves they exist, without waiting for their
