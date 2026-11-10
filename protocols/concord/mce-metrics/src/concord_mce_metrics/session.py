@@ -2,42 +2,44 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """Reconstruct a CONCORD session from a MCE session's tool spans.
-"""
 
+The initiator script is driven through `init`, `handle` (the replies of the agents on stdin) and `mark-missing`. The
+session is rebuilt by replaying those calls through the ioc-concord engine, the code the script itself runs, so the
+pool, the ratings, the incumbent, the repair rounds and the outcome are the ones the run had.
+"""
 
 from __future__ import annotations
 
 import re
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import unescape
 
+from ioc_concord.engine import add_anchor, add_candidate, add_ratings, advance, parse_reply_doc
+from ioc_concord.errors import ConcordError
+from ioc_concord.schema import parse_schema
+from ioc_concord.state import new_run_state
+from ioc_concord.wire import DEFAULT_PARAMS
+from ioc_concord.xmlutil import AGENT_DOC_RE, escape_bare_chars
+
 from .spans import ordered, tool_arguments, tool_name, tool_output
 
-INITIATOR_SCRIPTS = ("concordv2.py", "concord_initiator.py")
+INITIATOR_SCRIPTS = ("concord_initiator.py",)
 STEPS = ("init", "anchors", "seeds", "scores", "repairs", "completed")
-# `Phase: X` line printed by each accepted initiator call, and the cost bucket it opens.
+# The cost bucket each phase opens.
 PHASE_OF = {"Anchor": "anchors", "Seed": "seeds", "Score": "scores", "Repair": "repair", "Complete": "after_commit"}
 
-_PHASE = re.compile(r"^Phase: (\w+)(?:\W+(SUCCESS|BEST_EFFORT))?", re.M)
-_POOL = re.compile(r"""<candidate\s+id\s*=\s*["']([^"']+)["']""")
-_CANDIDATE = re.compile(r'<candidate id="([^"]+)">(.*?)</candidate>', re.S)
-_SCORE = re.compile(r"""<score\s+candidate_id\s*=\s*["']([^"']+)["']\s*>(.*?)</score>""", re.S)
-_SCORED_ID = re.compile(r"""candidate_id\s*=\s*["']([^"']+)["']""")
+_STATE = re.compile(r"concord-state-([0-9a-f]+)\.json")
+_COMPLETE = re.compile(r"^RUN COMPLETE: outcome (SUCCESS|BEST_EFFORT)\.", re.M)
+_WINNER = re.compile(r"^Winning candidate (\S+) ", re.M)
+_FROM = re.compile(r"^--- from: *(\S+) *$", re.M)
+FALLBACK_SCHEMA = {"type": "string", "description": "an option"}
 
 
 def clean(text: str | None) -> str:
     return re.sub(r"\s+", " ", unescape(text or "", {"&quot;": '"', "&apos;": "'"})).strip()
-
-
-def tag(text: str | None, name: str) -> str:
-    m = re.search(rf"<{name}>(.*?)</{name}>", text or "", re.S)
-    return clean(m.group(1)) if m else ""
-
-
-def phase_of(stdout: str) -> tuple[str | None, str | None]:
-    m = _PHASE.search(stdout or "")
-    return (m.group(1), m.group(2)) if m else (None, None)
 
 
 def option(args: list[str], *names: str) -> str | None:
@@ -49,20 +51,23 @@ def option(args: list[str], *names: str) -> str | None:
 
 @dataclass
 class Call:
-    """One accepted-or-not call of the initiator script."""
+    """One call of the initiator script, accepted or not."""
 
     args: list[str]
     stdin: str
     exit: int | None
     stdout: str
+    stderr: str
     start: float
     end: float
 
-    def reply_text(self, k: int) -> str:
-        """The reply recorded by a ``record-reply`` at index ``k``: the argument after the agent, or the piped stdin."""
-        if len(self.args) > k + 2 and self.args[k + 2] != "--overwrite":
-            return self.args[k + 2]
-        return self.stdin
+    @property
+    def command(self) -> str:
+        """`init`, `handle`, `mark-missing`, ... : the first argument that is not a global option (`--state <path>`)."""
+        a, i = self.args, 0
+        while i < len(a) and a[i] in ("--state", "--format"):
+            i += 2
+        return a[i] if i < len(a) else ""
 
 
 @dataclass
@@ -83,18 +88,18 @@ class Session:
     agents: list[str]
     budget: str | None
     tau: float | None  # --satisfaction-threshold
-    schema: str  # --schema, for the judge to read option numbers
-    phase: str | None = None
+    schema: str  # the candidate schema as the agents read it, for the judge to read option numbers
+    phase: str | None = None  # Anchor, Seed, Score, Repair or Complete
     outcome: str | None = None  # SUCCESS (the commit) or BEST_EFFORT
     winner: str | None = None
     candidates: dict[str, Candidate] = field(default_factory=dict)
     anchors: dict[str, tuple[float, float]] = field(default_factory=dict)  # agent -> (raw_reject, raw_ideal)
-    scores: dict[tuple[str, str], Score] = field(default_factory=dict)  # (agent, candidate id) -> last score
+    scores: dict[tuple[str, str], Score] = field(default_factory=dict)  # (agent, candidate id) -> score
     anchored: set[str] = field(default_factory=set)
     seeded: set[str] = field(default_factory=set)
     scored: dict[str, set[str]] = field(default_factory=dict)  # agent -> candidate ids it scored
     missing: set[tuple[str, str]] = field(default_factory=set)  # (agent, candidate id) marked MISSING
-    pool: list[str] = field(default_factory=list)  # candidate ids of the last SCORE message
+    pool: list[str] = field(default_factory=list)  # candidate ids of the run
     repair_answered: int = 0
     repair_causes: list[str] = field(default_factory=list)  # per repair round: 'scores' or 'mark-missing'
     marks: list[tuple[float, str]] = field(default_factory=list)  # (time, cost bucket) from `init` on
@@ -169,6 +174,7 @@ def initiator_calls(tool_spans: list[dict[str, Any]] | None) -> list[Call]:
                 stdin=str(args.get("stdin") or ""),
                 exit=out.get("exit_code"),
                 stdout=str(out.get("stdout") or ""),
+                stderr=str(out.get("stderr") or ""),
                 start=start,
                 end=float(span.get("endTime") or start),
             )
@@ -176,74 +182,202 @@ def initiator_calls(tool_spans: list[dict[str, Any]] | None) -> list[Call]:
     return calls
 
 
-def _new(c: Call) -> Session:
-    a = c.args
-    agents = option(a, "--agents")
-    tau = option(a, "--satisfaction-threshold")
+# ---- replay -------------------------------------------------------------
+
+
+def _text(value: str | None) -> str:
+    """An `init` text argument. A `@file` was read by the script; its text is not in the trace, so the file is read when
+    it is still there and the name is kept otherwise (only the schema matters to the metrics)."""
+    value = value or ""
+    if value.startswith("@"):
+        try:
+            return Path(value[1:]).read_text().rstrip("\n")
+        except OSError:
+            return value
+    return value
+
+
+def _number(value: str | None, default: float) -> float:
     try:
-        tau_value = float(tau) if tau is not None else None
+        return float(value) if value is not None else default
     except ValueError:
-        tau_value = None
-    return Session(
-        agents=[x.strip() for x in (agents or "").split(",") if x.strip()],
-        budget=option(a, "-B", "--B", "--budget"),
-        tau=tau_value,
-        schema=clean(option(a, "--schema"))[:700],
-    )
+        return default
+
+
+class _Replay:
+    """The engine state of a run, advanced call by call the way the initiator script advanced it."""
+
+    def __init__(self, st: dict[str, Any], budget: str | None, tau: float | None) -> None:
+        self.st = st
+        self.budget = budget
+        self.tau = tau
+        self.deferred: list[tuple[str, list]] = []  # ratings that arrived before the candidate they rate
+        self.repair_causes: list[str] = []
+        self.marks: list[tuple[float, str]] = []
+        self.phase = self._phase()
+
+    def _phase(self) -> str:
+        st = self.st
+        if st["outcome"]:
+            return "Complete"
+        if st["pending"]:
+            return "Repair"
+        if any(a not in st["anchors"] for a in st["agents"]):
+            return "Anchor"
+        seeded = {c["proposer"] for c in st["pool"] if c["round"] == 0}
+        if any(a not in seeded for a in st["agents"]):
+            return "Seed"
+        return "Score"
+
+    def _rate(self, agent: str, ratings: list) -> None:
+        known = {c["id"] for c in self.st["pool"]}
+        now = [r for r in ratings if r[0] in known]
+        if now:
+            add_ratings(self.st, agent, now)
+        later = [r for r in ratings if r[0] not in known]
+        if later:
+            self.deferred.append((agent, later))
+
+    def _replay_deferred(self) -> None:
+        todo, self.deferred = self.deferred, []
+        for agent, ratings in todo:
+            self._rate(agent, ratings)
+
+    def _apply(self, agent: str, doc: tuple) -> None:
+        st = self.st
+        kind, payload = doc
+        if kind == "anchor":
+            if agent not in st["anchors"]:
+                add_anchor(st, agent, *payload)
+        elif kind == "candidate":
+            text, rationale, cid = payload
+            add_candidate(st, agent, text, rationale, cid)
+        else:
+            self._rate(agent, payload)
+
+    def handle(self, call: Call) -> None:
+        st = self.st
+        blocks = _FROM.split(call.stdin)
+        items = [(None, blocks[0])] + [(blocks[i], blocks[i + 1]) for i in range(1, len(blocks) - 1, 2)]
+        for sender, body in items:
+            for m in AGENT_DOC_RE.finditer(body):
+                try:
+                    root = ET.fromstring(escape_bare_chars(m.group(0)))
+                except ET.ParseError:
+                    continue
+                agent = root.get("agent") or sender
+                if agent not in st["agents"]:
+                    continue
+                if root.get("state") and root.get("state") != st.get("state_id"):
+                    continue  # a reply of another run
+                doc = parse_reply_doc(root)
+                if doc is None:
+                    continue
+                try:
+                    self._apply(agent, doc)
+                except ConcordError:
+                    continue
+                self._replay_deferred()
+        self._advance(call, cause="scores")
+
+    def mark_missing(self, call: Call) -> None:
+        st = self.st
+        k = call.args.index("mark-missing")
+        if len(call.args) <= k + 2:
+            return
+        agent, cid = call.args[k + 1], call.args[k + 2]
+        if agent in st["agents"] and any(c["id"] == cid for c in st["pool"]) and cid not in st["raw"].get(agent, {}):
+            st["raw"].setdefault(agent, {})[cid] = "MISSING"
+            self._advance(call, cause="mark-missing")
+
+    def _advance(self, call: Call, cause: str) -> None:
+        rounds = self.st["t"]
+        advance(self.st)
+        if self.st["t"] > rounds:
+            self.repair_causes.append(cause)
+        self.phase = self._phase()
+        if not self.marks or self.marks[-1][1] != PHASE_OF[self.phase]:
+            self.marks.append((call.end, PHASE_OF[self.phase]))
+
+    def session(self) -> Session:
+        st = self.st
+        s = Session(
+            agents=list(st["agents"]),
+            budget=self.budget,
+            tau=self.tau,
+            schema=clean(st["schema"])[:700],
+            phase=self.phase,
+            outcome=st["outcome"],
+            winner=st["x_star"] if st["outcome"] else None,
+            pool=[c["id"] for c in st["pool"]],
+            repair_answered=sum(1 for c in st["pool"] if c["round"] > 0),
+            repair_causes=list(self.repair_causes),
+            marks=list(self.marks),
+        )
+        for c in st["pool"]:
+            s.candidates[c["id"]] = Candidate(c["proposer"], clean(c["candidate"]), clean(c["rationale"]))
+        for agent, a in st["anchors"].items():
+            s.anchors[agent] = (a["raw_reject"], a["raw_ideal"])
+            s.anchored.add(agent)
+        for c in st["pool"]:
+            if c["round"] == 0:
+                s.seeded.add(c["proposer"])
+        for agent, rated in st["raw"].items():
+            for cid, raw in rated.items():
+                if raw == "MISSING":
+                    s.missing.add((agent, cid))
+                    continue
+                s.scored.setdefault(agent, set()).add(cid)
+                s.scores[(agent, cid)] = Score(raw, clean(st.get("score_reasoning", {}).get(agent, {}).get(cid)))
+        return s
+
+
+def _start(call: Call) -> _Replay | None:
+    a = call.args
+    agents = [x.strip() for x in (option(a, "--agents") or "").split(",") if x.strip()]
+    tau = _number(option(a, "--satisfaction-threshold"), DEFAULT_PARAMS["satisfaction_threshold"])
+    eps = _number(option(a, "--eps"), DEFAULT_PARAMS["eps"])
+    budget = int(_number(option(a, "-B", "--B", "--budget"), DEFAULT_PARAMS["B"]))
+    state_id = _STATE.search(call.stdout)
+    brief = (_text(option(a, "--context")), _text(option(a, "--x-reject")), _text(option(a, "--x-ideal")))
+    schema = _text(option(a, "--schema"))
+    st = None
+    # The schema only helps the judge read the options: one that cannot be read (a `@file` that is gone) is replaced.
+    for spec in (lambda: parse_schema(schema, "--schema"), lambda: FALLBACK_SCHEMA):
+        try:
+            st = new_run_state(agents, *brief, spec(), tau, eps, budget, state_id=state_id.group(1) if state_id else None)
+            break
+        except ConcordError:
+            continue
+    if st is None:
+        return None
+    replay = _Replay(st, str(budget), tau)
+    replay.marks.append((call.start, "anchors"))  # the cost of the protocol starts at init
+    return replay
 
 
 def parse(calls: list[Call]) -> Session | None:
     """The last CONCORD session of the calls, or None when ``init`` never succeeded."""
-    s: Session | None = None
+    run: _Replay | None = None
+    end: tuple[str | None, str | None] = (None, None)  # what RUN COMPLETE printed: the outcome and the winner
     for c in calls:
-        a = c.args
-        if a[:1] == ["init"] and c.exit == 0:
-            s, before = _new(c), None
-            s.marks = [(c.start, "anchors")]  # a new session: the previous one is forgotten
-            s.pool = _POOL.findall(c.stdout)
-        elif s is None or c.exit != 0:
+        if c.command == "init" and c.exit == 0:
+            run, end = _start(c), (None, None)  # a new session: the previous one is forgotten
+        elif run is None or c.exit != 0:
             continue
-        else:
-            before = s.phase
-        after, outcome = phase_of(c.stdout)
-
-        if "record-reply" in a:
-            k = a.index("record-reply")
-            agent = a[k + 1] if len(a) > k + 1 else ""
-            text = c.reply_text(k)
-            if before == "Anchor":
-                s.anchored.add(agent)
-                reject, ideal = re.search(r"<raw_reject>\s*([-\d.]+)", text), re.search(r"<raw_ideal>\s*([-\d.]+)", text)
-                if reject and ideal:
-                    s.anchors[agent] = (float(reject.group(1)), float(ideal.group(1)))
-            elif before == "Seed":
-                s.seeded.add(agent)
-            elif before == "Repair":
-                s.repair_answered += 1
-            elif before == "Score":
-                s.scored.setdefault(agent, set()).update(_SCORED_ID.findall(text))
-                for cid, body in _SCORE.findall(text):
-                    raw = re.search(r"<raw>\s*([-\d.]+)", body)
-                    if raw:
-                        s.scores[(agent, cid)] = Score(float(raw.group(1)), tag(body, "reasoning") or tag(body, "rationale"))
-        elif "mark-missing" in a:
-            k = a.index("mark-missing")
-            if len(a) > k + 2:
-                s.missing.add((a[k + 1], a[k + 2]))
-
-        for cid, body in _CANDIDATE.findall(c.stdout):
-            s.candidates.setdefault(cid, Candidate(cid.split("-", 1)[-1], tag(body, "text"), tag(body, "rationale")))
-
-        if after:
-            if after == "Repair" and before != "Repair" and "status" not in a:
-                s.repair_causes.append("mark-missing" if "mark-missing" in a else "scores")
-            if after == "Score":
-                s.pool = _POOL.findall(c.stdout) or s.pool
-            if after == "Complete":
-                s.outcome, s.winner = outcome, tag(c.stdout, "winning_candidate_id")
-            if after in PHASE_OF:
-                s.marks.append((c.end, PHASE_OF[after]))
-            s.phase = after
+        elif c.command == "handle":
+            run.handle(c)
+        elif c.command == "mark-missing":
+            run.mark_missing(c)
+        text = c.stdout + "\n" + c.stderr
+        if run is not None and (done := _COMPLETE.search(text)):
+            winner = _WINNER.search(text)
+            end = (done.group(1), winner.group(1) if winner else None)
+    if run is None:
+        return None
+    s = run.session()
+    if not s.reached_end and end[0]:  # the script says it finished though the replay did not: believe the script
+        s.phase, s.outcome, s.winner = "Complete", end[0], end[1]
     return s
 
 

@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -249,10 +249,16 @@ wheels = [
 ]
 
 [[package]]
+name = "ioc-concord"
+version = "0.1.0"
+source = { git = "https://github.com/ioc-project/cognition-protocols.git?subdirectory=packages%2Fioc-concord&rev=22d36f835cc3760680f163e73d16423248109d4c#22d36f835cc3760680f163e73d16423248109d4c" }
+
+[[package]]
 name = "ioc-concord-mce-metrics"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "ioc-concord" },
     { name = "ioc-scope-mce-core" },
     { name = "openai" },
     { name = "python-dotenv" },
@@ -265,6 +271,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ioc-concord", git = "https://github.com/ioc-project/cognition-protocols.git?subdirectory=packages%2Fioc-concord&rev=22d36f835cc3760680f163e73d16423248109d4c" },
     { name = "ioc-scope-mce-core", specifier = ">=2.0.0" },
     { name = "openai" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
