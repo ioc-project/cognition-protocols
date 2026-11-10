@@ -55,12 +55,19 @@ class Net:
     def __init__(self, agent_mod, names, **kw):
         self.agents = {n: agent_mod.Agent(n, uuid_fn=uuids(f"{i:08x}"), **kw) for i, n in enumerate(names, 1)}
         self.events = []
+        self.log = []
 
     def broadcast(self, step, who=None):
+        """Deliver what `step` sends to every agent, then what the agents send in answer, in the order it was sent."""
         self.events += [(who, e) for e in step.events]
-        for text in step.send:
+        queue = list(step.send)
+        while queue:
+            text = queue.pop(0)
+            self.log.append(text)
             for name, a in self.agents.items():
-                self.events += [(name, e) for e in a.receive(text).events]
+                got = a.receive(text)
+                self.events += [(name, e) for e in got.events]
+                queue += got.send
 
     def start(self, doc=None):
         self.broadcast(type("S", (), {"send": [doc or init_doc()], "events": []})())
@@ -248,7 +255,7 @@ def test_two_agents_reach_success_and_each_computes_the_same_outcome(agent):
     for name in ("cost", "security"):
         a = net.agents[name]
         s = a.status()
-        assert (s["state"], s["outcome"], s["x_star"], s["floor"], s["status"]) == ("done", "SUCCESS", "seed-cost", 750_000, "active")
+        assert (s["state"], s["outcome"], s["x_star"], s["floor"], s["status"]) == ("done", "SUCCESS", "seed-cost", 750_000, "ended")
         assert s["lacking"] == [] and a.due() == []
     assert [e["outcome"] for _, e in net.events if e["event"] == "outcome"] == ["SUCCESS", "SUCCESS"]
 
@@ -375,3 +382,218 @@ def test_the_clock_is_injected_and_a_given_time_wins(agent):
     a = agent.Agent("cost", clock=lambda: 1234)
     assert a.receive(init_doc()).events[0]["at"] == 1234
     assert a.receive("hello", now=7).events[0]["at"] == 7
+
+
+# --- the repair ---------------------------------------------------------------
+
+def below_tau(agent):
+    """cost and security rate each other's seed low: the floor is .3 and security is the bottleneck of round 1."""
+    return happy(agent, cost_on_security=20, security_on_cost=30)
+
+
+def test_the_bottleneck_owes_a_repair_and_the_task_says_what_to_fix(agent):
+    net = below_tau(agent)
+    assert net.agents["cost"].due() == []
+    (task,) = net.agents["security"].due()
+    assert task == {"kind": "repair", "run_id": RUN, "round": 1,
+                    "incumbent": {"id": "seed-cost", "candidate": "plan of cost", "rationale": "because"},
+                    "threshold": "0.6", "floor": "0.3", "scores": {"cost": "0.8", "security": "0.3"},
+                    "shortfall": {"security": "0.3"}, "reasoning": {"cost": "I like it", "security": "my view"}, "repairs_left": 8}
+    assert net.agents["security"].due() == net.agents["security"].due()
+
+
+def test_a_repair_that_clears_tau_for_everyone_ends_the_run_in_success(agent):
+    net = below_tau(agent)
+    sec = net.agents["security"]
+    net.broadcast(sec.submit_repair(RUN, "a better plan", "because", 70, "mine is fine"), "security")
+    (task,) = net.agents["cost"].due()
+    assert task["kind"] == "score" and [c["id"] for c in task["candidates"]] == ["r1-security"]
+    assert sec.due() == []
+    net.answer_score("cost", r1_security=65)
+    for name in ("cost", "security"):
+        s = net.agents[name].status()
+        assert (s["state"], s["outcome"], s["x_star"], s["floor"], s["status"]) == ("done", "SUCCESS", "r1-security", 650_000, "ended")
+    assert [W.parse_message(t)["kind"] for t in net.log].count("result") == 1
+
+
+def test_only_the_bottleneck_can_submit_a_repair_and_only_when_one_is_owed(agent):
+    net = below_tau(agent)
+    with pytest.raises(agent.StateError, match="no repair is owed"):
+        net.agents["cost"].submit_repair(RUN, "x", "r", 50, "w")
+    ok = happy(agent)
+    with pytest.raises(agent.StateError, match="no repair is owed|has ended"):
+        ok.agents["security"].submit_repair(RUN, "x", "r", 50, "w")
+    with pytest.raises(agent.InvalidMessage, match="0 to 100"):
+        net.agents["security"].submit_repair(RUN, "x", "r", 500, "w")
+    assert len(net.agents["security"].due()) == 1
+
+
+def test_a_repair_from_another_agent_or_when_none_is_owed_is_ignored(agent):
+    net = below_tau(agent)
+    cost = net.agents["cost"]
+    from_cost = W.build_repair("cost", RUN, 1, "x", "r", 50, "w")
+    assert net.agents["security"].receive(from_cost).events[0]["reason"] == "no repair owed from this agent"
+    assert net.agents["security"].status()["lacking"] == []
+    ok = happy(agent)
+    late = W.build_repair("security", RUN, 1, "x", "r", 50, "w")
+    assert ok.agents["cost"].receive(late).events[0]["reason"] == "run over"
+    wrong_round = W.build_repair("security", RUN, 2, "x", "r", 50, "w")
+    step = cost.receive(wrong_round)
+    assert step.events[0]["reason"] == "no repair owed from this agent"
+    assert cost.status()["lacking"] == []
+
+
+def test_a_repair_that_arrives_before_the_state_is_complete_is_held_and_still_accepted_later(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start()
+    net.answer_init("cost")
+    net.answer_init("security")
+    net.answer_score("cost", seed_security=20)                          # security's score on seed-cost is not in yet
+    repair_doc = W.build_repair("security", RUN, 1, "better", "because", 70, "ok", uid="77777777-7777-4777-8777-777777777777")
+    cost = net.agents["cost"]
+    step = cost.receive(repair_doc)
+    assert step.events[0]["event"] == "held" and cost.status()["state"] == "wait"
+    net.answer_score("security", seed_cost=30)
+    again = cost.receive(repair_doc)
+    assert again.events[0]["event"] == "recorded" and cost.due()[0]["kind"] == "score"
+
+
+# --- the result and the confirmation --------------------------------------------
+
+def test_the_reporter_sends_its_result_by_itself_and_its_run_ends(agent):
+    net = happy(agent)
+    results = [t for t in net.log if W.parse_message(t)["kind"] == "result"]
+    assert len(results) == 1
+    m = W.parse_message(results[0])
+    assert (m["from"], m["outcome"], m["winning_candidate_id"]) == ("cost", "SUCCESS", "seed-cost") and W.check_ok(results[0])
+    sent = [e for who, e in net.events if e["event"] == "sent" and e.get("kind") == "result"]
+    assert len(sent) == 1
+    assert net.agents["cost"].status()["status"] == "ended" and net.agents["cost"].due() == []
+
+
+def test_a_participant_that_is_not_the_reporter_ends_when_it_holds_the_result_and_it_matches(agent):
+    net = happy(agent)
+    rep = net.agents["security"].report()
+    assert rep["status"] == "confirmed" and rep["outcome"] == "SUCCESS"
+    assert rep["winner"] == {"id": "seed-cost", "candidate": "plan of cost"}
+    assert rep["scores"] == {"cost": 800_000, "security": 750_000} and rep["shortfall"] == {} and rep["rounds"] == 0
+    assert rep["results_compared"] == {"reporter": "cost", "result": {"outcome": "SUCCESS", "winning_candidate_id": "seed-cost"},
+                                       "matches": True}
+    assert net.agents["cost"].report()["results_compared"]["matches"] is True and net.agents["cost"].report()["status"] == "confirmed"
+
+
+def test_a_non_reporter_with_its_outcome_computed_is_not_ended_until_it_holds_the_result(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start()
+    net.answer_init("cost")
+    net.answer_init("security")
+    net.agents["security"].receive(W.build_score("cost", RUN, [("seed-security", 70, "r")]))
+    sec = net.agents["security"]
+    sec.submit_score(RUN, [("seed-cost", 75, "r")])
+    s = sec.status()
+    assert (s["outcome"], s["status"]) == ("SUCCESS", "active") and sec.report()["status"] == "pending"
+    assert sec.due() == []
+    result = W.build_result("cost", RUN, "SUCCESS", "seed-cost")
+    sec.receive(result)
+    assert sec.status()["status"] == "ended" and sec.report()["status"] == "confirmed"
+
+
+def test_a_result_that_arrives_before_the_agent_has_its_outcome_is_recorded_and_compared_later(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start()
+    net.answer_init("cost")
+    net.answer_init("security")
+    sec = net.agents["security"]
+    step = sec.receive(W.build_result("cost", RUN, "SUCCESS", "seed-cost"))
+    assert [e["event"] for e in step.events] == ["recorded"] and sec.status()["status"] == "active"
+    sec.receive(W.build_score("cost", RUN, [("seed-security", 70, "r")]))
+    step = sec.submit_score(RUN, [("seed-cost", 75, "r")])
+    assert [e["event"] for e in step.events] == ["sent", "outcome", "ended"] and sec.report()["status"] == "confirmed"
+
+
+def test_a_result_is_held_when_its_winner_is_unknown_and_the_agent_has_no_outcome_yet(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start()
+    net.answer_init("cost")
+    sec = net.agents["security"]
+    doc = W.build_result("cost", RUN, "BEST_EFFORT", "r3-cost", uid="88888888-8888-4888-8888-888888888888")
+    assert sec.receive(doc).events[0]["event"] == "held"
+    net.answer_init("security")
+    assert sec.receive(doc).events[0]["event"] == "held"                # same uuid, still no outcome: not kept
+    sec.receive(W.build_score("cost", RUN, [("seed-security", 70, "r")]))
+    sec.submit_score(RUN, [("seed-cost", 75, "r")])
+    step = sec.receive(W.build_result("cost", RUN, "BEST_EFFORT", "r3-cost"))
+    assert step.events[0]["reason"] == "invalid" and "not a candidate of the run" in step.events[0]["detail"]
+    assert sec.status()["status"] == "active"
+
+
+def test_a_result_from_an_agent_that_is_not_the_reporter_is_ignored(agent):
+    net = Net(agent, ["cost", "security", "legal"])
+    net.start(init_doc(["cost", "security", "legal"]))
+    fake = W.build_result("security", RUN, "SUCCESS", "seed-security")
+    assert net.agents["legal"].receive(fake).events[0]["reason"] == "not the reporter"
+    assert net.agents["legal"].report()["results_compared"]["result"] is None
+
+
+def test_a_result_that_differs_from_the_outcome_sends_a_mismatch_error_and_the_run_is_disputed(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start()
+    net.answer_init("cost")
+    net.answer_init("security")
+    sec = net.agents["security"]
+    sec.receive(W.build_score("cost", RUN, [("seed-security", 70, "r")]))
+    sec.submit_score(RUN, [("seed-cost", 75, "r")])
+    step = sec.receive(W.build_result("cost", RUN, "BEST_EFFORT", "seed-security"))
+    assert [e["event"] for e in step.events] == ["recorded", "mismatch", "ended"]
+    (err,) = step.send
+    m = W.parse_message(err)
+    assert (m["kind"], m["from"], m["to"], m["what"], m["reason"]) == ("error", "security", "cost", "result", "mismatch")
+    s = sec.status()
+    assert (s["outcome"], s["status"]) == ("SUCCESS", "ended")                  # a result is not a vote
+    rep = sec.report()
+    assert rep["status"] == "disputed" and rep["results_compared"]["matches"] is False and rep["mismatches"]["sent"] == 1
+
+
+def test_a_mismatch_error_is_read_by_every_agent_also_after_its_run_has_ended(agent):
+    net = happy(agent)
+    err = W.build_error("security", RUN, "cost", "result", "mismatch", text="differs")
+    for name in ("cost", "security"):
+        assert net.agents[name].report()["status"] == "confirmed"
+    got = net.agents["cost"].receive(err)
+    assert [e["event"] for e in got.events] == ["mismatch received"]
+    assert net.agents["cost"].status()["status"] == "ended" and net.agents["cost"].report()["status"] == "disputed"
+    assert net.agents["cost"].report()["mismatches"] == {"sent": 0, "received": ["security"]}
+    other = W.build_error("security", RUN, "security", "result", "mismatch")
+    assert net.agents["cost"].receive(other).events[0]["reason"] == "not about the result of the reporter"
+
+
+def test_the_agent_is_free_for_a_new_run_once_its_run_has_ended(agent):
+    net = happy(agent)
+    cost = net.agents["cost"]
+    again = "22222222-2222-4222-8222-222222222222"
+    assert cost.receive(init_doc(run_id=again)).events[0]["event"] == "joined"
+    assert cost.status()["run_id"] == again and cost.status(RUN)["status"] == "ended"
+    assert cost.report(RUN)["status"] == "confirmed"
+
+
+def test_data_messages_of_an_ended_run_are_ignored(agent):
+    net = happy(agent)
+    late = W.build_score("security", RUN, [("seed-cost", 5, "r")], uid="99999999-9999-4999-8999-999999999999")
+    assert net.agents["cost"].receive(late).events[0]["reason"] == "run over"
+
+
+def test_a_repair_run_that_spends_its_budget_ends_in_best_effort(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start(init_doc(params={"B": 1}))
+    net.answer_init("cost")
+    net.answer_init("security")
+    net.answer_score("cost", seed_security=20)
+    net.answer_score("security", seed_cost=30)
+    sec = net.agents["security"]
+    assert sec.due()[0]["repairs_left"] == 1
+    net.broadcast(sec.submit_repair(RUN, "weak", "because", 30, "meh"), "security")
+    net.answer_score("cost", r1_security=30)
+    for name in ("cost", "security"):
+        s, rep = net.agents[name].status(), net.agents[name].report()
+        assert (s["outcome"], s["x_star"], s["status"], rep["rounds"]) == ("BEST_EFFORT", "seed-cost", "ended", 1)
+        assert rep["shortfall"] == {"security": 300_000} and rep["status"] == "confirmed"

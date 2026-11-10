@@ -246,6 +246,8 @@ def _check_error_fields(what, reason, candidate, ref):
         raise InvalidMessage(f"what must be one of {', '.join(ERROR_WHAT)}, not {what!r}")
     if what == "init" and reason not in ("busy", "invalid", "version"):
         raise InvalidMessage('what="init" goes only with reason="busy", "invalid" or "version"')
+    if reason == "mismatch" and what != "result":
+        raise InvalidMessage('reason="mismatch" is about a result: what must be "result"')
     if reason in ("busy", "invalid", "version") and what != "init":
         raise InvalidMessage(f'reason="{reason}" is about the init: what must be "init"')
     if reason == "check" and not ref:

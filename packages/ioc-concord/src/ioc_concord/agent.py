@@ -24,9 +24,10 @@ import time
 
 from ioc_concord.engine import add_anchor, add_proposal, add_ratings, evaluate, lacking
 from ioc_concord.errors import InvalidMessage, StateError
-from ioc_concord.protocol import PROTOCOL_VERSION
-from ioc_concord.state import PARTICIPANT, RUN_ACTIVE, active_run, item_key, members, new_agent_state, new_run
-from ioc_concord.wire import (DATA_TAGS, INIT, build_init_reply, build_score, check_ok, locate, new_uuid, parse_message, peek)
+from ioc_concord.protocol import PROTOCOL_VERSION, format_number
+from ioc_concord.state import PARTICIPANT, RUN_ACTIVE, RUN_ENDED, active_run, item_key, members, new_agent_state, new_run
+from ioc_concord.wire import (DATA_TAGS, INIT, build_error, build_init_reply, build_repair, build_result, build_score, check_ok,
+                              locate, new_uuid, parse_message, peek)
 
 
 class Step:
@@ -155,6 +156,15 @@ class Agent:
         if kind == "init":
             step.note("ignored", reason="run already known", **where)
             return False
+        if kind == "error" and msg["reason"] == "mismatch":
+            return self._record_mismatch(run, msg, step)
+        if run["status"] != RUN_ACTIVE:
+            step.note("ignored", reason="run over", **where)
+            return False
+        if kind == "repair" and author in run["participants"]:
+            return self._record_repair(run, msg, doc, step)
+        if kind == "result":
+            return self._record_result(run, msg, doc, step)
         if kind == "init-reply" and author in run["participants"]:
             return self._record_init_reply(run, msg, doc, step)
         if kind == "score" and author in run["participants"]:
@@ -195,14 +205,96 @@ class Agent:
         step.note("recorded", kind="score", candidates=recorded, **{"from": author})
         return True
 
+    def _record_repair(self, run, msg, doc, step):
+        """A repair counts only from the bottleneck of the round, and only when one is owed. A copy of the run state that is not
+        complete cannot tell, so the repair is held: not recorded, its uuid not kept."""
+        author, p = msg["from"], msg["proposal"]
+        where = {"kind": "repair", "from": author, "candidate": p["id"]}
+        key = item_key("repair", author, p["id"])
+        if key in run["received"] or key in run["sent"]:
+            step.note("ignored", reason="already recorded", **where)
+            return True
+        ev = evaluate(run["engine"])
+        if ev["state"] == "wait":
+            step.note("held", reason="the run state is incomplete", **where)
+            return False
+        if ev["state"] != "repair" or ev["bottleneck"] != author or p["round"] != ev["round"]:
+            step.note("ignored", reason="no repair owed from this agent", **where)
+            return False
+        try:
+            add_proposal(run["engine"], author, p["id"], p["candidate"], p["rationale"], p["raw"], p["reasoning"])
+        except InvalidMessage as exc:
+            step.note("ignored", reason="invalid", detail=str(exc), **where)
+            return False
+        run["received"][key] = doc
+        step.note("recorded", **where)
+        return True
+
+    def _record_result(self, run, msg, doc, step):
+        """The result counts only from the reporter, and its winner must be a candidate of the run. Until this agent has computed
+        its own outcome it cannot say whether the winner exists, so the result is held, not recorded."""
+        author, winner = msg["from"], msg["winning_candidate_id"]
+        where = {"kind": "result", "from": author}
+        if author != run["participants"][0]:
+            step.note("ignored", reason="not the reporter", **where)
+            return False
+        if run["reported"] is not None:
+            step.note("ignored", reason="already recorded", **where)
+            return True
+        if winner not in {c["id"] for c in run["engine"]["pool"]}:
+            if run["outcome"] is None:
+                step.note("held", reason="the run state is incomplete", **where)
+            else:
+                step.note("ignored", reason="invalid", detail=f"{winner} is not a candidate of the run", **where)
+            return False
+        run["reported"] = {"outcome": msg["outcome"], "winning_candidate_id": winner}
+        run["received"][item_key("result", author)] = doc
+        step.note("recorded", outcome=msg["outcome"], winner=winner, **where)
+        return True
+
+    def _record_mismatch(self, run, msg, step):
+        """A mismatch error is read by every agent, also after its run has ended: the run is in doubt."""
+        author, where = msg["from"], {"kind": "error", "from": msg["from"], "about": "mismatch"}
+        if author not in run["participants"] or msg["to"] != run["participants"][0]:
+            step.note("ignored", reason="not about the result of the reporter", **where)
+            return False
+        run["mismatches"]["received"].append(author)
+        step.note("mismatch received", **where)
+        return True
+
     def _advance(self, run, step):
-        """Evaluate the engine over the state, and note the outcome when this agent has computed it."""
+        """Evaluate the engine over the state, note the outcome when this agent has computed it, and take the step that follows:
+        the reporter sends its result, any other participant compares the result it holds with its outcome."""
         ev = evaluate(run["engine"])
         if ev["state"] == "done" and run["outcome"] is None:
             run["outcome"] = ev["outcome"]
             step.note("outcome", outcome=ev["outcome"], winner=ev["x_star"], run_id=run["run_id"])
         elif ev["state"] == "repair":
             step.note("repair owed", bottleneck=ev["bottleneck"], round=ev["round"], run_id=run["run_id"])
+        if run["outcome"] is not None and run["status"] == RUN_ACTIVE:
+            self._confirm(run, ev, step)
+
+    def _confirm(self, run, ev, step):
+        """The reporter ends its run by sending its result; another participant ends it when it holds that result, and a result
+        that differs from its own outcome makes it send a mismatch error. A result never changes the outcome."""
+        reporter, where = run["participants"][0], {"run_id": run["run_id"]}
+        if self.me == reporter:
+            text = build_result(self.me, run["run_id"], ev["outcome"], ev["x_star"], uid=self.new_uuid())
+            run["sent"][item_key("result", self.me)] = text
+            step.send.append(text)
+            step.note("sent", kind="result", **where)
+        elif run["reported"] is not None:
+            got = (run["reported"]["outcome"], run["reported"]["winning_candidate_id"])
+            if got != (ev["outcome"], ev["x_star"]):
+                text = build_error(self.me, run["run_id"], reporter, "result", "mismatch", uid=self.new_uuid(),
+                                   text=f"My outcome is {ev['outcome']} with {ev['x_star']}; the result says {got[0]} with {got[1]}.")
+                run["mismatches"]["sent"].append(text)
+                step.send.append(text)
+                step.note("mismatch", mine=[ev["outcome"], ev["x_star"]], theirs=list(got), **where)
+        else:
+            return
+        run["status"] = RUN_ENDED
+        step.note("ended", outcome=run["outcome"], **where)
 
     # ------------------------------------------------------------------
     # what the model must write
@@ -213,6 +305,11 @@ class Agent:
 
         init-reply  run_id, initiator, context, x_reject, x_ideal, schema: anchors, a seed and a score for it
         score       run_id, candidates [{id, from, candidate, rationale, reasoning}]: a rating for each, on the same scale
+        repair      run_id, round, incumbent {id, candidate, rationale}, threshold, floor, scores {agent: normalized score of the
+                    incumbent}, shortfall {agent: how far below the threshold}, reasoning {agent: what it said about the
+                    incumbent}, repairs_left: a better candidate, which only the bottleneck of the round writes
+
+        The numbers in a task are normalized scores between 0 and 1, as text with at most 6 decimal places.
         """
         run = active_run(self.state)
         if run is None or run["role"] != PARTICIPANT:
@@ -223,12 +320,26 @@ class Agent:
                      "x_reject": run["x_reject"], "x_ideal": run["x_ideal"], "schema": run["schema"]}]
         owed = self._to_rate(run)
         if not owed:
-            return []
+            return self._repair_task(run)
         by_id = {c["id"]: c for c in st["pool"]}
         return [{"kind": "score", "run_id": run["run_id"], "candidates": [
             {"id": cid, "from": by_id[cid]["proposer"], "candidate": by_id[cid]["candidate"],
              "rationale": by_id[cid]["rationale"], "reasoning": st["reasoning"][by_id[cid]["proposer"]].get(cid, "")}
             for cid in owed]}]
+
+    def _repair_task(self, run):
+        ev = evaluate(run["engine"])
+        if ev["state"] != "repair" or ev["bottleneck"] != self.me or item_key("repair", self.me, f"r{ev['round']}-{self.me}") in run["sent"]:
+            return []
+        st, x = run["engine"], ev["x_star"]
+        inc = next(c for c in st["pool"] if c["id"] == x)
+        text = lambda d: {a: format_number(v) for a, v in d.items()}
+        return [{"kind": "repair", "run_id": run["run_id"], "round": ev["round"],
+                 "incumbent": {"id": x, "candidate": inc["candidate"], "rationale": inc["rationale"]},
+                 "threshold": format_number(st["params"]["satisfaction_threshold"]), "floor": format_number(ev["floor"]),
+                 "scores": text(ev["scores"]), "shortfall": text(ev["shortfall"]),
+                 "reasoning": {a: st["reasoning"][a].get(x, "") for a in st["agents"]},
+                 "repairs_left": st["params"]["B"] - ev["t"]}]
 
     def _to_rate(self, run):
         """The candidates of the others that this agent has not rated, once every init reply is in."""
@@ -276,6 +387,21 @@ class Agent:
             run["sent"][item_key("score", self.me, cid)] = text
         return self._sent(run, text, "score", now)
 
+    def submit_repair(self, run_id, candidate, rationale, raw, reasoning, now=None):
+        """Answer the `repair` task: a better candidate, with its rationale and the agent's own score for it with its reasoning. The
+        round is the one the task named. Raises StateError when no repair is owed from this agent, and InvalidMessage when something
+        is invalid."""
+        run = self._run(run_id, "submit_repair")
+        ev = evaluate(run["engine"])
+        if ev["state"] != "repair" or ev["bottleneck"] != self.me:
+            raise StateError("submit_repair: no repair is owed from this agent now")
+        text = build_repair(self.me, run_id, ev["round"], candidate, rationale, raw, reasoning, spec=run["schema"],
+                            uid=self.new_uuid())
+        p = parse_message(text, run["schema"])["proposal"]
+        add_proposal(run["engine"], self.me, p["id"], p["candidate"], p["rationale"], p["raw"], p["reasoning"])
+        run["sent"][item_key("repair", self.me, p["id"])] = text
+        return self._sent(run, text, "repair", now)
+
     def _sent(self, run, text, kind, now):
         step = self._step(now)
         step.send.append(text)
@@ -300,3 +426,31 @@ class Agent:
                 "state": ev["state"], "x_star": ev["x_star"], "floor": ev["floor"], "scores": ev["scores"],
                 "bottleneck": ev["bottleneck"], "round": ev["round"], "reporter": ev["reporter"],
                 "lacking": lacking(run["engine"]), "anchors_in": sorted(run["engine"]["anchors"])}
+
+    def report(self, run_id=None):
+        """The report of a run (the active one when `run_id` is None; None when there is none), as the spec describes it:
+        `outcome`, `winner` ({id, candidate}), `scores` and `shortfall` (millionths), `rounds`, `reason`, `results_compared` (the
+        reporter's result and whether it matches this agent's outcome; for the reporter, its own) and `status`: "pending" until
+        the run has ended for this agent, then "confirmed", or "disputed" when a mismatch was found, sent or received."""
+        run = self.state["runs"].get(run_id or self.state["active"])
+        if run is None:
+            return None
+        ev = evaluate(run["engine"])
+        done = run["outcome"] is not None
+        winner = next((c for c in run["engine"]["pool"] if c["id"] == ev["x_star"]), None) if done else None
+        reporter = run["participants"][0]
+        mine = (run["outcome"], ev["x_star"]) if done else None
+        if self.me == reporter:
+            compared = {"reporter": reporter, "result": {"outcome": run["outcome"], "winning_candidate_id": ev["x_star"]} if done else None,
+                        "matches": True if done else None}
+        else:
+            rep = run["reported"]
+            compared = {"reporter": reporter, "result": rep,
+                        "matches": None if rep is None or not done else mine == (rep["outcome"], rep["winning_candidate_id"])}
+        mismatches = run["mismatches"]
+        status = "disputed" if mismatches["sent"] or mismatches["received"] else ("confirmed" if run["status"] == RUN_ENDED else "pending")
+        return {"run_id": run["run_id"], "outcome": run["outcome"],
+                "winner": {"id": winner["id"], "candidate": winner["candidate"]} if winner else None,
+                "scores": ev["scores"] if done else {}, "shortfall": ev["shortfall"] if done else {}, "rounds": ev["t"],
+                "reason": None, "results_compared": compared,
+                "mismatches": {"sent": len(mismatches["sent"]), "received": list(mismatches["received"])}, "status": status}

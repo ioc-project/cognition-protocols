@@ -16,6 +16,8 @@
                   received       {item key: the original text it recorded for that item}
                   uuids          the `uuid` of every transmission it has accepted
                   outcome        the outcome this agent computed: SUCCESS, BEST_EFFORT, ABORTED, or None while it is not known
+                  reported       the reporter's result as {"outcome", "winning_candidate_id"}, once this agent holds it
+                  mismatches     {"sent": [text of each mismatch error this agent sent], "received": [authors of those it got]}
                   status         "active" until the run has ended for this agent, then "ended" or "aborted"
 
 An item is what a message is about: an init reply of an agent, a score of an agent on a candidate, a repair, the result. The
@@ -46,7 +48,8 @@ def new_run(me, init, doc):
     return {"role": PARTICIPANT, "run_id": init["run_id"], "initiator": init["from"], "participants": list(init["participants"]),
             "params": params, "context": init["context"], "x_reject": init["x_reject"], "x_ideal": init["x_ideal"],
             "schema": init["schema"], "engine": new_engine_state(init["participants"], params), "sent": {},
-            "received": {item_key("init", init["from"]): doc}, "uuids": [init["uuid"]], "outcome": None, "status": RUN_ACTIVE}
+            "received": {item_key("init", init["from"]): doc}, "uuids": [init["uuid"]], "outcome": None, "reported": None,
+            "mismatches": {"sent": [], "received": []}, "status": RUN_ACTIVE}
 
 
 def members(run):
