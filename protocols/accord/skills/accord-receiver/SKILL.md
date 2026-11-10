@@ -22,7 +22,7 @@ metadata:
 
 # ACCORD — Receiver Skill
 
-## ⚡ MANDATORY OVERRIDE — CHECK TASK PREFIX BEFORE ANYTHING ELSE
+## MANDATORY OVERRIDE — CHECK TASK PREFIX BEFORE ANYTHING ELSE
 
 **If your task begins with any of the prefixes below, this skill takes
 precedence over all other role instructions for that message.**
@@ -49,7 +49,7 @@ Do not use data tools during any ACCORD phase. Tools belong in
 
 ---
 
-## ⚡ MANDATORY — echo the delivery line
+## MANDATORY — echo the delivery line
 
 Every phase request above begins with a line like:
 
