@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import fcntl
+import hashlib
 import json
 import math
 import os
@@ -69,6 +70,14 @@ MAX_FRAME_ATOMS = 6
 MAX_FRAME_ROUNDS = 2
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+
+class AccordError(Exception):
+    """A refusal the orchestrator can act on. Every one leaves the session usable: nothing is half-recorded."""
+
+
+class AccordRefusal(AccordError):
+    """An AccordError whose bookkeeping must outlive it, so the state is written before it propagates."""
 
 
 def normalize_text(text: str) -> str:
@@ -486,6 +495,8 @@ def blank_state() -> dict:
         "handle_replies": {},  # {phase_key: {agent: raw_text}}
         "clarify_terms": [],   # populated by ground advance when ambiguous pairs exist
         "issued": {},          # {phase:agent -> True} prevents re-sending the same message
+        "issued_checks": {},   # {phase:agent -> check} fingerprint of the message that was sent
+        "check_fail": {},      # {phase:agent -> consecutive unverifiable replies}
         "required_knowledge": [],
         "objective_clauses": [],
     }
@@ -512,15 +523,23 @@ def locked_state(path: Path):
     reply is recorded regardless of arrival order.
     """
     if not path.exists():
-        raise SystemExit(f"no state file at {path} — run init first")
+        raise AccordError(f"no state file at {path} — run init first")
+
+    def write(fh, st):
+        fh.seek(0)
+        fh.write(json.dumps(st, indent=2))
+        fh.truncate()
+
     with open(path, "r+") as fh:
         fcntl.flock(fh, fcntl.LOCK_EX)
         try:
             st = {**blank_state(), **json.loads(fh.read())}
-            yield st
-            fh.seek(0)
-            fh.write(json.dumps(st, indent=2))
-            fh.truncate()
+            try:
+                yield st
+            except AccordRefusal:
+                write(fh, st)       # the refusal counted this attempt; that count has to survive it
+                raise
+            write(fh, st)
         finally:
             fcntl.flock(fh, fcntl.LOCK_UN)
 
@@ -541,7 +560,7 @@ def read_json(arg: str | None, default: Any = None) -> Any:
     try:
         return json.loads(text)
     except json.JSONDecodeError as exc:
-        raise SystemExit(f"invalid JSON in {source}: {exc}")
+        raise AccordError(f"invalid JSON in {source}: {exc}")
 
 
 def csv(value: str | None) -> list[str]:
@@ -580,19 +599,38 @@ def _esc(text: str) -> str:
             .replace(">", "&gt;").replace('"', "&quot;"))
 
 
-def _header(st: dict) -> str:
-    return f'<accord-delivery state="{_esc(st["state_id"])}"></accord-delivery>'
+_CHECK_RE = re.compile(r'<accord-delivery\b[^>]*\bcheck="([0-9a-f]+)"')
+
+
+def reply_check(text: str) -> str:
+    """A short fingerprint of a phase message, blind to whitespace.
+
+    The initiator puts it on the delivery (`check="..."`); the specialist echoes that line back on its reply, so a
+    reply that was summarized, rewritten or invented in place of the real one no longer carries the right check.
+    It binds a reply to the message that was actually sent — it does not prove the reply's own body is untouched,
+    which nothing the initiator holds could establish.
+    """
+    return hashlib.sha256(re.sub(r"\s+", "", text).encode("utf-8")).hexdigest()[:8]
+
+
+def _header(st: dict, body: str = "") -> str:
+    return (f'<accord-delivery state="{_esc(st["state_id"])}" check="{reply_check(body)}">'
+            "</accord-delivery>")
+
+
+def _wrap_msg(st: dict, body: str) -> str:
+    """A phase message: its delivery header, fingerprinting the body that follows."""
+    return f"{_header(st, body)}\n\n{body}"
 
 
 def build_convene_msg(st: dict) -> str:
     specialists = ", ".join(st["specialists"])
-    return (
-        f"{_header(st)}\n\n"
+    return _wrap_msg(st, (
         "CONVENE_REQUEST\n\n"
         "Activate your `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\n"
         f"TASK: {_esc(st['task'])}\n\n"
         f"SPECIALISTS: {specialists}"
-    )
+    ))
 
 
 def build_frame_msg(st: dict, agent: str) -> str:
@@ -601,7 +639,6 @@ def build_frame_msg(st: dict, agent: str) -> str:
         obs["text"] for obs in st["obs"] if obs.get("agent") == agent
     ]
     parts = [
-        f"{_header(st)}\n\n",
         "FRAME_REQUEST\n\n",
         "Activate your `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\n",
         f"TASK: {_esc(st['task'])}\n\n",
@@ -609,41 +646,38 @@ def build_frame_msg(st: dict, agent: str) -> str:
     ]
     if previous:
         parts.append(f"\n\nYOUR_PREVIOUS_ATOMS: {json.dumps(previous, indent=2)}")
-    return "".join(parts)
+    return _wrap_msg(st, "".join(parts))
 
 
 def build_ground_msg(st: dict) -> str:
     key_terms = json.dumps(st["key_terms"], indent=2)
-    return (
-        f"{_header(st)}\n\n"
+    return _wrap_msg(st, (
         "GROUND_REQUEST\n\n"
         "Activate your `accord-receiver` skill and follow its GROUND_REQUEST handler.\n\n"
         f"KEY_TERMS: {key_terms}"
-    )
+    ))
 
 
 def build_clarify_msg(st: dict, agent: str, pairs: list[dict]) -> str:
-    return (
-        f"{_header(st)}\n\n"
+    return _wrap_msg(st, (
         "CLARIFY_REQUEST\n\n"
         "Activate your `accord-receiver` skill and follow its CLARIFY_REQUEST handler.\n\n"
         f"AMBIGUOUS_PAIR: {json.dumps(pairs, indent=2)}\n\n"
         f"DEFINITIONS_SO_FAR: {json.dumps(st['glossary'], indent=2)}"
-    )
+    ))
 
 
 def build_verify_msg(st: dict) -> str:
     rk = json.dumps(st["required_knowledge"], indent=2)
     oc = json.dumps(st["objective_clauses"], indent=2)
     frame = json.dumps(st["frame"], indent=2)
-    return (
-        f"{_header(st)}\n\n"
+    return _wrap_msg(st, (
         "VERIFY_REQUEST\n\n"
         "Activate your `accord-receiver` skill and follow its VERIFY_REQUEST handler.\n\n"
         f"REQUIRED_KNOWLEDGE: {rk}\n\n"
         f"OBJECTIVE_CLAUSES: {oc}\n\n"
         f"PROBLEM_FRAME: {frame}"
-    )
+    ))
 
 
 def _infer_phase_key(st: dict) -> str:
@@ -726,9 +760,107 @@ def _is_issued(st: dict, phase: str, agent: str) -> bool:
     return st["issued"].get(f"{phase}:{agent}", False)
 
 
-def _mark_issued(st: dict, phase: str, agents: list[str]) -> None:
+def _mark_issued(st: dict, phase: str, agents: list[str], messages: dict[str, str] | None = None) -> None:
     for a in agents:
         st["issued"][f"{phase}:{a}"] = True
+        if messages and a in messages:
+            match = _CHECK_RE.search(messages[a])
+            if match:
+                st["issued_checks"][f"{phase}:{a}"] = match.group(1)
+
+
+_PHASE_SHAPE = {
+    "convene": 'an agent card: `agent`, plus `roles`, `capabilities`, `access_scopes` and `holdings_summary`',
+    "frame": 'an `agent` and an `atoms` list of {"text": ..., "type": ...} objects (`[]` withdraws every atom)',
+    "ground": 'an `agent` and a `units` map carrying a unit for a term in KEY_TERMS',
+    "clarify": 'an `agent`, the `term`, and an `extended_definition` for it',
+    "verify": 'an `agent`, its `holds` list and its proposed `checks`',
+}
+
+
+def validate_reply(st: dict, phase: str, agent: str, reply: str) -> None:
+    """Refuse a reply this phase's merge would take nothing from.
+
+    The merges are deliberately lenient — they skip what they cannot read and carry on — so a summary, a refusal or
+    an answer in the wrong shape used to be recorded as that agent having contributed, and the phase closed without
+    it. This says so instead.
+
+    The bar is the reply's *shape*, not how much it says: the keys that make it an answer to this phase have to be
+    there, and may be empty. `{"agent": a, "holds": [], "checks": []}` is a complete VERIFY reply from an agent that
+    holds nothing, while `{"agent": a, "summary": "..."}` is not a reply at all — which is the difference a summary
+    cannot fake, and the delivery check cannot see.
+    """
+    kind = phase.split("_")[0]
+    shape = _PHASE_SHAPE.get(kind)
+    if shape is None:
+        return
+
+    def refuse(why: str) -> None:
+        raise AccordError(f"handle: the reply from {agent} {why}. {kind.upper()} needs {shape}. Nothing was recorded.")
+
+    parsed = parse_responses([reply])
+    if not parsed:
+        refuse("is not a JSON object")
+    body = parsed[0]
+
+    named = str(body.get("agent") or body.get("identity") or "").strip()
+    card_keys = ("roles", "capabilities", "access_scopes", "accessScopes", "holdings_summary", "holdingsSummary")
+    verify_keys = ("holds", "checks", "proposed_checks")
+
+    if kind == "convene":
+        if not named:
+            refuse("names no agent")
+        if not any(k in body for k in card_keys):
+            refuse("carries none of the agent-card fields")
+    elif kind == "frame":
+        if not isinstance(body.get("atoms"), list):
+            refuse("carries no `atoms` list")
+    elif kind in ("ground", "clarify"):
+        if not ingest_glossary([reply], st["key_terms"]):
+            refuse("grounds none of the key terms")
+    elif kind == "verify":
+        if not named:
+            refuse("names no agent")
+        if not any(k in body for k in verify_keys):
+            refuse("carries neither `holds` nor `checks`")
+
+
+def verify_reply_check(st: dict, phase: str, agent: str, reply: str) -> None:
+    """Refuse a reply that does not carry the check of the message that was sent.
+
+    A reply the orchestrator summarized or wrote itself loses the `<accord-delivery>` line, so it cannot present the
+    right check. The two failures are not equally suspicious, and are not treated alike:
+
+    * A **wrong** check is always refused. It says this text belongs to some other message, so recording it would
+      file the wrong content under this phase. The real reply exists; the orchestrator has to go back for it.
+    * A **missing** check is refused once and then recorded anyway, with a defect. It usually means a receiver that
+      did not echo the line rather than a substitution, and a receiver that never echoes must not stall the session.
+
+    That leniency covers the missing line only. What it lets through still has to be a reply the phase can read:
+    `validate_reply` runs next and refuses a body the merge would take nothing from, however many attempts it took.
+    """
+    key = f"{phase}:{agent}"
+    expected = st["issued_checks"].get(key)
+    if not expected:
+        return                                  # nothing was stamped (a session started before checks existed)
+    found = _CHECK_RE.search(reply)
+    if found and found.group(1) == expected:
+        st["check_fail"].pop(key, None)
+        return
+    if found:
+        raise AccordError(
+            f"handle: the reply from {agent} does not match its check (expected {expected}, got "
+            f"{found.group(1)}). Nothing was recorded.")
+
+    st["check_fail"][key] = st["check_fail"].get(key, 0) + 1
+    if st["check_fail"][key] < 2:
+        raise AccordRefusal(
+            f"handle: the reply from {agent} carried no `<accord-delivery>` check line. Nothing was recorded.")
+    st["check_fail"].pop(key, None)
+    st["defects"].append({
+        "kind": "unverified_reply", "agent": agent, "phase": phase,
+        "detail": "recorded on a second attempt without a matching delivery check",
+    })
 
 
 def _run_phase_advance(st: dict, phase_key: str) -> dict:
@@ -793,12 +925,15 @@ def cmd_handle(a: argparse.Namespace, st: dict) -> dict:
     reply: str = (a.reply or "").strip()
 
     if not st.get("task"):
-        raise SystemExit("handle: no task in state — run init --task first")
+        raise AccordError("handle: no task in state — run init --task first")
 
     if st.get("locked_contract"):
         return {"status": "LOCKED", "phase": "locked", "awaiting": [], "messages": {}}
 
     phase_key = _infer_phase_key(st)
+    verify_reply_check(st, phase_key, agent, reply)
+    if reply:
+        validate_reply(st, phase_key, agent, reply)
 
     # Record reply (empty string is still a valid placeholder — agent responded)
     phase_replies: dict[str, str] = st["handle_replies"].setdefault(phase_key, {})
@@ -823,7 +958,7 @@ def cmd_handle(a: argparse.Namespace, st: dict) -> dict:
         for recipient, msg in action["messages"].items():
             if not _is_issued(st, new_phase, recipient):
                 messages[recipient] = msg
-        _mark_issued(st, new_phase, list(messages))
+        _mark_issued(st, new_phase, list(messages), messages)
 
     if new_phase == "locked":
         return {
@@ -881,7 +1016,7 @@ def cmd_init(a: argparse.Namespace, st: dict) -> dict:
         action = current_action(st)
         phase_key = action["phase"]
         recipients = action.get("recipients", [])
-        _mark_issued(st, phase_key, recipients)
+        _mark_issued(st, phase_key, recipients, action.get("messages"))
         result["phase"] = phase_key
         result["awaiting"] = recipients
         result["messages"] = action.get("messages", {})
@@ -915,7 +1050,7 @@ def cmd_frame(a: argparse.Namespace, st: dict) -> dict:
     raw = read_json(a.responses, [])
     by_agent, truncated, saw_atoms = ingest_frame_round(raw)
     if raw and not saw_atoms:
-        raise SystemExit(
+        raise AccordError(
             "frame: none of the responses carried an 'atoms' list of "
             "{\"text\": ...} objects. Refusing to record an unparseable round."
         )
@@ -950,7 +1085,7 @@ def cmd_glossary(a: argparse.Namespace, st: dict) -> dict:
     raw = read_json(a.responses, [])
     tuples = ingest_glossary(raw, key_terms)
     if raw and not tuples:
-        raise SystemExit(
+        raise AccordError(
             "glossary: none of the responses carried a definition for a key term "
             f"({', '.join(key_terms) or 'no key terms registered'}). Expected a "
             "'units' map, a 'groundings' list, or 'term' with 'extended_definition'. "
@@ -1045,9 +1180,9 @@ def cmd_lock(a: argparse.Namespace, st: dict) -> dict:
 def cmd_execution_message(a: argparse.Namespace, st: dict) -> dict:
     contract = st.get("locked_contract")
     if not contract:
-        raise SystemExit("execution-message: no locked contract exists")
+        raise AccordError("execution-message: no locked contract exists")
     if contract.get("status") != "INTENT-LOCKED":
-        raise SystemExit("execution-message: contract is not INTENT-LOCKED")
+        raise AccordError("execution-message: contract is not INTENT-LOCKED")
     assignment = read_text(a.assignment_file)
     return {
         "agent": a.agent,
@@ -1065,8 +1200,56 @@ def cmd_status(a: argparse.Namespace, st: dict) -> dict:
     }
 
 
+def _hint_for(msg: str) -> str:
+    """What to do about an error: always a way back onto the path, never just the complaint."""
+    m = msg.lower()
+    if "no state file" in m or "no task in state" in m:
+        return ("Run `init` first, with --task to drive the session from `handle`. Use the same --state (or the same "
+                "$ACCORD_RUN_KEY) on every command in the session.")
+    if "not a specialist" in m or "unknown agent" in m:
+        return "Use the specialist ids exactly as you passed them to `init --specialists`."
+    if "does not match its check" in m:
+        return ("That reply is not the one the specialist returned for the message it was sent. Do not summarize, "
+                "shorten or rewrite a reply: pass it to `handle` exactly as received, including the "
+                "`<accord-delivery>` line it starts with.")
+    if "carried no" in m and "accord-delivery" in m:
+        return ("The reply is missing the `<accord-delivery>` line it was asked to echo. Send that specialist its "
+                "message again and pass the whole reply back unedited.")
+    if "invalid json" in m:
+        return ("That argument is not JSON. Pass a file path, '-' for stdin, or the JSON value inline — and only one "
+                "argument per command can use '-'.")
+    if "none of the responses" in m:
+        return ("Those replies are prose or the wrong shape, and nothing was recorded. Ask each specialist to answer "
+                "again from the message it was sent, and pass the replies through unedited — never write the JSON "
+                "yourself.")
+    if "no locked contract" in m or "not intent-locked" in m:
+        return "Finish VERIFY first. `execution-message` only works once the contract is INTENT-LOCKED."
+    if "no such file" in m:
+        return "Check the path. Each JSON argument takes a file path, '-' for stdin, or the JSON value inline."
+    if "invalid choice" in m or "unrecognized arguments" in m or "required" in m or "usage" in m:
+        return ("Run `--help` for the command. The usual sequence is `init --task ...` once, then `handle --agent "
+                "<id> --reply <text>` for each reply.")
+    return ("Fix what the message says and run the same command again. Never work around it by writing a reply or a "
+            "phase artifact yourself.")
+
+
+def report_error(phase: str, message: object, hint: str | None = None) -> None:
+    """Put an error on stdout in the same shape as every other result: a status, what happened, what to do."""
+    text = str(message).strip()
+    print(json.dumps({"ok": False, "phase": phase, "status": "ERROR", "error": text,
+                      "next": hint or _hint_for(text)}, indent=2))
+
+
+class _Parser(argparse.ArgumentParser):
+    """argparse writes usage errors to stderr and exits; route them through the one error shape instead."""
+
+    def error(self, message):           # noqa: D102 - argparse hook
+        report_error(getattr(self, "_accord_phase", "usage"), f"usage error: {message}")
+        raise SystemExit(2)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = _Parser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--state", default=os.environ.get("ACCORD_STATE", DEFAULT_STATE),
                    help=f"session state file (default: $ACCORD_STATE or {DEFAULT_STATE})")
     sub = p.add_subparsers(dest="phase", required=True)
@@ -1160,19 +1343,21 @@ def main(argv: list[str] | None = None) -> int:
                 if oc is not None:
                     st["objective_clauses"] = oc
                 data = args.fn(args, st)
-        except SystemExit:
-            raise
+        except AccordError as exc:
+            report_error(args.phase, exc)
+            return 1
         except Exception as exc:
-            print(json.dumps({"ok": False, "phase": args.phase, "error": f"{type(exc).__name__}: {exc}"}))
+            report_error(args.phase, f"{type(exc).__name__}: {exc}")
             return 1
     else:
         st = load_state(path)
         try:
             data = args.fn(args, st)
-        except SystemExit:
-            raise
+        except AccordError as exc:
+            report_error(args.phase, exc)
+            return 1
         except Exception as exc:
-            print(json.dumps({"ok": False, "phase": args.phase, "error": f"{type(exc).__name__}: {exc}"}))
+            report_error(args.phase, f"{type(exc).__name__}: {exc}")
             return 1
         save_state(path, getattr(args, "_state_out", st))
 

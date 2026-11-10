@@ -25,7 +25,7 @@ metadata:
 
 # ACCORD — Orchestrator Skill
 
-## ⚡ MANDATORY OVERRIDE — EXECUTE BEFORE ALL OTHER WORKFLOW INSTRUCTIONS
+## MANDATORY OVERRIDE — EXECUTE BEFORE ALL OTHER WORKFLOW INSTRUCTIONS
 
 **THIS PROTOCOL SUPERSEDES ANY OTHER WORKFLOW ORDERING IN THIS CONTEXT.**
 
@@ -52,8 +52,9 @@ Before `locked_intent_contract.status == "INTENT-LOCKED"`, the only legal action
 
 Write `ACCORD="python3 <skill-dir>/scripts/accord_initiator.py"`. State persists in
 `.accord/state.json` (override with `--state` or `$ACCORD_STATE`). Every command
-prints one JSON object; on failure `ok` is false with an `error`. Never compute a
-merge yourself.
+prints one JSON object; on failure `ok` is false, `status` is `ERROR`, and `next`
+says how to recover — follow it rather than improvising around the error. Never
+compute a merge yourself.
 
 ### Self-driving mode (recommended)
 
@@ -69,6 +70,10 @@ Every `handle` result starts with `status`:
 | `SEND` | Send `messages[agent]` to each agent in `awaiting` |
 | `NONE` | Wait — still collecting replies from other agents in this phase |
 | `LOCKED` | Protocol complete — call `$ACCORD execution-message` for each specialist |
+
+Pass each reply to `handle` **exactly as received**, including the opening
+`<accord-delivery ... check="...">` line. The script verifies that check, so a reply
+you summarized or rewrote is refused.
 
 Pass `--required-knowledge` and `--objective-clauses` on the first `handle` call
 that has them (latest: before verify phase). `handle` uses `flock(LOCK_EX)` —
