@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.1](https://github.com/ioc-project/cognition-protocols/compare/accord-initiator-v0.1.0...accord-initiator-v0.1.1) (2026-11-09)
+
+
+### Features
+
+* **accord:** add self-driving handle command to accord-initiator ([#94](https://github.com/ioc-project/cognition-protocols/issues/94)) ([909ad24](https://github.com/ioc-project/cognition-protocols/commit/909ad244c09dbe384bac51d23e9b040221833f76))
+
+
+### Bug Fixes
+
+* make accord / concord scripts executable ([#79](https://github.com/ioc-project/cognition-protocols/issues/79)) ([3163f94](https://github.com/ioc-project/cognition-protocols/commit/3163f942a4e831c62be98e69139b731ade504fde))
+* set SIM_CLARIFY to 0.55 and document how to disable CLARIFY ([#106](https://github.com/ioc-project/cognition-protocols/issues/106)) ([a45a44f](https://github.com/ioc-project/cognition-protocols/commit/a45a44fbcdbf504aa877367bc4a78d4292170acd))
+
 ## 0.1.0 (2026-10-23)
 
 
