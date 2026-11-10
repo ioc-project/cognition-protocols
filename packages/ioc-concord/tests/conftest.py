@@ -7,6 +7,7 @@ import importlib.util
 import sys
 import tomllib
 import types
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
@@ -26,24 +27,31 @@ bundle_tool = _bundle_tool()
 CONFIG = tomllib.loads((ROOT / "tools" / "bundle.toml").read_text())
 
 
+@lru_cache(maxsize=None)
 def bundled(module):
     """{script path: the module as it exists inside that script}: the bundled block, run on its own.
 
     The block is rendered whole (no tree shaking), so every name the tests call is there. The script carries the same code
-    minus what it never reaches, and test_bundled_scripts checks that it is exactly that."""
-    out = {}
+    minus what it never reaches, and test_bundled_scripts checks that it is exactly that. Scripts that bundle the same block are
+    tested once (under the name of the first): running the same code twice would only slow the tests down."""
+    out, seen = {}, set()
     for lib in CONFIG["library"]:
         for target in lib["target"]:
             if module not in target["modules"]:
                 continue
             block = bundle_tool.render(lib, target, (ROOT / target["file"]).read_text(), shake=False)
+            if block in seen:
+                continue
+            seen.add(block)
             ns = types.ModuleType(f"bundled_{Path(target['file']).stem}")
             exec(compile(block, target["file"], "exec"), ns.__dict__)
             out[target["file"]] = ns
     return out
 
 
+@lru_cache(maxsize=None)
 def implementations(module):
+    """{name: the module}: the library, and each distinct bundled block. Built once per module for the whole run."""
     import importlib
     impls = {"library": importlib.import_module(f"ioc_concord.{module}")}
     impls.update({Path(f).name: ns for f, ns in bundled(module).items()})
