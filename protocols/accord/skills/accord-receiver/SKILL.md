@@ -49,6 +49,32 @@ in `EXECUTION_REQUEST` tasks only.
 
 ---
 
+## ⚡ MANDATORY — echo the delivery line
+
+Every phase request above begins with a line like:
+
+```
+<accord-delivery state="a1b2c3d4" check="9f2c71ab"></accord-delivery>
+```
+
+**Copy that line verbatim as the first line of your reply, then a blank line, then the JSON
+your handler specifies.** Do not alter the `check` value, and do not add one if the request
+had none.
+
+The orchestrator verifies it. A reply that has been summarized or rewritten on the way back
+cannot carry the right check, so the orchestrator refuses it and asks for the real one. A reply
+without the line is refused the first time and recorded as a defect the second.
+
+```
+<accord-delivery state="a1b2c3d4" check="9f2c71ab"></accord-delivery>
+
+{"agent": "telemetry", "units": {"error_rate": "fraction 0-1"}}
+```
+
+`EXECUTION_REQUEST` carries no delivery line; reply to it as described in its handler.
+
+---
+
 ## Handler: CONVENE_REQUEST
 
 The orchestrator is assembling the Roster before delegating the task.

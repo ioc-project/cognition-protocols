@@ -67,8 +67,14 @@ Every merge in this skill is done by the standalone, stdlib-only Python script
 `ACCORD="python3 <skill-dir>/scripts/accord_initiator.py"`. State persists in
 `.accord/state.json` (override with `--state` or `$ACCORD_STATE`), so each phase
 can run as a separate process. Every command prints one JSON object
-`{"ok": true, "phase": ..., "data": {...}}`; on failure `ok` is false with an `error`.
+`{"ok": true, "phase": ..., "data": {...}}`. On failure it prints the same shape with
+`"ok": false`, `"status": "ERROR"`, an `error` saying what happened, and a `next` saying how to
+get back on the path — read `next` and do that, rather than improvising around the error.
 Never compute a merge yourself.
+
+Pass every specialist reply to `handle` **exactly as received**, including the
+`<accord-delivery ... check="...">` line it starts with. The script verifies that check: a reply
+that was summarized, trimmed or written for the specialist cannot carry it, and is refused.
 
 Until `verify` returns a `locked_intent_contract`, each merge result carries
 protocol control fields: `next_command`, `protocol_status`,
