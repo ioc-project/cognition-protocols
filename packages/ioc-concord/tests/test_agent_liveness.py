@@ -278,3 +278,34 @@ def test_a_message_in_a_run_that_has_ended_starts_no_timer(agent):
     net.answer_score("security", seed_cost=75)
     for a in net.agents.values():
         assert a.status()["timers"] == {} and a.next_wakeup() is None and a.tick(10 ** 6).send == []
+
+
+def test_a_message_that_was_stored_but_never_sent_is_still_sent_when_it_is_asked_for(agent):
+    store = MemStore(agent)
+    net = Net(agent, ["cost", "security"])
+    net.start(init_doc(params=PARAMS))
+    net.answer_init("cost")
+    lost = net.agents["security"].submit_init_reply(RUN, 0, 100, "plan", "because", 80, "good")      # the node crashes before the send
+    again = agent.Agent("security", store=store)                                                      # (state saved after the submit)
+    again.state = net.agents["security"].state
+    again._save()
+    net.agents["security"] = agent.Agent("security", store=store, clock=lambda: net.now)
+    cost = net.agents["cost"]
+    assert cost.status()["anchors_in"] == ["cost"]
+    tick_all(net, 10)
+    assert cost.status()["anchors_in"] == ["cost", "security"]
+    sent = net.agents["security"].state["runs"][RUN]["sent"]["init-reply|security"]
+    assert lost.send == [sent] and counts(net, "resend") == ["security"]
+    assert W.parse_message(W.parse_message([t for t in net.log if W.peek(t)["tag"] == "concord-resend"][-1])["inner"])["uuid"] == \
+        W.peek(sent)["attrs"]["uuid"]
+
+
+def test_a_damaged_message_whose_uuid_cannot_be_read_does_not_use_up_the_requests_for_damaged_copies(agent):
+    net = Net(agent, ["cost", "security"])
+    net.start(init_doc(params=PARAMS))
+    a = net.agents["cost"]
+    reply = W.build_init_reply("security", RUN, 0, 100, "plan", "because", 80, "good", uid="55555555-5555-4555-8555-555555555555")
+    for i in range(5):                                                       # no uuid to name: no request can be sent
+        step = a.receive(reply.replace("because", f"becauz{i}").replace('uuid="55555555-5555-4555-8555-555555555555"', 'uuid="x"'))
+        assert step.send == [] and a.state["runs"][RUN]["damaged"] == {}
+    assert len(a.receive(reply.replace("because", "becauze")).send) == 1       # the budget is intact

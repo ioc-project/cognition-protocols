@@ -149,7 +149,8 @@ class Agent:
         try:
             msg = parse_message(doc)
         except InvalidMessage as exc:
-            return step.note("ignored", reason="invalid", detail=str(exc), **where) and False
+            step.note("ignored", reason="invalid", detail=str(exc), **where)
+            return False
         inner = peek(msg["inner"])
         if inner is None or inner["attrs"].get("from") != attrs.get("from") or inner["attrs"].get("run_id") != attrs.get("run_id"):
             step.note("ignored", reason="invalid", detail="the message inside is not the sender's own, of this run", **where)
@@ -172,9 +173,9 @@ class Agent:
             step.note("ignored", reason="check", **where)
             if run is not None and tag != INIT:
                 who = f"{attrs.get('from')}|{KIND_OF_TAG[tag]}"
-                if run["damaged"].get(who, 0) < run["params"]["retries"]:
-                    run["damaged"][who] = run["damaged"].get(who, 0) + 1
-                    self._error(step, attrs.get("from"), attrs.get("run_id"), KIND_OF_TAG[tag], "check", ref=attrs.get("uuid"))
+                if (run["damaged"].get(who, 0) < run["params"]["retries"]
+                        and self._error(step, attrs.get("from"), attrs.get("run_id"), KIND_OF_TAG[tag], "check", ref=attrs.get("uuid"))):
+                    run["damaged"][who] = run["damaged"].get(who, 0) + 1          # only a request that was sent counts
             return False
         try:
             msg = parse_message(doc, run["schema"] if run is not None else None)
@@ -185,7 +186,9 @@ class Agent:
             return False
         if run is None:
             return self._join(msg, doc, step)
-        kept = self._record(run, msg, doc, step, resent)
+        if msg["kind"] == "init":
+            return self._known_init(run, msg, resent, step)
+        kept = self._record(run, msg, doc, step)
         if kept is None:                                  # it cannot be judged before the run state is complete
             if doc not in run["held"]:
                 run["held"].append(doc)
@@ -201,13 +204,16 @@ class Agent:
                     text=f"I speak version {PROTOCOL_VERSION}; this init is version {got}.")
 
     def _error(self, step, to, run_id, what, reason, candidate=None, ref=None, text=""):
-        """Add a <concord-error> to the messages to send, unless it cannot be built (an unreadable author or run id)."""
+        """Add a <concord-error> to the messages to send, unless it cannot be built (an unreadable author or run id). Returns whether
+        it was added."""
         try:
             step.send.append(build_error(self.me, run_id, to, what, reason, candidate=candidate, ref=ref, text=text,
                                          uid=self.new_uuid()))
         except InvalidMessage as exc:
-            return step.note("cannot answer", detail=str(exc))
+            step.note("cannot answer", detail=str(exc))
+            return False
         step.note("sent", kind="error", to=to, what=what, error=reason, run_id=run_id)
+        return True
 
     def _join(self, init, doc, step):
         where = {"kind": INIT, "from": init["from"], "run_id": init["run_id"]}
@@ -242,11 +248,10 @@ class Agent:
         self._abort(run, step, "version", note={"agent": info["attrs"]["from"], "text": info["text"]})
         return True
 
-    def _record(self, run, msg, doc, step, resent=False):
-        """Record the valid message `msg` (the text `doc`) of a known run. Returns whether to keep its uuid."""
+    def _record(self, run, msg, doc, step):
+        """Record the valid message `msg` (the text `doc`) of a known run. Returns whether to keep its uuid, or None when it cannot
+        be judged yet (see `_accept`)."""
         kind, author, where = msg["kind"], msg["from"], {"kind": msg["kind"], "from": msg["from"], "run_id": run["run_id"]}
-        if kind == "init":
-            return self._known_init(run, resent, step, where)
         if kind == "error":
             return self._record_error(run, msg, step)
         if kind == "cancel":
@@ -254,9 +259,12 @@ class Agent:
         if run["status"] != RUN_ACTIVE:
             step.note("ignored", reason="run over", **where)
             return False
-        if run["role"] == INITIATOR and kind not in ("init-reply", "result"):
-            step.note("ignored", reason="not for the initiator", **where)
-            return False
+        if run["role"] == INITIATOR:
+            if kind == "repair" and author in run["participants"]:
+                return self._observe_repair(run, msg, doc, step)
+            if kind not in ("init-reply", "result"):
+                step.note("ignored", reason="not for the initiator", **where)
+                return False
         if kind == "repair" and author in run["participants"]:
             return self._record_repair(run, msg, doc, step)
         if kind == "result":
@@ -268,12 +276,12 @@ class Agent:
         step.note("ignored", reason="not handled", **where)
         return False
 
-    def _known_init(self, run, resent, step, where):
-        """An init for a run the agent knows is ignored, unless it comes inside a resend: the initiator is waiting for init replies,
-        and a participant that has sent its own sends it again."""
+    def _known_init(self, run, msg, resent, step):
+        """An init for a run the agent knows is ignored, unless it comes inside a resend from the initiator: it is waiting for init
+        replies, and a participant that has sent its own sends it again."""
         key = item_key("init-reply", self.me)
-        if not resent or key not in run["sent"]:
-            step.note("ignored", reason="run already known", **where)
+        if not resent or key not in run["sent"] or msg["from"] != run["initiator"]:
+            step.note("ignored", reason="run already known", kind="init", **{"from": msg["from"]}, run_id=run["run_id"])
             return False
         step.send.append(build_resend(self.me, run["run_id"], run["sent"][key], uid=self.new_uuid()))
         step.note("resent", kind="init-reply", run_id=run["run_id"])
@@ -326,10 +334,29 @@ class Agent:
                                           uid=self.new_uuid()))
             step.note("sent", kind="cancel", **why)
 
+    def _already(self, run, key, step, where):
+        """Whether the message of the item `key` has been recorded, or sent, already: the first one stands."""
+        if key not in run["received"] and key not in run["sent"]:
+            return False
+        step.note("ignored", reason="already recorded", **where)
+        return True
+
+    def _observe_repair(self, run, msg, doc, step):
+        """An initiator that does not negotiate keeps the repairs it hears, without judging them, so that its report can name the
+        winner. A repair id carries its author, so a repair that the participants ignore cannot take the place of a valid one."""
+        author, p = msg["from"], msg["proposal"]
+        where = {"kind": "repair", "from": author, "candidate": p["id"]}
+        key = item_key("repair", author, p["id"])
+        if self._already(run, key, step, where):
+            return True
+        add_proposal(run["engine"], author, p["id"], p["candidate"], p["rationale"], p["raw"], p["reasoning"])
+        run["received"][key] = doc
+        step.note("recorded", **where)
+        return True
+
     def _record_init_reply(self, run, msg, doc, step):
         author, key, p = msg["from"], item_key("init-reply", msg["from"]), msg["proposal"]
-        if key in run["received"] or key in run["sent"]:
-            step.note("ignored", reason="already recorded", kind="init-reply", **{"from": author})
+        if self._already(run, key, step, {"kind": "init-reply", "from": author}):
             return True
         try:
             add_anchor(run["engine"], author, msg["raw_reject"], msg["raw_ideal"])
@@ -373,8 +400,7 @@ class Agent:
         author, p = msg["from"], msg["proposal"]
         where = {"kind": "repair", "from": author, "candidate": p["id"]}
         key = item_key("repair", author, p["id"])
-        if key in run["received"] or key in run["sent"]:
-            step.note("ignored", reason="already recorded", **where)
+        if self._already(run, key, step, where):
             return True
         ev = evaluate(run["engine"])
         if ev["state"] == "wait":
@@ -399,8 +425,7 @@ class Agent:
         if author != run["participants"][0]:
             step.note("ignored", reason="not the reporter", **where)
             return False
-        if run["reported"] is not None:
-            step.note("ignored", reason="already recorded", **where)
+        if self._already(run, item_key("result", author), step, where):
             return True
         if run["role"] == INITIATOR:        # it holds no copy of the run state to judge the winner by: it takes the result as it is
             run["reported"] = {"outcome": msg["outcome"], "winning_candidate_id": winner}

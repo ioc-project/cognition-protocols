@@ -4,7 +4,7 @@
 #
 """The initiator: opening a run, watching it when it is not a participant, sending the init again, and the races between runs."""
 import pytest
-from test_agent import MemStore, Net, uuids
+from test_agent import MemStore, Net, init_doc, uuids
 from test_agent_liveness import PARAMS, counts, errors, kinds, settle, tick_all
 
 from ioc_concord import wire as W
@@ -300,3 +300,41 @@ def test_an_ended_run_does_not_stop_the_initiator_from_opening_another(agent):
     run_to_the_end(net)
     step = net.agents["alice"].start(["cost", "security"], "c", "a", "b", SPEC, run_id=R2)
     assert net.agents["alice"].status()["run_id"] == R2 and net.agents["alice"].report(R1)["status"] == "unverified" and step.send
+
+
+def test_an_initiator_that_watches_reports_the_text_of_a_winner_that_is_a_repair(agent):
+    net = watched(agent)
+    open_run(net)
+    net.answer_init("cost")
+    net.answer_init("security")
+    net.answer_score("cost", seed_security=20)
+    net.answer_score("security", seed_cost=30)
+    net.broadcast(net.agents["security"].submit_repair(R1, "a better plan", "because", 70, "ok"), "security")
+    net.answer_score("cost", r1_security=65)
+    rep = net.agents["alice"].report()
+    assert (rep["status"], rep["outcome"]) == ("unverified", "SUCCESS")
+    assert rep["winner"] == {"id": "r1-security", "candidate": "a better plan"}
+
+
+def test_a_repair_that_the_participants_ignore_cannot_take_the_place_of_the_winner_in_the_watchers_report(agent):
+    net = watched(agent)
+    open_run(net)
+    alice = net.agents["alice"]
+    first = W.build_repair("security", R1, 1, "the real one", "r", 70, "w", uid="71717171-7171-4171-8171-717171717171")
+    other = W.build_repair("security", R1, 1, "an impostor", "r", 70, "w", uid="72727272-7272-4272-8272-727272727272")
+    assert alice.receive(first).events[0]["event"] == "recorded"
+    assert alice.receive(other).events[0]["reason"] == "already recorded"
+    assert alice.state["runs"][R1]["engine"]["pool"][0]["candidate"] == "the real one"
+
+
+def test_an_init_inside_a_resend_is_answered_only_when_it_comes_from_the_initiator(agent):
+    names = ["cost", "security", "legal"]
+    net = Net(agent, names)
+    net.start(init_doc(names, params=PARAMS))
+    net.answer_init("legal")
+    legal = net.agents["legal"]
+    again = W.build_resend("alice", R1, init_doc(names, params=PARAMS), uid="73737373-7373-4373-8373-737373737373")
+    assert kinds(legal.receive(again)) == ["resend"]
+    claim = W.build_resend("security", R1, init_doc(names, params=PARAMS, from_="security"), uid="74747474-7474-4474-8474-747474747474")
+    step = legal.receive(claim)                                # a member that claims to be the initiator of the run
+    assert step.send == [] and step.events[0]["reason"] == "run already known"

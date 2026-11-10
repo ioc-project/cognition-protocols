@@ -56,12 +56,14 @@ def new_run(me, init, doc):
     only watches the init replies and the result."""
     params = dict(init["params"])
     mine = init["from"] == me
-    return {"role": PARTICIPANT if me in init["participants"] else INITIATOR, "run_id": init["run_id"], "initiator": init["from"], "participants": list(init["participants"]),
-            "params": params, "context": init["context"], "x_reject": init["x_reject"], "x_ideal": init["x_ideal"],
-            "schema": init["schema"], "engine": new_engine_state(init["participants"], params), "sent": {item_key("init", me): doc} if mine else {},
-            "received": {} if mine else {item_key("init", init["from"]): doc}, "uuids": [init["uuid"]], "outcome": None, "reported": None,
-            "mismatches": {"sent": [], "received": []}, "timers": {}, "held": [], "expected": [], "damaged": {},
-            "abort": None, "cancel_sent": False, "disputed": False,
+    return {"role": PARTICIPANT if me in init["participants"] else INITIATOR, "run_id": init["run_id"],
+            "initiator": init["from"], "participants": list(init["participants"]), "params": params, "context": init["context"],
+            "x_reject": init["x_reject"], "x_ideal": init["x_ideal"], "schema": init["schema"],
+            "engine": new_engine_state(init["participants"], params),
+            "sent": {item_key("init", me): doc} if mine else {},
+            "received": {} if mine else {item_key("init", init["from"]): doc},
+            "uuids": [init["uuid"]], "outcome": None, "reported": None, "mismatches": {"sent": [], "received": []},
+            "timers": {}, "held": [], "expected": [], "damaged": {}, "abort": None, "cancel_sent": False, "disputed": False,
             "status": RUN_ACTIVE}
 
 
