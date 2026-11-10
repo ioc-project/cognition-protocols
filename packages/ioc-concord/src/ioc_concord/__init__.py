@@ -18,7 +18,10 @@ Modules:
     wire      the messages: build each one (the author's checks), and read each one in the layers of the Order of checks
     store     the Store protocol, and FileStore (atomic writes) as one implementation
     state     the state of an agent: its runs as plain dicts, and the keys of the items a run is made of
-    agent     the node: receive messages in the order of checks, say what the model must write, build what it sends
+    liveness  the messages an agent is owed and the timers that wait for them, as functions of the state of a run
+    tasks     what the agent's model must write now, derived from the state
+    report    where a run stands, and the report of the run
+    agent     the node: receive messages in the order of checks, ask again, give up, build what it sends
 
 A module that is bundled into a script follows the rules in `tools/bundle.py`: stdlib imports at the top, intra-package
 imports of the form `from ioc_concord.<module> import <names>`, and top-level names that are unique across modules.

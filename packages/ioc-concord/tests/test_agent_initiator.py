@@ -338,3 +338,13 @@ def test_an_init_inside_a_resend_is_answered_only_when_it_comes_from_the_initiat
     claim = W.build_resend("security", R1, init_doc(names, params=PARAMS, from_="security"), uid="74747474-7474-4474-8474-747474747474")
     step = legal.receive(claim)                                # a member that claims to be the initiator of the run
     assert step.send == [] and step.events[0]["reason"] == "run already known"
+
+
+def test_start_never_reuses_a_run_id_the_agent_knows_and_the_old_run_is_kept(agent):
+    a = agent.Agent("alice", uuid_fn=uuids("aaaaaaaa"))
+    first = a.start(["cost", "security"], "first", "a", "b", SPEC, run_id=R1).send[0]
+    a.state["runs"][R1]["status"] = "ended"
+    with pytest.raises(agent.StateError, match="knows the run"):
+        a.start(["cost", "security"], "second", "a", "b", SPEC, run_id=R1)
+    assert a.state["runs"][R1]["sent"]["init|alice"] == first and a.state["runs"][R1]["context"] == "first"
+    assert a.start(["cost", "security"], "second", "a", "b", SPEC, run_id=R2).send

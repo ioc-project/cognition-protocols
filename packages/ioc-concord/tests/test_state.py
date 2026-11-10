@@ -38,7 +38,7 @@ def test_a_run_holds_what_the_init_says_and_is_json_able(state):
     run = state.new_run("cost", init, doc)
     assert (run["run_id"], run["initiator"], run["participants"], run["role"], run["status"], run["outcome"]) == (
         RUN, "alice", ["cost", "security"], "participant", "active", None)
-    assert run["received"] == {"init|alice": doc} and run["uuids"] == [init["uuid"]] and run["sent"] == {}
+    assert run["received"] == {"init|alice": doc} and list(run["uuids"]) == [init["uuid"]] and run["sent"] == {}
     assert run["engine"]["agents"] == ["cost", "security"] and run["params"] == init["params"]
     assert json.loads(json.dumps(run)) == run
 
@@ -57,3 +57,22 @@ def test_the_active_run_is_the_one_that_is_still_running(state):
     assert state.active_run(s) is s["runs"][RUN]
     s["runs"][RUN]["status"] = state.RUN_ENDED
     assert state.active_run(s) is None
+
+
+def test_a_sent_original_is_kept_by_item_and_by_uuid_and_an_accepted_uuid_is_remembered(state):
+    init, doc = parsed_init()
+    run = state.new_run("cost", init, doc)
+    reply = W.build_init_reply("cost", RUN, 0, 100, "plan", "because", 80, "good", uid="55555555-5555-4555-8555-555555555555")
+    state.keep_sent(run, "init-reply|cost", reply)
+    assert run["sent"] == {"init-reply|cost": reply} and run["sent_by_uuid"] == {"55555555-5555-4555-8555-555555555555": reply}
+    assert "x" not in run["uuids"]
+    state.keep_uuid(run, "x")
+    state.keep_uuid(run, "x")
+    assert list(run["uuids"]) == [init["uuid"], "x"] and json.loads(json.dumps(run)) == run
+
+
+def test_the_initiator_keeps_the_init_it_sent_in_the_same_way(state):
+    init, doc = parsed_init()
+    run = state.new_run("alice", init, doc)
+    assert run["role"] == "initiator" and run["sent"] == {"init|alice": doc} and run["received"] == {}
+    assert run["sent_by_uuid"] == {init["uuid"]: doc}

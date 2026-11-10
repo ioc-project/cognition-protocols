@@ -13,13 +13,15 @@
                   context, x_reject, x_ideal, schema
                   engine         the state of the decision engine (see engine.py)
                   sent           {item key: the original text this agent sent for that item}
+                  sent_by_uuid   {uuid: the same texts}, to find the one a damaged-document request names
                   received       {item key: the original text it recorded for that item}
-                  uuids          the `uuid` of every transmission it has accepted
+                  uuids          {uuid: True} for every transmission it has accepted
                   outcome        the outcome this agent computed: SUCCESS, BEST_EFFORT, ABORTED, or None while it is not known
                   reported       the reporter's result as {"outcome", "winning_candidate_id"}, once this agent holds it
-                  mismatches     {"sent": [text of each mismatch error this agent sent], "received": [authors of those it got]}
+                  mismatches     {"sent": how many mismatch errors this agent sent, "last": the text of the last, "received": [authors
+                                 of those it got]}
                   timers         {timer key: {author, what, candidate, requests, deadline, asked}} for the messages the agent is owed
-                  held           the repairs and results that cannot be judged yet, as received, judged again as the state fills
+                  held           {uuid: the text} of the repairs and results that cannot be judged yet, judged again as the state fills
                   expected       the ids of candidates that other messages prove to exist, whose proposal this agent lacks
                   abort          why the run aborted, as {"reason", "agent", "superseded_by", "note"}, or None; the note is for the initiator
                                  that gave up on a version refusal: {"agent", "text"}
@@ -33,6 +35,7 @@ first message recorded for an item stands, and the original is kept word for wor
 from ioc_concord.engine import new_engine_state
 from ioc_concord.errors import StateError
 from ioc_concord.protocol import is_agent_id
+from ioc_concord.wire import peek
 
 PARTICIPANT, INITIATOR = "participant", "initiator"
 RUN_ACTIVE, RUN_ENDED, RUN_ABORTED = "active", "ended", "aborted"
@@ -49,21 +52,35 @@ def item_key(kind, author, item=None):
     return "|".join(p for p in (kind, author, item) if p)
 
 
+def keep_uuid(run, uid):
+    """Remember that the transmission `uid` has been accepted."""
+    run["uuids"][uid] = True
+
+
+def keep_sent(run, key, text):
+    """Keep `text`, the original that this agent sent for the item `key`, to send it again word for word."""
+    run["sent"][key] = text
+    run["sent_by_uuid"][peek(text)["attrs"]["uuid"]] = text
+
+
 def new_run(me, init, doc):
     """The run that the parsed init `init` (see wire.parse_message) opens for `me`, with the init text `doc`: as received, or as
     sent when `me` is the initiator. An initiator that is not a participant has the role INITIATOR: it negotiates nothing, and
     only watches the init replies and the result."""
     params = dict(init["params"])
     mine = init["from"] == me
-    return {"role": PARTICIPANT if me in init["participants"] else INITIATOR, "run_id": init["run_id"],
+    run = {"role": PARTICIPANT if me in init["participants"] else INITIATOR, "run_id": init["run_id"],
             "initiator": init["from"], "participants": list(init["participants"]), "params": params, "context": init["context"],
             "x_reject": init["x_reject"], "x_ideal": init["x_ideal"], "schema": init["schema"],
             "engine": new_engine_state(init["participants"], params),
-            "sent": {item_key("init", me): doc} if mine else {},
-            "received": {} if mine else {item_key("init", init["from"]): doc},
-            "uuids": [init["uuid"]], "outcome": None, "reported": None, "mismatches": {"sent": [], "received": []},
-            "timers": {}, "held": [], "expected": [], "abort": None, "cancel_sent": False, "disputed": False,
+            "sent": {}, "sent_by_uuid": {}, "received": {} if mine else {item_key("init", init["from"]): doc},
+            "uuids": {init["uuid"]: True}, "outcome": None, "reported": None,
+            "mismatches": {"sent": 0, "last": None, "received": []},
+            "timers": {}, "held": {}, "expected": [], "abort": None, "cancel_sent": False, "disputed": False,
             "status": RUN_ACTIVE}
+    if mine:
+        keep_sent(run, item_key("init", me), doc)
+    return run
 
 
 def members(run):
