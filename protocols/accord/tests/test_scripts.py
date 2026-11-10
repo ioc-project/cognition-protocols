@@ -77,10 +77,11 @@ def test_today_an_unusable_reply_counts_as_that_agent_having_answered():
     assert "error" not in before
 
 
-def test_today_self_driving_mode_locks_an_empty_verifiable_objective():
-    """Recorded, not endorsed. `init` has no flag for REQUIRED_KNOWLEDGE or OBJECTIVE_CLAUSES, so on the `handle`
-    path VERIFY receives neither, every proposed check is dropped for covering no clause, and one of the contract's
-    four artifacts is always empty. The step-by-step path, which can supply them, produces a populated one."""
+def test_today_a_default_self_driving_run_locks_an_empty_verifiable_objective():
+    """Recorded, not endorsed. `handle` accepts --required-knowledge and --objective-clauses, so the self-driving
+    path *can* populate the objective — but nothing asks for them: `init` does not take them, no phase message
+    mentions them, and no `next_command` hint names them. A run that does not know to pass them locks an empty one.
+    """
     self_driven = driver.contract_of(scenarios.split_term_triggers_clarify())["verifiable_objective"]
     assert self_driven == {"owners": {}, "uncovered": [], "checks": []}
 

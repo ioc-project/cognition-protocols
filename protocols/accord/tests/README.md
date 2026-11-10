@@ -41,6 +41,7 @@ assertion when the behavior changes.
 - **An unusable reply counts as an answer.** `handle` accepts prose and truncated JSON silently: the agent leaves
   `awaiting` having contributed nothing, and the phase merges without it rather than re-asking. A specialist that gets
   the format wrong disappears from the Roster, whose purpose is an honest capability map.
-- **Self-driving mode always locks an empty Verifiable Objective.** `init` has no flag for `REQUIRED_KNOWLEDGE` or
-  `OBJECTIVE_CLAUSES`, so on the `handle` path VERIFY receives neither and every check an agent proposes is dropped for
-  covering no clause. One of the contract's four artifacts is therefore always empty on the path the skill recommends.
+- **A default self-driving run locks an empty Verifiable Objective.** `handle` does accept `--required-knowledge` and
+  `--objective-clauses`, so the self-driving path *can* populate it. But nothing asks for them: `init` does not take
+  them, no phase message mentions them, and no `next_command` hint names them. A run that does not know to pass them
+  locks an empty objective, and every check an agent proposed is dropped for covering no clause.
