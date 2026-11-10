@@ -168,7 +168,7 @@ def test_the_initiator_is_a_member_of_the_run_so_its_messages_pass_the_first_ste
     net = Net(agent, ["cost", "security"])
     net.start()
     err = W.build_error("alice", RUN, "cost", "init", "busy")
-    assert net.agents["cost"].receive(err).events[0]["reason"] == "not handled"
+    assert net.agents["cost"].receive(err).events[0]["reason"] == "no answer expected"
 
 
 def test_a_transmission_is_acted_on_once(agent):

@@ -18,6 +18,9 @@
                   outcome        the outcome this agent computed: SUCCESS, BEST_EFFORT, ABORTED, or None while it is not known
                   reported       the reporter's result as {"outcome", "winning_candidate_id"}, once this agent holds it
                   mismatches     {"sent": [text of each mismatch error this agent sent], "received": [authors of those it got]}
+                  abort          why the run aborted, as {"reason", "agent", "superseded_by"}, or None
+                  cancel_sent    whether this agent has sent its cancel (it sends it once)
+                  disputed       whether a cancel reached this agent after its run had ended with an outcome
                   status         "active" until the run has ended for this agent, then "ended" or "aborted"
 
 An item is what a message is about: an init reply of an agent, a score of an agent on a candidate, a repair, the result. The
@@ -49,7 +52,8 @@ def new_run(me, init, doc):
             "params": params, "context": init["context"], "x_reject": init["x_reject"], "x_ideal": init["x_ideal"],
             "schema": init["schema"], "engine": new_engine_state(init["participants"], params), "sent": {},
             "received": {item_key("init", init["from"]): doc}, "uuids": [init["uuid"]], "outcome": None, "reported": None,
-            "mismatches": {"sent": [], "received": []}, "status": RUN_ACTIVE}
+            "mismatches": {"sent": [], "received": []}, "abort": None, "cancel_sent": False, "disputed": False,
+            "status": RUN_ACTIVE}
 
 
 def members(run):

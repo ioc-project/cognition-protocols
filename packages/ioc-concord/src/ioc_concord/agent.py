@@ -24,10 +24,10 @@ import time
 
 from ioc_concord.engine import add_anchor, add_proposal, add_ratings, evaluate, lacking
 from ioc_concord.errors import InvalidMessage, StateError
-from ioc_concord.protocol import PROTOCOL_VERSION, format_number
-from ioc_concord.state import PARTICIPANT, RUN_ACTIVE, RUN_ENDED, active_run, item_key, members, new_agent_state, new_run
-from ioc_concord.wire import (DATA_TAGS, INIT, build_error, build_init_reply, build_repair, build_result, build_score, check_ok,
-                              locate, new_uuid, parse_message, peek)
+from ioc_concord.protocol import ABORTED, PROTOCOL_VERSION, format_number
+from ioc_concord.state import PARTICIPANT, RUN_ABORTED, RUN_ACTIVE, RUN_ENDED, active_run, item_key, members, new_agent_state, new_run
+from ioc_concord.wire import (DATA_TAGS, INIT, KIND_OF_TAG, RESEND, build_cancel, build_error, build_init_reply, build_repair,
+                              build_resend, build_result, build_score, check_ok, locate, new_uuid, parse_message, peek)
 
 
 class Step:
@@ -115,49 +115,103 @@ class Agent:
         # 1. the run is known, the sender belongs to it and is not this agent
         if sender == self.me:
             return step.note("ignored", reason="own message", **where)
-        if run is None and tag != INIT:
+        if run is None and tag not in (INIT, RESEND):
             return step.note("ignored", reason="unknown run", **where)
         if run is not None and sender not in members(run):
             return step.note("ignored", reason="sender is not in the run", **where)
         # 2. the uuid is not one already accepted
         if run is not None and uid in run["uuids"]:
             return step.note("ignored", reason="duplicate", **where)
-        # 3. the version is this agent's own
+        # 3 to 6, for the message itself and, in a resend, for the message inside
+        keep = self._unwrap(doc, info, run, step) if tag == RESEND else self._accept(doc, info, run, step)
+        run = self.state["runs"].get(run_id)             # the init may have started it
+        if keep and run is not None and uid not in run["uuids"]:
+            run["uuids"].append(uid)
+        if keep and run is not None:
+            self._advance(run, step)
+
+    def _unwrap(self, doc, info, run, step):
+        """A <concord-resend>: steps 2 and 3 are for the wrapper (it has no check), and 3 to 5 for the message inside."""
+        attrs, inner = info["attrs"], info["inner"]
+        where = {"kind": RESEND, "from": attrs.get("from"), "run_id": attrs.get("run_id")}
         if attrs.get("version") != PROTOCOL_VERSION:
-            return step.note("ignored", reason="version", version=attrs.get("version"), **where)
-        # 4. the check is correct, for the messages that carry one
+            step.note("ignored", reason="version", version=attrs.get("version"), **where)
+            if inner is not None and inner["tag"] == INIT:
+                self._refuse_version(inner, step)
+            return False
+        try:
+            msg = parse_message(doc)
+        except InvalidMessage as exc:
+            return step.note("ignored", reason="invalid", detail=str(exc), **where) and False
+        inner = peek(msg["inner"])
+        if inner is None or inner["attrs"].get("from") != attrs.get("from") or inner["attrs"].get("run_id") != attrs.get("run_id"):
+            step.note("ignored", reason="invalid", detail="the message inside is not the sender's own, of this run", **where)
+            return False
+        return self._accept(msg["inner"], inner, run, step, resent=True)
+
+    def _accept(self, doc, info, run, step, resent=False):
+        """Steps 3 to 6 for `doc`. Returns whether its uuid is to be kept: it was processed."""
+        attrs, tag = info["attrs"], info["tag"]
+        where = {"kind": tag, "from": attrs.get("from"), "run_id": attrs.get("run_id")}
+        if attrs.get("version") != PROTOCOL_VERSION:
+            step.note("ignored", reason="version", version=attrs.get("version"), **where)
+            if tag == INIT:
+                self._refuse_version(info, step)
+            return False
         if tag in DATA_TAGS and not check_ok(doc):
-            return step.note("ignored", reason="check", **where)
-        # 5. the message is valid
+            step.note("ignored", reason="check", **where)
+            if run is not None and tag != INIT:
+                self._error(step, attrs.get("from"), attrs.get("run_id"), KIND_OF_TAG[tag], "check", ref=attrs.get("uuid"))
+            return False
         try:
             msg = parse_message(doc, run["schema"] if run is not None else None)
         except InvalidMessage as exc:
-            return step.note("ignored", reason="invalid", detail=str(exc), **where)
-        # 6. record it, keep its uuid and act on it
+            step.note("ignored", reason="invalid", detail=str(exc), **where)
+            if tag == INIT and run is None:
+                self._error(step, attrs.get("from"), attrs.get("run_id"), "init", "invalid", text=str(exc))
+            return False
         if run is None:
             return self._join(msg, doc, step)
-        if self._record(run, msg, doc, step):
-            run["uuids"].append(uid)
-            self._advance(run, step)
+        return self._record(run, msg, doc, step, resent)
+
+    def _refuse_version(self, info, step):
+        """An init of another version: the agent does not join, and tells the author which version it speaks."""
+        got = info["attrs"].get("version")
+        self._error(step, info["attrs"].get("from"), info["attrs"].get("run_id"), "init", "version",
+                    text=f"I speak version {PROTOCOL_VERSION}; this init is version {got}.")
+
+    def _error(self, step, to, run_id, what, reason, candidate=None, ref=None, text=""):
+        """Add a <concord-error> to the messages to send, unless it cannot be built (an unreadable author or run id)."""
+        try:
+            step.send.append(build_error(self.me, run_id, to, what, reason, candidate=candidate, ref=ref, text=text,
+                                         uid=self.new_uuid()))
+        except InvalidMessage as exc:
+            return step.note("cannot answer", detail=str(exc))
+        step.note("sent", kind="error", to=to, what=what, error=reason, run_id=run_id)
 
     def _join(self, init, doc, step):
         where = {"kind": INIT, "from": init["from"], "run_id": init["run_id"]}
         if self.me not in init["participants"]:
-            return step.note("ignored", reason="not a participant", **where)
+            step.note("ignored", reason="not a participant", **where)
+            return False
         if active_run(self.state) is not None:
-            return step.note("ignored", reason="busy", **where)
+            step.note("ignored", reason="busy", **where)
+            self._error(step, init["from"], init["run_id"], "init", "busy", text="I am in another run.")
+            return False
         self.state["runs"][init["run_id"]] = new_run(self.me, init, doc)
         self.state["active"] = init["run_id"]
         step.note("joined", initiator=init["from"], participants=init["participants"], run_id=init["run_id"])
+        return True
 
-    def _record(self, run, msg, doc, step):
+    def _record(self, run, msg, doc, step, resent=False):
         """Record the valid message `msg` (the text `doc`) of a known run. Returns whether to keep its uuid."""
         kind, author, where = msg["kind"], msg["from"], {"kind": msg["kind"], "from": msg["from"], "run_id": run["run_id"]}
         if kind == "init":
-            step.note("ignored", reason="run already known", **where)
-            return False
-        if kind == "error" and msg["reason"] == "mismatch":
-            return self._record_mismatch(run, msg, step)
+            return self._known_init(run, resent, step, where)
+        if kind == "error":
+            return self._record_error(run, msg, step)
+        if kind == "cancel":
+            return self._record_cancel(run, msg, step)
         if run["status"] != RUN_ACTIVE:
             step.note("ignored", reason="run over", **where)
             return False
@@ -171,6 +225,63 @@ class Agent:
             return self._record_score(run, msg, doc, step)
         step.note("ignored", reason="not handled", **where)
         return False
+
+    def _known_init(self, run, resent, step, where):
+        """An init for a run the agent knows is ignored, unless it comes inside a resend: the initiator is waiting for init replies,
+        and a participant that has sent its own sends it again."""
+        key = item_key("init-reply", self.me)
+        if not resent or key not in run["sent"]:
+            step.note("ignored", reason="run already known", **where)
+            return False
+        step.send.append(build_resend(self.me, run["run_id"], run["sent"][key], uid=self.new_uuid()))
+        step.note("resent", kind="init-reply", run_id=run["run_id"])
+        return True
+
+    def _record_error(self, run, msg, step):
+        """An error is answered by its addressee, with the stored original word for word, even after the run is over. Only a
+        mismatch is read by every agent."""
+        where = {"kind": "error", "from": msg["from"], "error": msg["reason"], "what": msg["what"]}
+        if msg["reason"] == "mismatch":
+            return self._record_mismatch(run, msg, step)
+        if msg["reason"] not in ("missing", "check") or msg["to"] != self.me or msg["what"] == "init":
+            step.note("ignored", reason="no answer expected", **where)
+            return False
+        if msg["reason"] == "check":
+            stored = next((t for t in run["sent"].values() if peek(t)["attrs"]["uuid"] == msg["ref"]), None)
+        else:
+            stored = run["sent"].get(item_key(msg["what"], self.me, msg["candidate"]))
+        if stored is None:
+            step.note("nothing to send", **where)
+            return True
+        step.send.append(build_resend(self.me, run["run_id"], stored, reply_to=msg["uuid"], uid=self.new_uuid()))
+        step.note("resent", kind=msg["what"], to=msg["from"], run_id=run["run_id"])
+        return True
+
+    def _record_cancel(self, run, msg, step):
+        """A cancel ends the run for this agent, whatever its stage, and is passed on once."""
+        where = {"kind": "cancel", "from": msg["from"], "cancel": msg["reason"]}
+        if msg["agent"] is not None and msg["agent"] not in run["participants"]:
+            step.note("ignored", reason="invalid", detail=f"{msg['agent']} is not a participant of the run", **where)
+            return False
+        self._abort(run, step, msg["reason"], msg["agent"], msg["superseded_by"])
+        return True
+
+    def _abort(self, run, step, reason, agent=None, superseded_by=None):
+        """End the run `ABORTED` with `reason`, and send the cancel once. An agent whose run has ended with an outcome keeps it:
+        its report is disputed. An aborted run sends no result."""
+        why = {"run_id": run["run_id"], "reason": reason, "agent": agent, "superseded_by": superseded_by}
+        if run["status"] == RUN_ACTIVE:
+            run["status"], run["outcome"], run["abort"] = RUN_ABORTED, ABORTED, {"reason": reason, "agent": agent,
+                                                                                 "superseded_by": superseded_by}
+            step.note("aborted", **why)
+        elif run["status"] == RUN_ENDED:
+            run["disputed"] = True
+            step.note("disputed", **why)
+        if not run["cancel_sent"]:
+            run["cancel_sent"] = True
+            step.send.append(build_cancel(self.me, run["run_id"], reason, superseded_by=superseded_by, agent=agent,
+                                          uid=self.new_uuid()))
+            step.note("sent", kind="cancel", **why)
 
     def _record_init_reply(self, run, msg, doc, step):
         author, key, p = msg["from"], item_key("init-reply", msg["from"]), msg["proposal"]
@@ -265,6 +376,8 @@ class Agent:
     def _advance(self, run, step):
         """Evaluate the engine over the state, note the outcome when this agent has computed it, and take the step that follows:
         the reporter sends its result, any other participant compares the result it holds with its outcome."""
+        if run["status"] != RUN_ACTIVE:
+            return
         ev = evaluate(run["engine"])
         if ev["state"] == "done" and run["outcome"] is None:
             run["outcome"] = ev["outcome"]
@@ -431,12 +544,14 @@ class Agent:
         """The report of a run (the active one when `run_id` is None; None when there is none), as the spec describes it:
         `outcome`, `winner` ({id, candidate}), `scores` and `shortfall` (millionths), `rounds`, `reason`, `results_compared` (the
         reporter's result and whether it matches this agent's outcome; for the reporter, its own) and `status`: "pending" until
-        the run has ended for this agent, then "confirmed", or "disputed" when a mismatch was found, sent or received."""
+        the run has ended for this agent, then "confirmed", or "disputed" when a mismatch was found, sent or received or a cancel
+        reached it after its run had ended. An aborted run has outcome ABORTED, no winner, its `reason` ({reason, agent,
+        superseded_by}) and the status "aborted": the spec gives it none."""
         run = self.state["runs"].get(run_id or self.state["active"])
         if run is None:
             return None
         ev = evaluate(run["engine"])
-        done = run["outcome"] is not None
+        done = run["outcome"] not in (None, ABORTED)
         winner = next((c for c in run["engine"]["pool"] if c["id"] == ev["x_star"]), None) if done else None
         reporter = run["participants"][0]
         mine = (run["outcome"], ev["x_star"]) if done else None
@@ -448,9 +563,14 @@ class Agent:
             compared = {"reporter": reporter, "result": rep,
                         "matches": None if rep is None or not done else mine == (rep["outcome"], rep["winning_candidate_id"])}
         mismatches = run["mismatches"]
-        status = "disputed" if mismatches["sent"] or mismatches["received"] else ("confirmed" if run["status"] == RUN_ENDED else "pending")
+        if run["status"] == RUN_ABORTED:
+            status = "aborted"
+        elif mismatches["sent"] or mismatches["received"] or run["disputed"]:
+            status = "disputed"
+        else:
+            status = "confirmed" if run["status"] == RUN_ENDED else "pending"
         return {"run_id": run["run_id"], "outcome": run["outcome"],
                 "winner": {"id": winner["id"], "candidate": winner["candidate"]} if winner else None,
                 "scores": ev["scores"] if done else {}, "shortfall": ev["shortfall"] if done else {}, "rounds": ev["t"],
-                "reason": None, "results_compared": compared,
+                "reason": run["abort"], "results_compared": compared,
                 "mismatches": {"sent": len(mismatches["sent"]), "received": list(mismatches["received"])}, "status": status}
