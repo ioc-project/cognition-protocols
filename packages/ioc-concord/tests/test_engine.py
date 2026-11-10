@@ -5,27 +5,33 @@
 """The decision engine, as imported and as bundled into each script (see conftest.py)."""
 import pytest
 
-PARAMS = {"satisfaction_threshold": 0.6, "eps": 0.05, "B": 3, "timeout": 300, "retries": 3}
+M = 1_000_000                       # every number of the engine is a count of millionths
+PARAMS = {"satisfaction_threshold": 600_000, "eps": 50_000, "B": 3, "timeout": 300, "retries": 3}
 FULL = (0, 100)
+
+
+def m(x):
+    """`x` (a raw score or a normalized score written as in the spec) in millionths."""
+    return round(x * M)
 
 
 def new(engine, agents, anchors=None, **params):
     st = engine.new_engine_state(agents, {**PARAMS, **params})
     for a in agents:
-        engine.add_anchor(st, a, *(anchors or {}).get(a, FULL))
+        engine.add_anchor(st, a, *(m(v) for v in (anchors or {}).get(a, FULL)))
     return st
 
 
 def seed(engine, st, agent, raw, text=None):
-    engine.add_proposal(st, agent, f"seed-{agent}", text or f"s{agent}", "because", raw, "mine")
+    engine.add_proposal(st, agent, f"seed-{agent}", text or f"s{agent}", "because", m(raw), "mine")
 
 
 def rate(engine, st, agent, **raw):
-    engine.add_ratings(st, agent, [(cid.replace("_", "-"), r, "reasons") for cid, r in raw.items()])
+    engine.add_ratings(st, agent, [(cid.replace("_", "-"), m(r), "reasons") for cid, r in raw.items()])
 
 
 def repair(engine, st, agent, n, raw):
-    engine.add_proposal(st, agent, f"r{n}-{agent}", f"r{n}", "because", raw, "mine")
+    engine.add_proposal(st, agent, f"r{n}-{agent}", f"r{n}", "because", m(raw), "mine")
 
 
 # --- parameters and ids ----------------------------------------------------
@@ -33,16 +39,21 @@ def repair(engine, st, agent, n, raw):
 def test_check_params_accepts_defaults_and_a_zero_timeout(engine, protocol):
     engine.check_params(["a", "b"], protocol.DEFAULT_PARAMS)
     engine.check_params(["a", "b"], {**protocol.DEFAULT_PARAMS, "timeout": 0, "retries": 0})
+    engine.check_params(["a", "b"], {**protocol.DEFAULT_PARAMS, "satisfaction_threshold": 1_000_000, "eps": 1})
 
 
 @pytest.mark.parametrize("agents, change, message", [
     (["a"], {}, "at least 2 agents"),
     (["a", "a"], {}, "duplicate"),
-    (["a", " "], {}, "cannot be empty"),
-    (["a", "b"], {"satisfaction_threshold": 0}, r"\(0, 1\]"),
-    (["a", "b"], {"satisfaction_threshold": 1.1}, r"\(0, 1\]"),
-    (["a", "b"], {"satisfaction_threshold": float("nan")}, r"\(0, 1\]"),
+    (["a", " "], {}, "1 to 64 letters"),
+    (["a", "b c"], {}, "1 to 64 letters"),
+    (["a", "x" * 65], {}, "1 to 64 letters"),
+    (["a", "b"], {"satisfaction_threshold": 0}, "above 0 and at most 1"),
+    (["a", "b"], {"satisfaction_threshold": 1_000_001}, "above 0 and at most 1"),
+    (["a", "b"], {"satisfaction_threshold": 0.6}, "above 0 and at most 1"),
+    (["a", "b"], {"satisfaction_threshold": True}, "above 0 and at most 1"),
     (["a", "b"], {"eps": 0}, "eps"),
+    (["a", "b"], {"eps": 0.05}, "eps"),
     (["a", "b"], {"B": 0}, "budget"),
     (["a", "b"], {"B": 1.5}, "budget"),
     (["a", "b"], {"timeout": -1}, "timeout"),
@@ -70,10 +81,10 @@ def test_candidate_ids_round_trip(engine):
 
 def test_the_first_anchors_stand_and_a_bad_scale_is_refused(engine):
     st = engine.new_engine_state(["a", "b"], PARAMS)
-    assert engine.add_anchor(st, "a", 20, 80)
-    assert not engine.add_anchor(st, "a", 0, 100)
-    assert st["anchors"]["a"] == {"raw_reject": 20, "raw_ideal": 80}
-    for bad in ((50, 50), (80, 20), (0, float("nan")), (-1, 50), (10, 101), (True, 50)):
+    assert engine.add_anchor(st, "a", m(20), m(80))
+    assert not engine.add_anchor(st, "a", m(0), m(100))
+    assert st["anchors"]["a"] == {"raw_reject": 20 * M, "raw_ideal": 80 * M}
+    for bad in ((m(50), m(50)), (m(80), m(20)), (0, 1.5), (-1, m(50)), (m(10), m(101)), (True, m(50)), (m(20), 80.0)):
         with pytest.raises(engine.InvalidMessage):
             engine.add_anchor(st, "b", *bad)
     assert "b" not in st["anchors"]
@@ -81,49 +92,86 @@ def test_the_first_anchors_stand_and_a_bad_scale_is_refused(engine):
 
 def test_a_proposal_carries_its_own_score_and_the_first_one_stands(engine):
     st = new(engine, ["a", "b"])
-    assert engine.add_proposal(st, "a", "seed-a", "X", "why", 80, "good")
-    assert st["raw"]["a"] == {"seed-a": 80} and st["reasoning"]["a"] == {"seed-a": "good"}
-    assert not engine.add_proposal(st, "a", "seed-a", "Y", "other", 10, "bad")
-    assert [c["candidate"] for c in st["pool"]] == ["X"] and st["raw"]["a"]["seed-a"] == 80
+    assert engine.add_proposal(st, "a", "seed-a", "X", "why", m(80), "good")
+    assert st["raw"]["a"] == {"seed-a": 80 * M} and st["reasoning"]["a"] == {"seed-a": "good"}
+    assert not engine.add_proposal(st, "a", "seed-a", "Y", "other", m(10), "bad")
+    assert [c["candidate"] for c in st["pool"]] == ["X"] and st["raw"]["a"]["seed-a"] == 80 * M
 
 
 def test_a_proposal_with_the_wrong_id_or_score_is_refused(engine):
     st = new(engine, ["a", "b"])
     for cid in ("seed-b", "r1-b", "r0-a", "a", "seed-z"):
         with pytest.raises(engine.InvalidMessage, match="is not seed-a or"):
-            engine.add_proposal(st, "a", cid, "X", "r", 50, "w")
-    with pytest.raises(engine.InvalidMessage, match="0 to 100"):
-        engine.add_proposal(st, "a", "seed-a", "X", "r", 101, "w")
+            engine.add_proposal(st, "a", cid, "X", "r", m(50), "w")
+    for raw in (m(101), -1, 50.0):
+        with pytest.raises(engine.InvalidMessage, match="0 to 100"):
+            engine.add_proposal(st, "a", "seed-a", "X", "r", raw, "w")
     assert st["pool"] == []
 
 
 def test_ratings_are_recorded_once_and_unknown_candidates_are_reported_not_refused(engine):
     st = new(engine, ["a", "b"])
     seed(engine, st, "a", 80)
-    assert engine.add_ratings(st, "b", [("seed-a", 60, "ok"), ("seed-x", 10, "?")]) == (["seed-a"], ["seed-x"])
-    assert engine.add_ratings(st, "b", [("seed-a", 5, "again")]) == ([], [])
-    assert st["raw"]["b"] == {"seed-a": 60}
+    assert engine.add_ratings(st, "b", [("seed-a", m(60), "ok"), ("seed-x", m(10), "?")]) == (["seed-a"], ["seed-x"], [])
+    assert st["raw"]["b"] == {"seed-a": 60 * M}
 
 
-def test_a_score_message_that_rates_its_own_candidate_twice_or_out_of_range_is_invalid_and_records_nothing(engine):
+def test_a_rating_the_agent_already_gave_is_ignored_and_the_first_one_stands(engine):
+    st = new(engine, ["a", "b"])
+    seed(engine, st, "a", 80)
+    assert engine.add_ratings(st, "b", [("seed-a", m(60), "ok")]) == (["seed-a"], [], [])
+    assert engine.add_ratings(st, "b", [("seed-a", m(5), "again")]) == ([], [], ["seed-a"])
+    assert st["raw"]["b"] == {"seed-a": 60 * M} and st["reasoning"]["b"] == {"seed-a": "ok"}
+    st = new(engine, ["a", "b"])
+    seed(engine, st, "a", 80)
+    assert engine.add_ratings(st, "b", [("seed-a", m(50), "x"), ("seed-a", m(60), "y")]) == (["seed-a"], [], ["seed-a"])
+    assert st["raw"]["b"] == {"seed-a": 50 * M}
+
+
+def test_an_entry_that_rates_the_senders_own_candidate_is_ignored_and_the_others_are_kept(engine):
+    st = new(engine, ["a", "b", "c"])
+    seed(engine, st, "a", 80)
+    seed(engine, st, "b", 70)
+    seed(engine, st, "c", 60)
+    got = engine.add_ratings(st, "b", [("seed-a", m(50), "x"), ("seed-b", m(50), "own"), ("seed-c", m(40), "y")])
+    assert got == (["seed-a", "seed-c"], [], ["seed-b"])
+    assert st["raw"]["b"] == {"seed-b": 70 * M, "seed-a": 50 * M, "seed-c": 40 * M}
+    # an own candidate the receiver does not hold is ignored too, not asked for
+    assert engine.add_ratings(st, "b", [("r1-b", m(50), "own")]) == ([], [], ["r1-b"])
+
+
+def test_a_score_out_of_range_makes_the_whole_message_invalid_and_records_nothing(engine):
     st = new(engine, ["a", "b"])
     seed(engine, st, "a", 80)
     seed(engine, st, "b", 80)
-    for ratings, message in (([("seed-b", 50, "x")], "which it proposed"),
-                             ([("seed-a", 50, "x"), ("seed-a", 60, "y")], "rated twice"),
-                             ([("seed-a", 150, "x")], "0 to 100"),
-                             ([("seed-a", 50, "x"), ("seed-b", 50, "x")], "which it proposed")):
-        with pytest.raises(engine.InvalidMessage, match=message):
+    for ratings in ([("seed-a", m(150), "x")], [("seed-a", m(50), "x"), ("seed-b", -1, "x")], [("seed-a", 50.5, "x")]):
+        with pytest.raises(engine.InvalidMessage, match="0 to 100"):
             engine.add_ratings(st, "b", ratings)
-    assert st["raw"]["b"] == {"seed-b": 80}
+    assert st["raw"]["b"] == {"seed-b": 80 * M}
 
 
 # --- scores ----------------------------------------------------------------
 
 def test_norm_is_relative_to_the_anchors_and_clamped(engine):
     st = new(engine, ["a", "b"], {"a": (20, 80)})
-    assert engine.norm(st, "a", 50) == pytest.approx(0.5)
-    assert engine.norm(st, "a", 10) == 0.0 and engine.norm(st, "a", 95) == 1.0
+    assert engine.norm(st, "a", m(50)) == 500_000
+    assert engine.norm(st, "a", m(10)) == 0 and engine.norm(st, "a", m(95)) == M
+    assert engine.norm(st, "a", m(20)) == 0 and engine.norm(st, "a", m(80)) == M
+
+
+def test_norm_is_exact_and_rounds_half_up_to_six_places(engine):
+    st = new(engine, ["a", "b"], {"a": (0, 3)})
+    assert engine.norm(st, "a", m(1)) == 333_333           # 0.3333333...
+    assert engine.norm(st, "a", m(2)) == 666_667           # 0.6666666...
+    st = new(engine, ["a", "b"], {"a": (0, 2)})
+    assert engine.norm(st, "a", 1) == 1                    # 0.0000005 exactly, half up
+    assert engine.norm(st, "a", 3) == 2                    # 0.0000015 exactly
+    assert engine.norm(st, "a", 5) == 3
+    st = new(engine, ["a", "b"], {"a": (0, 8)})
+    assert engine.norm(st, "a", 1) == 0                    # 0.000000125 -> 0
+    assert engine.norm(st, "a", 7) == 1                    # 0.000000875 -> 1
+    st = new(engine, ["a", "b"], {"a": (0.1, 0.9)})
+    assert engine.norm(st, "a", m(0.5)) == 500_000         # no float error in 0.5 - 0.1
 
 
 def test_pool_order_is_round_then_place_in_the_roster_never_arrival(engine):
@@ -137,9 +185,14 @@ def test_pool_order_is_round_then_place_in_the_roster_never_arrival(engine):
     assert engine.repairs_in_pool(st) == 1 and engine.next_round(st) == 2
 
 
+def test_the_reporter_is_the_first_participant(engine):
+    assert engine.reporter(engine.new_engine_state(["z", "a"], PARAMS)) == "z"
+
+
 def test_lex_gt_compares_position_by_position(engine):
-    assert engine.lex_gt([0.5, 0.9], [0.5, 0.8]) and not engine.lex_gt([0.4, 1.0], [0.5, 0.0])
-    assert not engine.lex_gt([0.5, 0.5], [0.5, 0.5])
+    assert engine.lex_gt([500_000, 900_000], [500_000, 800_000]) and not engine.lex_gt([400_000, M], [500_000, 0])
+    assert not engine.lex_gt([500_000, 500_000], [500_000, 500_000])
+    assert engine.lex_gt([500_001], [500_000]) and not engine.lex_gt([500_000], [500_001])
 
 
 # --- SELECT and ACCEPT -----------------------------------------------------
@@ -153,34 +206,38 @@ def test_select_takes_the_best_leximin_and_the_first_in_the_pool_on_a_tie(engine
     # seed-a: (0.7, 0.9) -> sorted [0.7, 0.9]; seed-b: [0.7, 0.7]
     assert engine.select(st, ["seed-a", "seed-b"]) == "seed-a"
     assert engine.select(st, ["seed-b", "seed-a"]) == "seed-a"
-    rate(engine, st, "a", seed_b=70)
     st2 = new(engine, ["a", "b"])
     seed(engine, st2, "a", 70)
     seed(engine, st2, "b", 70)
     rate(engine, st2, "a", seed_b=70)
     rate(engine, st2, "b", seed_a=70)
     assert engine.select(st2, ["seed-a", "seed-b"]) == "seed-a"
+    assert engine.select(st2, ["seed-b", "seed-a"]) == "seed-b"
+
+
+def duel(engine, inc, cand, **params):
+    """Two agents that give both candidates the same raw score: `inc` for seed-a, `cand` for seed-b."""
+    st = new(engine, ["a", "b"], **params)
+    seed(engine, st, "a", inc)
+    seed(engine, st, "b", cand)
+    rate(engine, st, "a", seed_b=cand)
+    rate(engine, st, "b", seed_a=inc)
+    return st
 
 
 def test_accept_needs_eps_on_the_same_side_of_tau_but_not_above_it(engine):
-    st = new(engine, ["a", "b"])
-    seed(engine, st, "a", 50)
-    seed(engine, st, "b", 52)
-    rate(engine, st, "a", seed_b=52)
-    rate(engine, st, "b", seed_a=50)
-    assert not engine.accept(st, "seed-b", "seed-a")                    # [.52,.52] vs [.50,.50]: gain .02 < eps
-    st = new(engine, ["a", "b"])
-    seed(engine, st, "a", 61)
-    seed(engine, st, "b", 60)
-    rate(engine, st, "a", seed_b=60)
-    rate(engine, st, "b", seed_a=61)
-    assert not engine.accept(st, "seed-a", "seed-b")                    # both clear tau: gain .01 < eps
-    st = new(engine, ["a", "b"])
-    seed(engine, st, "a", 59)
-    seed(engine, st, "b", 62)
-    rate(engine, st, "a", seed_b=62)
-    rate(engine, st, "b", seed_a=59)
-    assert engine.accept(st, "seed-b", "seed-a")                        # [.62,.62] clears tau, [.59,.59] does not
+    assert not engine.accept(duel(engine, 50, 52), "seed-b", "seed-a")      # [.52,.52] vs [.50,.50]: gain .02 < eps
+    assert not engine.accept(duel(engine, 61, 60), "seed-a", "seed-b")      # both clear tau: gain .01 < eps
+    assert engine.accept(duel(engine, 59, 62), "seed-b", "seed-a")          # [.62,.62] clears tau, [.59,.59] does not
+
+
+def test_accept_compares_exactly_at_the_edge_of_eps_and_tau(engine):
+    # 0.3 - 0.2 is 0.09999999999999998 in floating point, so a float engine would refuse a gain of exactly eps
+    assert engine.accept(duel(engine, 20, 30, satisfaction_threshold=M, eps=100_000), "seed-b", "seed-a")
+    assert not engine.accept(duel(engine, 20, 29.99994, satisfaction_threshold=M, eps=100_000), "seed-b", "seed-a")
+    # the floor of the candidate is exactly tau (0.599999 is below it, and 59.99994 on a scale of 100 rounds to that)
+    assert engine.accept(duel(engine, 59.99994, 60), "seed-b", "seed-a")
+    assert not engine.accept(duel(engine, 59.99992, 59.99994), "seed-b", "seed-a")
 
 
 def test_accept_refuses_a_gain_that_costs_an_earlier_position(engine):
@@ -198,17 +255,17 @@ def test_accept_refuses_a_gain_that_costs_an_earlier_position(engine):
 def test_evaluate_waits_for_init_replies_and_for_ratings(engine):
     st = engine.new_engine_state(["a", "b"], PARAMS)
     assert engine.evaluate(st)["state"] == "wait"
-    engine.add_anchor(st, "a", 0, 100)
+    engine.add_anchor(st, "a", 0, m(100))
     seed(engine, st, "a", 90)
     assert engine.evaluate(st)["state"] == "wait"
-    engine.add_anchor(st, "b", 0, 100)
+    engine.add_anchor(st, "b", 0, m(100))
     seed(engine, st, "b", 90)
     ev = engine.evaluate(st)
     assert ev["state"] == "wait" and ev["x_star"] is None
     assert sorted(engine.lacking(st)) == [("a", "seed-b"), ("b", "seed-a")]
 
 
-def test_success_when_everyone_clears_tau_and_nobody_is_missing(engine):
+def test_success_when_everyone_clears_tau(engine):
     st = new(engine, ["a", "b"])
     seed(engine, st, "a", 90)
     seed(engine, st, "b", 80)
@@ -216,8 +273,24 @@ def test_success_when_everyone_clears_tau_and_nobody_is_missing(engine):
     rate(engine, st, "b", seed_a=75)
     ev = engine.evaluate(st)
     assert (ev["state"], ev["outcome"], ev["x_star"], ev["reporter"]) == ("done", "SUCCESS", "seed-a", "a")
-    assert ev["floor"] == pytest.approx(0.75) and ev["shortfall"] == {}
-    assert ev["scores"] == {"a": pytest.approx(0.9), "b": pytest.approx(0.75)}
+    assert ev["floor"] == 750_000 and ev["shortfall"] == {}
+    assert ev["scores"] == {"a": 900_000, "b": 750_000}
+
+
+def test_the_floor_exactly_at_tau_is_success(engine):
+    st = new(engine, ["a", "b"])
+    seed(engine, st, "a", 90)
+    seed(engine, st, "b", 60)
+    rate(engine, st, "a", seed_b=70)
+    rate(engine, st, "b", seed_a=60)
+    assert engine.evaluate(st)["outcome"] == "SUCCESS"
+    st = new(engine, ["a", "b"])
+    seed(engine, st, "a", 90)
+    seed(engine, st, "b", 59.99994)
+    rate(engine, st, "a", seed_b=70)
+    rate(engine, st, "b", seed_a=59.99994)
+    ev = engine.evaluate(st)
+    assert ev["state"] == "repair" and ev["shortfall"] == {"b": 1}
 
 
 def test_the_bottleneck_proposes_a_repair_and_the_round_is_numbered(engine):
@@ -229,7 +302,7 @@ def test_the_bottleneck_proposes_a_repair_and_the_round_is_numbered(engine):
     ev = engine.evaluate(st)
     # seed-a [.30,.90], seed-b [.20,.80] -> incumbent seed-a; the bottleneck is b (.30)
     assert (ev["state"], ev["x_star"], ev["bottleneck"], ev["round"], ev["t"]) == ("repair", "seed-a", "b", 1, 0)
-    assert ev["shortfall"] == {"b": pytest.approx(0.3)}
+    assert ev["shortfall"] == {"b": 300_000}
 
 
 def test_a_tie_for_bottleneck_goes_to_the_first_in_participants(engine):
@@ -268,7 +341,7 @@ def test_best_effort_when_the_budget_is_spent_and_not_before(engine):
     rate(engine, st, "a", r1_b=30)
     ev = engine.evaluate(st)
     assert (ev["outcome"], ev["t"], ev["x_star"]) == ("BEST_EFFORT", 1, "seed-a")
-    assert ev["shortfall"] == {"b": pytest.approx(0.3)}
+    assert ev["shortfall"] == {"b": 300_000}
     assert [e["replaced"] for e in ev["log"]] == [True, False]
 
 
@@ -284,7 +357,16 @@ def test_every_repair_counts_in_t_even_when_the_incumbent_stays(engine):
     assert (ev["state"], ev["round"], ev["t"]) == ("repair", 2, 1)
 
 
-# --- missing participants --------------------------------------------------
+def test_the_run_has_no_other_outcome_than_success_or_best_effort(engine):
+    st = new(engine, ["a", "b"], B=1)
+    seed(engine, st, "a", 10)
+    seed(engine, st, "b", 10)
+    rate(engine, st, "a", seed_b=10)
+    rate(engine, st, "b", seed_a=10)
+    repair(engine, st, "a", 1, 10)
+    rate(engine, st, "b", r1_a=10)
+    assert engine.evaluate(st)["outcome"] == "BEST_EFFORT"
+
 
 def table(engine, raw, **params):
     """A run of a, b and c whose raw scores are `raw[agent][candidate]` (each agent's seed is its own `seed-<agent>`)."""
@@ -292,7 +374,7 @@ def table(engine, raw, **params):
     for ag in "abc":
         seed(engine, st, ag, raw[ag][f"seed-{ag}"])
     for ag in "abc":
-        engine.add_ratings(st, ag, [(cid, r, "w") for cid, r in raw[ag].items() if cid != f"seed-{ag}"])
+        engine.add_ratings(st, ag, [(cid, m(r), "w") for cid, r in raw[ag].items() if cid != f"seed-{ag}"])
     return st
 
 
@@ -302,75 +384,10 @@ UNHAPPY_C = {"a": {"seed-a": 90, "seed-b": 50, "seed-c": 30},
 three = lambda engine: table(engine, UNHAPPY_C)
 
 
-def test_a_missing_participant_ends_success_as_best_effort_and_its_ratings_no_longer_count(engine):
-    st = three(engine)
-    ev = engine.evaluate(st)
-    assert (ev["state"], ev["x_star"], ev["bottleneck"]) == ("repair", "seed-a", "c")
-    assert engine.mark_missing(st, "c") and not engine.mark_missing(st, "c") and not engine.mark_missing(st, "z")
-    ev = engine.evaluate(st)
-    assert (ev["outcome"], ev["x_star"], ev["floor"]) == ("BEST_EFFORT", "seed-a", pytest.approx(0.7))
-    assert sorted(ev["scores"]) == ["a", "b"] and ev["reporter"] == "a"
-
-
-def test_success_needs_nobody_missing_even_when_everyone_clears_tau(engine):
-    st = table(engine, {"a": {"seed-a": 90, "seed-b": 70, "seed-c": 70}, "b": {"seed-a": 70, "seed-b": 80, "seed-c": 70},
-                        "c": {"seed-a": 70, "seed-b": 70, "seed-c": 70}})
-    assert engine.evaluate(st)["outcome"] == "SUCCESS"
-    engine.mark_missing(st, "c")
-    assert engine.evaluate(st)["outcome"] == "BEST_EFFORT"
-
-
-def test_the_bottleneck_changes_when_the_one_that_owed_a_repair_goes_missing(engine):
-    st = table(engine, {**UNHAPPY_C, "b": {"seed-a": 40, "seed-b": 80, "seed-c": 30}})
-    ev = engine.evaluate(st)
-    assert (ev["x_star"], ev["bottleneck"], ev["round"]) == ("seed-b", "c", 1)
-    engine.mark_missing(st, "c")
-    ev = engine.evaluate(st)
-    assert (ev["state"], ev["x_star"], ev["bottleneck"], ev["round"]) == ("repair", "seed-b", "a", 1)
-
-
-def test_the_incumbent_can_change_when_the_evaluations_are_replayed_without_a_participant(engine):
-    st = new(engine, ["a", "b", "c"])
-    seed(engine, st, "a", 90)
-    seed(engine, st, "b", 60)
-    seed(engine, st, "c", 60)
-    rate(engine, st, "a", seed_b=70, seed_c=70)
-    rate(engine, st, "b", seed_a=20, seed_c=60)      # b dislikes seed-a
-    rate(engine, st, "c", seed_a=90, seed_b=60)
-    assert engine.evaluate(st)["x_star"] == "seed-b"                  # [.6,.6,.7] beats seed-a's [.2,.9,.9]
-    engine.mark_missing(st, "b")
-    assert engine.evaluate(st)["x_star"] == "seed-a"                  # without b: [.9,.9] beats [.6,.7]
-
-
-def test_a_missing_participant_is_not_waited_for_but_its_seed_stays_in_the_pool(engine):
-    st = new(engine, ["a", "b", "c"])
-    seed(engine, st, "a", 90)
-    seed(engine, st, "b", 80)
-    engine.mark_missing(st, "c")                                      # no init reply from c ever
-    assert engine.evaluate(st)["state"] == "wait"
-    rate(engine, st, "a", seed_b=70)
-    rate(engine, st, "b", seed_a=75)
-    ev = engine.evaluate(st)
-    assert (ev["outcome"], ev["reporter"]) == ("BEST_EFFORT", "a")
-    assert [c["id"] for c in engine.ordered_pool(st)] == ["seed-a", "seed-b"]
-    assert engine.lacking(st) == []
-
-
-def test_a_participant_that_proposed_and_went_missing_leaves_its_candidate_in_the_pool(engine):
-    st = three(engine)
-    engine.mark_missing(st, "a")
-    ev = engine.evaluate(st)
-    assert {c["id"] for c in engine.ordered_pool(st)} == {"seed-a", "seed-b", "seed-c"}
-    assert (ev["state"], ev["x_star"], ev["bottleneck"], ev["reporter"]) == ("repair", "seed-b", "c", "b")
-
-
-def test_fewer_than_two_participants_left_aborts(engine):
-    st = three(engine)
-    engine.mark_missing(st, "a")
-    engine.mark_missing(st, "b")
-    ev = engine.evaluate(st)
-    assert (ev["state"], ev["outcome"], ev["reason"], ev["reporter"]) == ("done", "ABORTED", "too few participants", "c")
-    assert ev["x_star"] is None
+def test_three_agents_pick_the_best_leximin_and_the_lowest_scorer_repairs(engine):
+    ev = engine.evaluate(three(engine))
+    assert (ev["state"], ev["x_star"], ev["bottleneck"], ev["round"], ev["reporter"]) == ("repair", "seed-a", "c", 1, "a")
+    assert ev["scores"] == {"a": 900_000, "b": 700_000, "c": 300_000}
 
 
 def test_evaluate_does_not_change_the_state(engine):

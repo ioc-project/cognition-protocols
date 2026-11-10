@@ -5,7 +5,9 @@
 """The messages, as imported and as bundled into each script (see conftest.py)."""
 import pytest
 
+M = 1_000_000
 RUN = "11111111-1111-4111-8111-111111111111"
+OTHER = "c3d4e5f6-0718-4a9b-8c2d-1e3f5a7b9d02"
 SPEC = {"type": "string", "description": "a plan"}
 ENUM = {"enum": ["A", "B"]}
 
@@ -53,7 +55,7 @@ def test_init_reads_back_with_every_parameter(wire):
     m = wire.parse_message(init(wire, params={"satisfaction_threshold": 0.7, "eps": 0.1, "B": 4, "timeout": 60,
                                               "retries": 1}))
     assert m["participants"] == ["cost", "security"] and m["from"] == "alice"
-    assert m["params"] == {"satisfaction_threshold": 0.7, "eps": 0.1, "B": 4, "timeout": 60, "retries": 1}
+    assert m["params"] == {"satisfaction_threshold": 700_000, "eps": 100_000, "B": 4, "timeout": 60, "retries": 1}
     assert (m["context"], m["x_reject"], m["x_ideal"], m["schema"]) == ("pick one", "nothing", "all agree", SPEC)
 
 
@@ -71,24 +73,28 @@ def test_init_makes_a_run_id_when_none_is_given(wire):
 
 def test_init_reply_and_repair_carry_the_proposal_and_the_proposers_own_score(wire):
     m = wire.parse_message(init_reply(wire))
-    assert (m["raw_reject"], m["raw_ideal"]) == (8.0, 95.0)
-    assert m["proposal"] == {"id": "seed-cost", "round": 0, "candidate": "local cache", "rationale": "because", "raw": 82.0,
+    assert (m["raw_reject"], m["raw_ideal"]) == (8 * M, 95 * M)
+    assert m["proposal"] == {"id": "seed-cost", "round": 0, "candidate": "local cache", "rationale": "because", "raw": 82 * M,
                              "reasoning": "good"}
     p = wire.parse_message(repair(wire, n=3))["proposal"]
-    assert (p["id"], p["round"], p["raw"]) == ("r3-cost", 3, 70.0)
+    assert (p["id"], p["round"], p["raw"]) == ("r3-cost", 3, 70 * M)
 
 
 def test_score_reads_back_every_rating_in_order(wire):
-    assert wire.parse_message(score(wire))["scores"] == [
-        {"id": "seed-security", "raw": 41.0, "reasoning": "risky"}, {"id": "r1-security", "raw": 60.5, "reasoning": "better"}]
+    m = wire.parse_message(score(wire))
+    assert m["scores"] == [{"id": "seed-security", "raw": 41 * M, "reasoning": "risky"},
+                           {"id": "r1-security", "raw": 60_500_000, "reasoning": "better"}] and m["ignored"] == []
 
 
-def test_result_with_and_without_a_missing_list_and_aborted(wire):
-    m = wire.parse_message(wire.build_result("cost", RUN, "BEST_EFFORT", "seed-cost", missing=["security"]))
-    assert (m["outcome"], m["winning_candidate_id"], m["missing"]) == ("BEST_EFFORT", "seed-cost", ["security"])
-    assert wire.parse_message(wire.build_result("cost", RUN, "SUCCESS", "seed-cost"))["missing"] == []
-    doc = wire.build_result("cost", RUN, "ABORTED", "seed-cost")
-    assert "winning_candidate_id" not in doc and wire.parse_message(doc)["winning_candidate_id"] is None
+def test_a_result_carries_its_outcome_and_winner_and_an_aborted_run_has_none(wire):
+    for outcome in ("SUCCESS", "BEST_EFFORT"):
+        m = wire.parse_message(wire.build_result("cost", RUN, outcome, "r2-security"))
+        assert (m["outcome"], m["winning_candidate_id"]) == (outcome, "r2-security")
+    refuses(wire, wire.build_result, "outcome must be", "cost", RUN, "ABORTED", "seed-cost")
+    doc = wire.build_result("cost", RUN, "SUCCESS", "seed-cost")
+    for bad in ("<outcome>ABORTED</outcome>", "<outcome>success</outcome>", "<outcome></outcome>"):
+        refuses(wire, wire.parse_message, "outcome", doc.replace("<outcome>SUCCESS</outcome>", bad))
+    refuses(wire, wire.parse_message, "winning_candidate_id", doc.replace("<winning_candidate_id>seed-cost</winning_candidate_id>", ""))
 
 
 def test_error_resend_and_cancel_read_back(wire):
@@ -101,9 +107,13 @@ def test_error_resend_and_cancel_read_back(wire):
     assert bare.endswith("/>") and wire.parse_message(bare)["text"] == ""
     chk = wire.build_error("cost", RUN, "security", "score", "check", ref=RUN)
     assert wire.parse_message(chk)["ref"] == RUN and wire.parse_message(chk)["candidate"] is None
-    c = wire.parse_message(wire.build_cancel("alice", RUN, "superseded", superseded_by="00000000-0000-4000-8000-000000000000"))
-    assert (c["reason"], c["superseded_by"]) == ("superseded", "00000000-0000-4000-8000-000000000000")
-    assert wire.parse_message(wire.build_cancel("alice", RUN, "version"))["superseded_by"] is None
+    c = wire.parse_message(wire.build_cancel("alice", RUN, "superseded", superseded_by=OTHER))
+    assert (c["reason"], c["superseded_by"], c["agent"]) == ("superseded", OTHER, None)
+    c = wire.parse_message(wire.build_cancel("cost", RUN, "missing-agent", agent="security"))
+    assert (c["reason"], c["superseded_by"], c["agent"]) == ("missing-agent", None, "security")
+    c = wire.parse_message(wire.build_cancel("alice", RUN, "version"))
+    assert (c["reason"], c["superseded_by"], c["agent"]) == ("version", None, None)
+    assert wire.peek(wire.build_cancel("alice", RUN, "version"))["attrs"].get("check") is None
 
 
 def test_every_send_gets_a_new_uuid_and_a_given_one_is_kept(wire):
@@ -117,9 +127,8 @@ def test_the_text_of_a_message_survives_escaping_and_quotes(wire):
     assert m["proposal"]["candidate"] == cand and m["proposal"]["rationale"] == "x &amp; <y>"
     doc = init_reply(wire, candidate=cand)
     assert '"quoted"' in doc and "&lt;" in doc
-    odd = wire.build_score('we"ird&agent', RUN, [("seed-cost", 5, "r")])
-    assert wire.peek(odd)["attrs"]["from"] == 'we"ird&agent' and wire.parse_message(odd)["from"] == 'we"ird&agent'
-    assert wire.check_ok(odd)
+    odd = wire.build_score("security", RUN, [("seed-cost", 5, 'why "not" <this> & that')])
+    assert wire.parse_message(odd)["scores"][0]["reasoning"] == 'why "not" <this> & that' and wire.check_ok(odd)
 
 
 # --- the author's responsibility --------------------------------------------
@@ -169,7 +178,7 @@ def test_score_is_refused_when_empty_duplicated_or_for_its_own_candidate(wire):
 
 def test_result_error_resend_cancel_are_refused_when_inconsistent(wire):
     refuses(wire, wire.build_result, "outcome must be", "a", RUN, "WON", "seed-a")
-    refuses(wire, wire.build_result, "winning candidate", "a", RUN, "SUCCESS")
+    refuses(wire, wire.build_result, "winning candidate", "a", RUN, "SUCCESS", None)
     refuses(wire, wire.build_result, "winning candidate", "a", RUN, "BEST_EFFORT", "junk")
     e = lambda **kw: wire.build_error(**{"from_": "a", "run_id": RUN, "to": "b", "what": "score", "reason": "missing",
                                          "candidate": "seed-b", **kw})
@@ -182,9 +191,21 @@ def test_result_error_resend_cancel_are_refused_when_inconsistent(wire):
     refuses(wire, e, "goes only with reason", what="init", reason="missing", candidate=None)
     refuses(wire, e, "what must be \"init\"", what="score", reason="busy")
     refuses(wire, e, "goes only with reason", what="init", reason="check", ref=RUN, candidate=None)
+    refuses(wire, e, "what must be \"init\"", what="score", reason="invalid")
+    refuses(wire, e, "what must be \"init\"", what="result", reason="version", candidate=None)
+    assert wire.parse_message(e(what="init", reason="invalid", candidate=None, text="why"))["text"] == "why"
+    refuses(wire, e, "ref must be a UUID", reason="check", ref="nope", candidate=None)
+    refuses(wire, e, "to must be an agent id", to="b c")
     refuses(wire, wire.build_cancel, "reason must be", "a", RUN, "because")
+    refuses(wire, wire.build_cancel, "reason must be", "a", RUN, "invalid", agent="b")
     refuses(wire, wire.build_cancel, "superseded_by", "a", RUN, "superseded")
     refuses(wire, wire.build_cancel, "superseded_by", "a", RUN, "version", superseded_by=RUN)
+    refuses(wire, wire.build_cancel, "superseded_by", "a", RUN, "missing-agent", agent="b", superseded_by=RUN)
+    refuses(wire, wire.build_cancel, "agent goes with", "a", RUN, "missing-agent")
+    refuses(wire, wire.build_cancel, "agent goes with", "a", RUN, "version", agent="b")
+    refuses(wire, wire.build_cancel, "agent goes with", "a", RUN, "superseded", superseded_by=OTHER, agent="b")
+    refuses(wire, wire.build_cancel, "superseded_by must be a UUID", "a", RUN, "superseded", superseded_by="OTHER-RUNID")
+    refuses(wire, wire.build_cancel, "agent must be an agent id", "a", RUN, "missing-agent", agent="b c")
 
 
 def test_a_participant_can_send_again_only_its_own_data_messages(wire):
@@ -292,15 +313,44 @@ def test_a_receiver_refuses_a_proposal_with_the_wrong_id(wire):
 
 
 def test_a_receiver_refuses_invalid_scores_and_anchors_it_reads(wire):
-    refuses(wire, wire.parse_message, "rates seed-cost, which it proposed", score(wire).replace("seed-security", "seed-cost"))
-    refuses(wire, wire.parse_message, "rated twice", score(wire).replace("r1-security", "seed-security"))
     refuses(wire, wire.parse_message, "0 to 100", score(wire).replace("41.0", "141.0"))
     refuses(wire, wire.parse_message, "is not a number", score(wire).replace("41.0", "lots"))
+    refuses(wire, wire.parse_message, "not a candidate id", score(wire).replace("seed-security", "nope"))
     refuses(wire, wire.parse_message, "must exceed", init_reply(wire).replace("<raw_ideal>95.0", "<raw_ideal>5.0"))
-    refuses(wire, wire.parse_message, "0 to 100", init_reply(wire).replace("<raw_reject>8.0", "<raw_reject>-8.0"))
+    refuses(wire, wire.parse_message, "is not a number", init_reply(wire).replace("<raw_reject>8.0", "<raw_reject>-8.0"))
     refuses(wire, wire.parse_message, "<reasoning> in <score> is empty",
             init_reply(wire).replace("<reasoning>good</reasoning>", "<reasoning> </reasoning>"))
     refuses(wire, wire.parse_message, r"<anchors> is missing", init_reply(wire).replace("anchors", "ancho"))
+    refuses(wire, wire.parse_message, "at least one", score(wire).replace("score", "x").replace("concord-x", "concord-score"))
+
+
+def test_a_score_entry_for_the_senders_own_candidate_or_a_repeated_one_is_ignored_and_the_rest_kept(wire):
+    m = wire.parse_message(score(wire).replace("seed-security", "seed-cost"))
+    assert [e["id"] for e in m["scores"]] == ["r1-security"] and m["ignored"] == ["seed-cost"]
+    m = wire.parse_message(score(wire).replace("r1-security", "seed-security").replace("60.5", "99"))
+    assert m["scores"] == [{"id": "seed-security", "raw": 41 * M, "reasoning": "risky"}] and m["ignored"] == ["seed-security"]
+    only = wire.parse_message(score(wire, scores=[("seed-b", 5, "r")]).replace("seed-b", "r2-cost"))
+    assert only["scores"] == [] and only["ignored"] == ["r2-cost"]
+
+
+@pytest.mark.parametrize("text", [".5", "82.", "82.1234567", "+5", "-0", "1e2", "NaN", "inf", "1_0", "8 2", "1,5", "\u0663\u0662",
+                                  "0x10", "1000", "100.000001", "101"])
+def test_a_number_in_another_form_or_out_of_range_makes_the_message_invalid(wire, text):
+    for doc, old in ((score(wire), "41.0"), (init_reply(wire), "<raw>82.0"), (init_reply(wire), "<raw_reject>8.0")):
+        new = doc.replace(old, old.replace("41.0", text).replace("82.0", text).replace("8.0", text))
+        refuses(wire, wire.parse_message, "number|0 to 100", new)
+
+
+@pytest.mark.parametrize("text, millionths", [("0", 0), ("100", 100 * M), ("100.0", 100 * M), ("007", 7 * M), ("82.123456", 82_123_456),
+                                              ("0.000001", 1), ("00.5", 500_000)])
+def test_a_number_in_the_form_of_the_spec_is_read_exactly(wire, text, millionths):
+    assert wire.parse_message(score(wire).replace("41.0", text))["scores"][0]["raw"] == millionths
+
+
+@pytest.mark.parametrize("old, new", [('from="cost"', 'from="co st"'), ('from="cost"', 'from="' + "x" * 65 + '"'),
+                                      ('from="cost"', 'from="c\u00e9"'), ('uuid="', 'uuid="X')])
+def test_a_receiver_refuses_an_agent_id_or_uuid_in_the_wrong_form(wire, old, new):
+    refuses(wire, wire.parse_message, "agent id|UUID", score(wire).replace(old, new, 1))
 
 
 def test_a_receiver_refuses_an_init_that_breaks_the_configuration(wire):
@@ -309,6 +359,11 @@ def test_a_receiver_refuses_an_init_that_breaks_the_configuration(wire):
     refuses(wire, wire.parse_message, "duplicate", ok.replace("<agent>security</agent>", "<agent>cost</agent>"))
     refuses(wire, wire.parse_message, "budget is not an integer|<budget> is not an integer", ok.replace("<budget>8", "<budget>8.5"))
     refuses(wire, wire.parse_message, "eps", ok.replace("<eps>0.05", "<eps>0"))
+    refuses(wire, wire.parse_message, "is not a number", ok.replace("<eps>0.05", "<eps>.05"))
+    refuses(wire, wire.parse_message, "is not a number", ok.replace("<satisfaction_threshold>0.6", "<satisfaction_threshold>6e-1"))
+    refuses(wire, wire.parse_message, "above 0 and at most 1", ok.replace("<satisfaction_threshold>0.6", "<satisfaction_threshold>1.000001"))
+    refuses(wire, wire.parse_message, "is not an integer", ok.replace("<retries>3", "<retries>\u0663"))
+    refuses(wire, wire.parse_message, "agent id", ok.replace("<agent>security</agent>", "<agent>sec urity</agent>"))
     refuses(wire, wire.parse_message, "timeout", ok.replace("<timeout>300", "<timeout>-1"))
     refuses(wire, wire.parse_message, "not valid JSON", ok.replace("&quot;", "").replace('"type"', "type").replace("{", "{{"))
     refuses(wire, wire.parse_message, "not enforced", ok.replace("&lt;", "<").replace('"type"', '"color": 1, "type"'))
@@ -328,6 +383,13 @@ def test_error_and_cancel_are_checked_on_the_way_in_too(wire):
     refuses(wire, wire.parse_message, "needs the attribute to", err.replace(' to="b"', ""))
     cancel = wire.build_cancel("a", RUN, "version")
     refuses(wire, wire.parse_message, "reason must be", cancel.replace('"version"', '"why"'))
+    refuses(wire, wire.parse_message, "reason must be", cancel.replace('"version"', '"invalid" agent="b"'))
+    refuses(wire, wire.parse_message, "agent goes with", cancel.replace('"version"', '"missing-agent"'))
+    refuses(wire, wire.parse_message, "agent must be an agent id",
+            wire.build_cancel("a", RUN, "missing-agent", agent="b").replace('agent="b"', 'agent="b c"'))
+    refuses(wire, wire.parse_message, "ref must be a UUID",
+            wire.build_error("a", RUN, "b", "score", "check", ref=RUN).replace(RUN + '"/>', 'x"/>').replace(f'ref="{RUN}"', 'ref="x"'))
+    refuses(wire, wire.parse_message, "to must be an agent id", err.replace(' to="b"', ' to="b c"'))
 
 
 # --- the examples of the spec ------------------------------------------------
@@ -347,15 +409,15 @@ def test_the_examples_of_the_spec_read(wire):
     </score>
   </proposal>
 </concord-init-reply>''' % RUN
-    assert wire.parse_message(spec_reply)["proposal"]["raw"] == 82.0
+    assert wire.parse_message(spec_reply)["proposal"]["raw"] == 82 * M
     result = '''<concord-result version="0.3.0" from="cost" run_id="%s" uuid="9d2f4c60-18a7-4e35-b3c9-5a0e7d1f6b82" check="0f1e2d3c">
   <outcome>BEST_EFFORT</outcome>
   <winning_candidate_id>seed-cost</winning_candidate_id>
-  <missing>
-    <agent>security</agent>
-  </missing>
 </concord-result>''' % RUN
-    assert wire.parse_message(result)["missing"] == ["security"]
+    assert wire.parse_message(result)["winning_candidate_id"] == "seed-cost"
     cancel = '<concord-cancel version="0.3.0" from="alice" run_id="%s" uuid="8f3a1c52-6d07-4e9b-b4a8-2c5d7e0f1a36" ' \
-             'reason="superseded" superseded_by="OTHER-RUNID"/>' % RUN
-    assert wire.parse_message(cancel)["superseded_by"] == "OTHER-RUNID"
+             'reason="superseded" superseded_by="c3d4e5f6-0718-4a9b-8c2d-1e3f5a7b9d02"/>' % RUN
+    assert wire.parse_message(cancel)["superseded_by"] == OTHER
+    missing = '<concord-cancel version="0.3.0" from="cost" run_id="%s" uuid="e1c4a7d2-3b58-4f09-8a6e-9d2b5c7f0a13" ' \
+              'reason="missing-agent" agent="security"/>' % RUN
+    assert wire.parse_message(missing)["agent"] == "security"
