@@ -77,7 +77,8 @@ without the line is refused the first time and recorded as a defect the second.
 
 ## Handler: CONVENE_REQUEST
 
-Return ONLY the following JSON. No preamble, no tools, nothing after.
+Echo the delivery line, then a blank line, then ONLY the following JSON. No
+preamble, no tools, nothing after.
 
 ```json
 {
@@ -103,7 +104,8 @@ Return at most 6 atoms. On a revision round this list replaces your previous
 atoms: keep, rewrite, or delete. Return `"atoms": []` to withdraw all. Keep a
 fact only you know.
 
-Return ONLY the following JSON. No preamble, no tools, nothing after.
+Echo the delivery line, then a blank line, then ONLY the following JSON. No
+preamble, no tools, nothing after.
 
 ```json
 {
@@ -129,7 +131,8 @@ You will receive `KEY_TERMS`. Provide your actual working definitions — not
 generic textbook ones. Report your real local unit even if it differs from
 what you expect others to use — that divergence is the signal this phase needs.
 
-Return ONLY the following JSON. No preamble, no tools, nothing after.
+Echo the delivery line, then a blank line, then ONLY the following JSON. No
+preamble, no tools, nothing after.
 
 ```json
 {
@@ -150,7 +153,8 @@ Provide an entry for every term in `KEY_TERMS`.
 You will receive `AMBIGUOUS_PAIR` and `DEFINITIONS_SO_FAR`. Provide additional
 grounding data — not an argument or a vote.
 
-Return ONLY the following JSON. No preamble, no tools, nothing after.
+Echo the delivery line, then a blank line, then ONLY the following JSON. No
+preamble, no tools, nothing after.
 
 ```json
 {
@@ -167,7 +171,8 @@ Return ONLY the following JSON. No preamble, no tools, nothing after.
 
 You will receive `REQUIRED_KNOWLEDGE` and `OBJECTIVE_CLAUSES`.
 
-Return ONLY the following JSON. No preamble, no tools, nothing after.
+Echo the delivery line, then a blank line, then ONLY the following JSON. No
+preamble, no tools, nothing after.
 **Maximum: 3 items in `holds`, 2 items in `checks`.**
 
 ```json
@@ -235,8 +240,9 @@ evidence directly contradicts the proposed action.
 
 ## Rules
 
-1. **Return only what the handler specifies.** No preamble, no summary, no
-   confirmation of what you sent — nothing before or after the required output.
+1. **Return only what the handler specifies.** If the request carried a delivery
+   line, echo it first, then a blank line, then the handler output. No preamble,
+   no summary, no confirmation of what you sent — nothing else before or after.
    Your environment may pass anything you write to other participants.
 2. **No data tools during Phases 0–3.** Tools belong in `EXECUTION_REQUEST` only.
 3. **Report what you actually know.** Do not adopt a canonical unit or role to
