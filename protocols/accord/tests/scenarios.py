@@ -5,6 +5,7 @@
 #
 """The scripted runs the tests replay. Each returns a Run whose .log is the transcript."""
 import json
+import re
 
 import driver
 
@@ -124,6 +125,62 @@ def execution_messages():
     return run
 
 
+def reply_check_refusals():
+    """A reply must carry the check of the message that was sent, or `handle` refuses it and asks for the real one.
+
+    A wrong check is always refused, however often it is retried. A missing one is refused once and then recorded
+    with a defect, so a receiver that never echoes the line cannot stall the session.
+    """
+    run = driver.Run("test-check")
+    d = driver.data(run.initiator(["init", *init_args()]))
+    delivery = d["messages"]["telemetry"].split("\n", 1)[0]
+    tampered = re.sub(r'check="[0-9a-f]+"', 'check="deadbeef"', delivery)
+
+    def card(agent):
+        return json.dumps({"agent": agent, "roles": [CARDS[agent][0]], "capabilities": [CARDS[agent][1]],
+                           "access_scopes": [CARDS[agent][2]], "holdings_summary": f"{CARDS[agent][0]} knowledge"})
+
+    run.initiator(["handle", "--agent", "telemetry", "--reply", "Telemetry reports elevated errors."],
+                  label="handle summary-no-check")
+    run.initiator(["handle", "--agent", "telemetry", "--reply", f"{tampered}\n\n{card('telemetry')}"],
+                  label="handle wrong-check")
+    run.initiator(["handle", "--agent", "telemetry", "--reply", f"{tampered}\n\n{card('telemetry')}"],
+                  label="handle wrong-check again")
+    run.initiator(["handle", "--agent", "telemetry", "--reply", f"{delivery}\n\n{card('telemetry')}"],
+                  label="handle correct-check")
+
+    # database never echoes the line, but its body is readable: refused once, then recorded with a defect.
+    run.initiator(["handle", "--agent", "database", "--reply", card("database")], label="handle db-no-line-1")
+    run.initiator(["handle", "--agent", "database", "--reply", card("database")], label="handle db-no-line-2")
+    run.initiator(["status"], label="status")
+    return run
+
+
+def reply_shape_refusals():
+    """A reply must also be something the phase's merge can read; the check only says which message it answers.
+
+    The leniency that lets a non-echoing receiver through does not extend to an unreadable body: a summary carrying
+    the right delivery line is still refused, however many times it is sent.
+    """
+    run = driver.Run("test-shape")
+    d = driver.data(run.initiator(["init", *init_args()]))
+    delivery = d["messages"]["telemetry"].split("\n", 1)[0]
+
+    for label, body in (
+        ("prose", "Telemetry confirms the error rate is elevated."),
+        ("truncated-json", '{"agent": "telemetry", '),
+        ("json-but-no-agent", '{"roles": ["telemetry analyst"], "capabilities": ["query metrics"]}'),
+        ("summary-as-json", '{"summary": "telemetry sees elevated errors", "agent": "telemetry"}'),
+    ):
+        run.initiator(["handle", "--agent", "telemetry", "--reply", f"{delivery}\n\n{body}"],
+                      label=f"handle {label}")
+    # the same prose, retried: a readable body is the bar, and retrying does not lower it
+    run.initiator(["handle", "--agent", "telemetry", "--reply", f"{delivery}\n\nStill just prose."],
+                  label="handle prose again")
+    run.initiator(["status"], label="status")
+    return run
+
+
 def error_paths():
     """Bad input to every entry point: each must end in a readable error, never a traceback."""
     run = driver.Run("test-errors")
@@ -148,4 +205,5 @@ def error_paths():
 
 SCENARIOS = {f.__name__: f for f in (
     split_term_triggers_clarify, agreed_terms_skip_clarify, three_agents_with_singleton, withdrawn_atoms,
-    step_by_step_phase_commands, execution_messages, error_paths)}
+    step_by_step_phase_commands, execution_messages, reply_check_refusals, reply_shape_refusals,
+    error_paths)}

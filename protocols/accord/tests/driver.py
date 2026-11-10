@@ -118,6 +118,16 @@ def section(message, label):
     return json.JSONDecoder().raw_decode(message, start)[0]
 
 
+def echo_delivery(message, reply):
+    """A reply as a receiver returns it: the delivery line it was sent, then the payload.
+
+    The line carries the check `handle` verifies, so passing it back is what distinguishes a real reply from one the
+    orchestrator wrote itself. `EXECUTION_REQUEST` carries no delivery line and is returned unchanged.
+    """
+    first = message.split("\n", 1)[0]
+    return f"{first}\n\n{reply}" if first.startswith("<accord-delivery") else reply
+
+
 def policy(cards, atoms, units, checks, clarify=None, revised=None):
     """A policy from tables, one entry per agent.
 
@@ -126,6 +136,9 @@ def policy(cards, atoms, units, checks, clarify=None, revised=None):
     {agent: [(text, type), ...]} — the atoms the agent returns on the second FRAME round instead of its first set.
     """
     def pol(agent, phase, message):
+        return echo_delivery(message, _payload(agent, message))
+
+    def _payload(agent, message):
         if "CONVENE_REQUEST" in message:
             role, capability, scope = cards[agent]
             return json.dumps({"agent": agent, "roles": [role], "capabilities": [capability],

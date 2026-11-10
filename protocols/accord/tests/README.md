@@ -26,11 +26,13 @@ Both documented drive paths are covered: `handle` (self-driving) and the explici
 | `withdrawn_atoms` | `"atoms": []` on the revision round withdraws an agent's contributions, and the support count of the atom it shared drops with it |
 | `step_by_step_phase_commands` | The explicit merge path, and the only one that can supply `REQUIRED_KNOWLEDGE` and `OBJECTIVE_CLAUSES` — so also where owners, checks and an uncovered gap are exercised |
 | `execution_messages` | One `EXECUTION_REQUEST` per specialist after lock, carrying the contract, plus the unknown-agent path |
+| `reply_check_refusals` | The delivery check: a wrong one is always refused, a missing one is refused once and then recorded with a defect |
+| `reply_shape_refusals` | The shape check: prose, truncated JSON and a summary wearing the right delivery line are all refused, however often they are retried |
 | `error_paths` | Bad input to every entry point: each must end in a readable error, never a traceback |
 
 ## Behavior these record but do not endorse
 
-Following `protocols/concord/tests`, the transcripts capture what the script does today, including three things that
+Following `protocols/concord/tests`, the transcripts capture what the script does today, including two things that
 look like defects. Each has a test named `test_today_…` so the recording is not mistaken for approval; change the
 assertion when the behavior changes.
 
@@ -38,9 +40,14 @@ assertion when the behavior changes.
   phases returns `status: INTENT-LOCKED` with an empty roster, frame, glossary and objective. That status is what the
   skill gates every app action on, so a premature call produces a green light over nothing — and the resulting empty
   contract then passes `execution-message`'s guard, which only checks that *a* contract exists.
-- **An unusable reply counts as an answer.** `handle` accepts prose and truncated JSON silently: the agent leaves
-  `awaiting` having contributed nothing, and the phase merges without it rather than re-asking. A specialist that gets
-  the format wrong disappears from the Roster, whose purpose is an honest capability map.
-- **Self-driving mode always locks an empty Verifiable Objective.** `init` has no flag for `REQUIRED_KNOWLEDGE` or
-  `OBJECTIVE_CLAUSES`, so on the `handle` path VERIFY receives neither and every check an agent proposes is dropped for
-  covering no clause. One of the contract's four artifacts is therefore always empty on the path the skill recommends.
+- **A default self-driving run locks an empty Verifiable Objective.** `handle` does accept `--required-knowledge` and
+  `--objective-clauses`, so the self-driving path *can* populate it. But nothing asks for them: `init` does not take
+  them, no phase message mentions them, and no `next_command` hint names them. A run that does not know to pass them
+  locks an empty objective, and every check an agent proposed is dropped for covering no clause.
+
+A third — `handle` accepting prose and truncated JSON as an answer — is now fixed, by two checks that catch different
+things. The **delivery check** says which message a reply answers, so a stale or invented one is caught; a missing
+line is forgiven on the second attempt, with a defect, so a receiver that never echoes cannot stall the session. The
+**shape check** says whether the reply is an answer to this phase at all, and is never forgiven — an orchestrator
+holding the request can copy the delivery line onto anything, so the shape is the part a summary cannot fake. What
+neither establishes is that the reply's content is what the specialist actually said: the initiator never saw it.

@@ -25,12 +25,14 @@ out|       "telemetry",
 out|       "database"
 out|     ],
 out|     "messages": {
-out|       "telemetry": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
-out| deploy; decide what to roll back\n\nSPECIALISTS: telemetry, database",
-out|       "database": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
-out| deploy; decide what to roll back\n\nSPECIALISTS: telemetry, database"
+out|       "telemetry": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"a5628b06\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nSPECIALISTS: telemetry, database",
+out|       "database": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"a5628b06\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nSPECIALISTS: telemetry, database"
 out|     },
 out|     "status": "SEND",
 out|     "hint": "Use `accord_initiator.py handle --agent <id> --reply <text>` for each incoming reply. No separate ⏎
@@ -40,9 +42,11 @@ out| }
 out| 
 
 === handle convene telemetry (exit 0)
-$ handle --agent telemetry --reply {"agent": "telemetry", "roles": ["telemetry analyst"], "capabilities": ["query ⏎
-$ metrics and traces"], "access_scopes": ["prometheus"], "holdings_summary": "telemetry analyst knowledge for this ⏎
-$ incident"}
+$ handle --agent telemetry --reply <accord-delivery state="1e0c1707" check="a5628b06"></accord-delivery>
+
+{"agent": ⏎
+$ "telemetry", "roles": ["telemetry analyst"], "capabilities": ["query metrics and traces"], "access_scopes": ⏎
+$ ["prometheus"], "holdings_summary": "telemetry analyst knowledge for this incident"}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -61,9 +65,11 @@ out| }
 out| 
 
 === handle convene database (exit 0)
-$ handle --agent database --reply {"agent": "database", "roles": ["database specialist"], "capabilities": ["inspect ⏎
-$ query plans and locks"], "access_scopes": ["pg-stat"], "holdings_summary": "database specialist knowledge for this ⏎
-$ incident"}
+$ handle --agent database --reply <accord-delivery state="1e0c1707" check="a5628b06"></accord-delivery>
+
+{"agent": ⏎
+$ "database", "roles": ["database specialist"], "capabilities": ["inspect query plans and locks"], "access_scopes": ⏎
+$ ["pg-stat"], "holdings_summary": "database specialist knowledge for this incident"}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -75,12 +81,14 @@ out|       "telemetry",
 out|       "database"
 out|     ],
 out|     "messages": {
-out|       "telemetry": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
-out| deploy; decide what to roll back\n\nCURRENT_FRAME: []",
-out|       "database": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
-out| deploy; decide what to roll back\n\nCURRENT_FRAME: []"
+out|       "telemetry": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"20b1808b\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nCURRENT_FRAME: []",
+out|       "database": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"20b1808b\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nCURRENT_FRAME: []"
 out|     },
 out|     "still_waiting_this_phase": [],
 out|     "roster": [
@@ -117,9 +125,11 @@ out| }
 out| 
 
 === handle frame_0 telemetry (exit 0)
-$ handle --agent telemetry --reply {"agent": "telemetry", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 ⏎
-$ after 14:02", "type": "objective"}, {"text": "the regression is confined to the checkout path", "type": ⏎
-$ "assumption"}]}
+$ handle --agent telemetry --reply <accord-delivery state="1e0c1707" check="20b1808b"></accord-delivery>
+
+{"agent": ⏎
+$ "telemetry", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 after 14:02", "type": "objective"}, ⏎
+$ {"text": "the regression is confined to the checkout path", "type": "assumption"}]}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -138,8 +148,11 @@ out| }
 out| 
 
 === handle frame_0 database (exit 0)
-$ handle --agent database --reply {"agent": "database", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 ⏎
-$ after 14:02", "type": "objective"}, {"text": "connection pool saturation began at 14:03", "type": "constraint"}]}
+$ handle --agent database --reply <accord-delivery state="1e0c1707" check="20b1808b"></accord-delivery>
+
+{"agent": ⏎
+$ "database", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 after 14:02", "type": "objective"}, ⏎
+$ {"text": "connection pool saturation began at 14:03", "type": "constraint"}]}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -151,24 +164,26 @@ out|       "telemetry",
 out|       "database"
 out|     ],
 out|     "messages": {
-out|       "telemetry": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
-out| deploy; decide what to roll back\n\nCURRENT_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error ⏎
-out| rate rose from 0.4 to 8.7 after 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n  ⏎
-out|     \"telemetry\",\n      \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is ⏎
-out| confined to the checkout path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      ⏎
-out| \"telemetry\"\n    ]\n  },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at ⏎
-out| 14:03\",\n    \"type\": \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  ⏎
+out|       "telemetry": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"4f169985\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nCURRENT_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error rate rose from 0.4 to 8.7 ⏎
+out| after 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n      \"telemetry\",\n      ⏎
+out| \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is confined to the checkout ⏎
+out| path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      \"telemetry\"\n    ]\n  ⏎
+out| },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at 14:03\",\n    \"type\": ⏎
+out| \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  ⏎
 out| }\n]\n\nYOUR_PREVIOUS_ATOMS: [\n  \"checkout error rate rose from 0.4 to 8.7 after 14:02\",\n  \"the regression ⏎
 out| is confined to the checkout path\"\n]",
-out|       "database": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
-out| deploy; decide what to roll back\n\nCURRENT_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error ⏎
-out| rate rose from 0.4 to 8.7 after 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n  ⏎
-out|     \"telemetry\",\n      \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is ⏎
-out| confined to the checkout path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      ⏎
-out| \"telemetry\"\n    ]\n  },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at ⏎
-out| 14:03\",\n    \"type\": \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  ⏎
+out|       "database": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"1aa59954\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nCURRENT_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error rate rose from 0.4 to 8.7 ⏎
+out| after 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n      \"telemetry\",\n      ⏎
+out| \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is confined to the checkout ⏎
+out| path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      \"telemetry\"\n    ]\n  ⏎
+out| },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at 14:03\",\n    \"type\": ⏎
+out| \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  ⏎
 out| }\n]\n\nYOUR_PREVIOUS_ATOMS: [\n  \"checkout error rate rose from 0.4 to 8.7 after 14:02\",\n  \"connection pool ⏎
 out| saturation began at 14:03\"\n]"
 out|     },
@@ -210,9 +225,11 @@ out| }
 out| 
 
 === handle frame_1 telemetry (exit 0)
-$ handle --agent telemetry --reply {"agent": "telemetry", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 ⏎
-$ after 14:02", "type": "objective"}, {"text": "the regression is confined to the checkout path", "type": ⏎
-$ "assumption"}]}
+$ handle --agent telemetry --reply <accord-delivery state="1e0c1707" check="4f169985"></accord-delivery>
+
+{"agent": ⏎
+$ "telemetry", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 after 14:02", "type": "objective"}, ⏎
+$ {"text": "the regression is confined to the checkout path", "type": "assumption"}]}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -231,8 +248,11 @@ out| }
 out| 
 
 === handle frame_1 database (exit 0)
-$ handle --agent database --reply {"agent": "database", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 ⏎
-$ after 14:02", "type": "objective"}, {"text": "connection pool saturation began at 14:03", "type": "constraint"}]}
+$ handle --agent database --reply <accord-delivery state="1e0c1707" check="1aa59954"></accord-delivery>
+
+{"agent": ⏎
+$ "database", "atoms": [{"text": "checkout error rate rose from 0.4 to 8.7 after 14:02", "type": "objective"}, ⏎
+$ {"text": "connection pool saturation began at 14:03", "type": "constraint"}]}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -244,12 +264,12 @@ out|       "telemetry",
 out|       "database"
 out|     ],
 out|     "messages": {
-out|       "telemetry": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nGROUND_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its GROUND_REQUEST handler.\n\nKEY_TERMS: [\n  \"error_rate\",\n  ⏎
-out| \"rollback_target\"\n]",
-out|       "database": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nGROUND_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its GROUND_REQUEST handler.\n\nKEY_TERMS: [\n  \"error_rate\",\n  ⏎
-out| \"rollback_target\"\n]"
+out|       "telemetry": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"67c3594b\"></accord-delivery>\n\nGROUND_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| GROUND_REQUEST handler.\n\nKEY_TERMS: [\n  \"error_rate\",\n  \"rollback_target\"\n]",
+out|       "database": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"67c3594b\"></accord-delivery>\n\nGROUND_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| GROUND_REQUEST handler.\n\nKEY_TERMS: [\n  \"error_rate\",\n  \"rollback_target\"\n]"
 out|     },
 out|     "still_waiting_this_phase": [],
 out|     "frame": [
@@ -289,8 +309,10 @@ out| }
 out| 
 
 === handle ground telemetry (exit 0)
-$ handle --agent telemetry --reply {"agent": "telemetry", "units": {"error_rate": "fraction 0-1", "rollback_target": ⏎
-$ "deployment id"}}
+$ handle --agent telemetry --reply <accord-delivery state="1e0c1707" check="67c3594b"></accord-delivery>
+
+{"agent": ⏎
+$ "telemetry", "units": {"error_rate": "fraction 0-1", "rollback_target": "deployment id"}}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -309,8 +331,10 @@ out| }
 out| 
 
 === handle ground database (exit 0)
-$ handle --agent database --reply {"agent": "database", "units": {"error_rate": "percent 0-100", "rollback_target": ⏎
-$ "deployment id"}}
+$ handle --agent database --reply <accord-delivery state="1e0c1707" check="67c3594b"></accord-delivery>
+
+{"agent": ⏎
+$ "database", "units": {"error_rate": "percent 0-100", "rollback_target": "deployment id"}}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -322,24 +346,24 @@ out|       "telemetry",
 out|       "database"
 out|     ],
 out|     "messages": {
-out|       "telemetry": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nCLARIFY_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its CLARIFY_REQUEST handler.\n\nAMBIGUOUS_PAIR: [\n  {\n    \"term\": ⏎
-out| \"error_rate\",\n    \"agents\": [\n      \"telemetry\",\n      \"database\"\n    ],\n    \"units\": [\n      ⏎
-out| \"fraction 0-1\",\n      \"percent 0-100\"\n    ],\n    \"sim\": 0.56\n  }\n]\n\nDEFINITIONS_SO_FAR: [\n  {\n    ⏎
-out| \"term\": \"error_rate\",\n    \"status\": \"flagged\",\n    \"variants\": [\n      {\n        \"agent\": ⏎
-out| \"telemetry\",\n        \"definition\": \"fraction 0-1\"\n      },\n      {\n        \"agent\": \"database\",\n   ⏎
-out|      \"definition\": \"percent 0-100\"\n      }\n    ]\n  },\n  {\n    \"term\": \"rollback_target\",\n    ⏎
-out| \"status\": \"agreed\",\n    \"definition\": \"deployment id\",\n    \"agents\": [\n      \"telemetry\",\n      ⏎
-out| \"database\"\n    ]\n  }\n]",
-out|       "database": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nCLARIFY_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its CLARIFY_REQUEST handler.\n\nAMBIGUOUS_PAIR: [\n  {\n    \"term\": ⏎
-out| \"error_rate\",\n    \"agents\": [\n      \"telemetry\",\n      \"database\"\n    ],\n    \"units\": [\n      ⏎
-out| \"fraction 0-1\",\n      \"percent 0-100\"\n    ],\n    \"sim\": 0.56\n  }\n]\n\nDEFINITIONS_SO_FAR: [\n  {\n    ⏎
-out| \"term\": \"error_rate\",\n    \"status\": \"flagged\",\n    \"variants\": [\n      {\n        \"agent\": ⏎
-out| \"telemetry\",\n        \"definition\": \"fraction 0-1\"\n      },\n      {\n        \"agent\": \"database\",\n   ⏎
-out|      \"definition\": \"percent 0-100\"\n      }\n    ]\n  },\n  {\n    \"term\": \"rollback_target\",\n    ⏎
-out| \"status\": \"agreed\",\n    \"definition\": \"deployment id\",\n    \"agents\": [\n      \"telemetry\",\n      ⏎
-out| \"database\"\n    ]\n  }\n]"
+out|       "telemetry": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"b623b17c\"></accord-delivery>\n\nCLARIFY_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| CLARIFY_REQUEST handler.\n\nAMBIGUOUS_PAIR: [\n  {\n    \"term\": \"error_rate\",\n    \"agents\": [\n      ⏎
+out| \"telemetry\",\n      \"database\"\n    ],\n    \"units\": [\n      \"fraction 0-1\",\n      \"percent 0-100\"\n  ⏎
+out|   ],\n    \"sim\": 0.56\n  }\n]\n\nDEFINITIONS_SO_FAR: [\n  {\n    \"term\": \"error_rate\",\n    \"status\": ⏎
+out| \"flagged\",\n    \"variants\": [\n      {\n        \"agent\": \"telemetry\",\n        \"definition\": \"fraction ⏎
+out| 0-1\"\n      },\n      {\n        \"agent\": \"database\",\n        \"definition\": \"percent 0-100\"\n      }\n  ⏎
+out|   ]\n  },\n  {\n    \"term\": \"rollback_target\",\n    \"status\": \"agreed\",\n    \"definition\": \"deployment ⏎
+out| id\",\n    \"agents\": [\n      \"telemetry\",\n      \"database\"\n    ]\n  }\n]",
+out|       "database": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"b623b17c\"></accord-delivery>\n\nCLARIFY_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| CLARIFY_REQUEST handler.\n\nAMBIGUOUS_PAIR: [\n  {\n    \"term\": \"error_rate\",\n    \"agents\": [\n      ⏎
+out| \"telemetry\",\n      \"database\"\n    ],\n    \"units\": [\n      \"fraction 0-1\",\n      \"percent 0-100\"\n  ⏎
+out|   ],\n    \"sim\": 0.56\n  }\n]\n\nDEFINITIONS_SO_FAR: [\n  {\n    \"term\": \"error_rate\",\n    \"status\": ⏎
+out| \"flagged\",\n    \"variants\": [\n      {\n        \"agent\": \"telemetry\",\n        \"definition\": \"fraction ⏎
+out| 0-1\"\n      },\n      {\n        \"agent\": \"database\",\n        \"definition\": \"percent 0-100\"\n      }\n  ⏎
+out|   ]\n  },\n  {\n    \"term\": \"rollback_target\",\n    \"status\": \"agreed\",\n    \"definition\": \"deployment ⏎
+out| id\",\n    \"agents\": [\n      \"telemetry\",\n      \"database\"\n    ]\n  }\n]"
 out|     },
 out|     "still_waiting_this_phase": [],
 out|     "glossary": [
@@ -386,9 +410,11 @@ out| }
 out| 
 
 === handle clarify telemetry (exit 0)
-$ handle --agent telemetry --reply {"agent": "telemetry", "term": "error_rate", "extended_definition": "failed HTTP ⏎
-$ requests divided by total requests, a fraction between 0 and 1", "distinguishing_context": "the sense used in ⏎
-$ telemetry's own tooling"}
+$ handle --agent telemetry --reply <accord-delivery state="1e0c1707" check="b623b17c"></accord-delivery>
+
+{"agent": ⏎
+$ "telemetry", "term": "error_rate", "extended_definition": "failed HTTP requests divided by total requests, a ⏎
+$ fraction between 0 and 1", "distinguishing_context": "the sense used in telemetry's own tooling"}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -407,9 +433,11 @@ out| }
 out| 
 
 === handle clarify database (exit 0)
-$ handle --agent database --reply {"agent": "database", "term": "error_rate", "extended_definition": "failed ⏎
-$ statements as a percentage of statements executed, 0 to 100", "distinguishing_context": "the sense used in ⏎
-$ database's own tooling"}
+$ handle --agent database --reply <accord-delivery state="1e0c1707" check="b623b17c"></accord-delivery>
+
+{"agent": ⏎
+$ "database", "term": "error_rate", "extended_definition": "failed statements as a percentage of statements executed, ⏎
+$ 0 to 100", "distinguishing_context": "the sense used in database's own tooling"}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -421,22 +449,24 @@ out|       "telemetry",
 out|       "database"
 out|     ],
 out|     "messages": {
-out|       "telemetry": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nVERIFY_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its VERIFY_REQUEST handler.\n\nREQUIRED_KNOWLEDGE: []\n\nOBJECTIVE_CLAUSES: ⏎
-out| []\n\nPROBLEM_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error rate rose from 0.4 to 8.7 after ⏎
-out| 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n      \"telemetry\",\n      ⏎
-out| \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is confined to the checkout ⏎
-out| path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      \"telemetry\"\n    ]\n  ⏎
-out| },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at 14:03\",\n    \"type\": ⏎
-out| \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  }\n]",
-out|       "database": "<accord-delivery state=\"1e0c1707\"></accord-delivery>\n\nVERIFY_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its VERIFY_REQUEST handler.\n\nREQUIRED_KNOWLEDGE: []\n\nOBJECTIVE_CLAUSES: ⏎
-out| []\n\nPROBLEM_FRAME: [\n  {\n    \"id\": \"s1\",\n    \"text\": \"checkout error rate rose from 0.4 to 8.7 after ⏎
-out| 14:02\",\n    \"type\": \"objective\",\n    \"support\": 2,\n    \"agents\": [\n      \"telemetry\",\n      ⏎
-out| \"database\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"text\": \"the regression is confined to the checkout ⏎
-out| path\",\n    \"type\": \"assumption\",\n    \"support\": 1,\n    \"agents\": [\n      \"telemetry\"\n    ]\n  ⏎
-out| },\n  {\n    \"id\": \"s3\",\n    \"text\": \"connection pool saturation began at 14:03\",\n    \"type\": ⏎
-out| \"constraint\",\n    \"support\": 1,\n    \"agents\": [\n      \"database\"\n    ]\n  }\n]"
+out|       "telemetry": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"907c5ff6\"></accord-delivery>\n\nVERIFY_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| VERIFY_REQUEST handler.\n\nREQUIRED_KNOWLEDGE: []\n\nOBJECTIVE_CLAUSES: []\n\nPROBLEM_FRAME: [\n  {\n    \"id\": ⏎
+out| \"s1\",\n    \"text\": \"checkout error rate rose from 0.4 to 8.7 after 14:02\",\n    \"type\": \"objective\",\n  ⏎
+out|   \"support\": 2,\n    \"agents\": [\n      \"telemetry\",\n      \"database\"\n    ]\n  },\n  {\n    \"id\": ⏎
+out| \"s2\",\n    \"text\": \"the regression is confined to the checkout path\",\n    \"type\": \"assumption\",\n    ⏎
+out| \"support\": 1,\n    \"agents\": [\n      \"telemetry\"\n    ]\n  },\n  {\n    \"id\": \"s3\",\n    \"text\": ⏎
+out| \"connection pool saturation began at 14:03\",\n    \"type\": \"constraint\",\n    \"support\": 1,\n    ⏎
+out| \"agents\": [\n      \"database\"\n    ]\n  }\n]",
+out|       "database": "<accord-delivery state=\"1e0c1707\" ⏎
+out| check=\"907c5ff6\"></accord-delivery>\n\nVERIFY_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| VERIFY_REQUEST handler.\n\nREQUIRED_KNOWLEDGE: []\n\nOBJECTIVE_CLAUSES: []\n\nPROBLEM_FRAME: [\n  {\n    \"id\": ⏎
+out| \"s1\",\n    \"text\": \"checkout error rate rose from 0.4 to 8.7 after 14:02\",\n    \"type\": \"objective\",\n  ⏎
+out|   \"support\": 2,\n    \"agents\": [\n      \"telemetry\",\n      \"database\"\n    ]\n  },\n  {\n    \"id\": ⏎
+out| \"s2\",\n    \"text\": \"the regression is confined to the checkout path\",\n    \"type\": \"assumption\",\n    ⏎
+out| \"support\": 1,\n    \"agents\": [\n      \"telemetry\"\n    ]\n  },\n  {\n    \"id\": \"s3\",\n    \"text\": ⏎
+out| \"connection pool saturation began at 14:03\",\n    \"type\": \"constraint\",\n    \"support\": 1,\n    ⏎
+out| \"agents\": [\n      \"database\"\n    ]\n  }\n]"
 out|     },
 out|     "still_waiting_this_phase": [],
 out|     "glossary": [
@@ -470,8 +500,10 @@ out| }
 out| 
 
 === handle verify telemetry (exit 0)
-$ handle --agent telemetry --reply {"agent": "telemetry", "holds": [], "checks": [{"criterion": "checkout error rate ⏎
-$ below 0.01 for 5 minutes", "covers": []}]}
+$ handle --agent telemetry --reply <accord-delivery state="1e0c1707" check="907c5ff6"></accord-delivery>
+
+{"agent": ⏎
+$ "telemetry", "holds": [], "checks": [{"criterion": "checkout error rate below 0.01 for 5 minutes", "covers": []}]}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",
@@ -490,8 +522,10 @@ out| }
 out| 
 
 === handle verify database (exit 0)
-$ handle --agent database --reply {"agent": "database", "holds": [], "checks": [{"criterion": "connection pool wait ⏎
-$ time returns to baseline", "covers": []}]}
+$ handle --agent database --reply <accord-delivery state="1e0c1707" check="907c5ff6"></accord-delivery>
+
+{"agent": ⏎
+$ "database", "holds": [], "checks": [{"criterion": "connection pool wait time returns to baseline", "covers": []}]}
 out| {
 out|   "ok": true,
 out|   "phase": "handle",

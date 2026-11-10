@@ -12,6 +12,7 @@ A transcript changes only when the script's behavior does, so a refactor that mu
 """
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -67,20 +68,79 @@ def test_today_lock_reports_intent_locked_on_a_session_that_ran_no_phases():
     assert contract["roster"] == [] and contract["glossary"] == [] and contract["problem_frame"] == []
 
 
-def test_today_an_unusable_reply_counts_as_that_agent_having_answered():
-    """Recorded, not endorsed. Prose and truncated JSON are accepted silently: the agent leaves `awaiting` having
-    contributed nothing, and the phase merges without it rather than re-asking."""
+def test_a_wrong_check_is_refused_however_often_it_is_retried():
+    """The leniency that keeps a non-echoing receiver from stalling the session must not extend to a wrong check:
+    that text belongs to another message, so recording it would file the wrong content under this phase."""
+    run = driver.Run("test-wrong-check")
+    d = driver.data(run.initiator(["init", *scenarios.init_args()]))
+    tampered = re.sub(r'check="[0-9a-f]+"', 'check="deadbeef"', d["messages"]["telemetry"].split("\n", 1)[0])
+    card = json.dumps({"agent": "telemetry", "roles": ["r"], "capabilities": ["c"], "access_scopes": ["s"],
+                       "holdings_summary": "h"})
+
+    for _ in range(3):
+        out = json.loads(run.initiator(["handle", "--agent", "telemetry", "--reply", f"{tampered}\n\n{card}"]).stdout)
+        assert out["ok"] is False and out["status"] == "ERROR"
+        assert "does not match its check" in out["error"]
+
+
+def test_a_missing_delivery_line_is_refused_once_then_recorded_with_a_defect():
+    """A receiver that does not echo the line must not stall the session, so the second attempt is taken — with a
+    defect recorded against it. The body still has to be readable; that is `validate_reply`'s job, not this one."""
     run = driver.Run("test-unusable")
     run.initiator(["init", *scenarios.init_args()])
-    before = driver.data(run.initiator(["handle", "--agent", "telemetry", "--reply", "prose, not a reply"]))
-    assert before["still_waiting_this_phase"] == ["database"], "telemetry was counted as having replied"
-    assert "error" not in before
+    card = json.dumps({"agent": "telemetry", "roles": ["r"], "capabilities": ["c"], "access_scopes": ["s"],
+                       "holdings_summary": "h"})
+
+    first = json.loads(run.initiator(["handle", "--agent", "telemetry", "--reply", card]).stdout)
+    assert first["ok"] is False and first["status"] == "ERROR"
+    assert "carried no" in first["error"] and first["next"]
+
+    second = run.initiator(["handle", "--agent", "telemetry", "--reply", card])
+    assert driver.data(second)["still_waiting_this_phase"] == ["database"]
+    state = json.loads(next(p for p in (run.tmp / "state").iterdir()).read_text())
+    assert [d["kind"] for d in state["defects"]] == ["unverified_reply"]
 
 
-def test_today_self_driving_mode_locks_an_empty_verifiable_objective():
-    """Recorded, not endorsed. `init` has no flag for REQUIRED_KNOWLEDGE or OBJECTIVE_CLAUSES, so on the `handle`
-    path VERIFY receives neither, every proposed check is dropped for covering no clause, and one of the contract's
-    four artifacts is always empty. The step-by-step path, which can supply them, produces a populated one."""
+def test_a_summary_is_refused_however_often_it_is_sent():
+    """What actually stops summarization: a body the phase's merge would take nothing from is never recorded.
+
+    The delivery check alone could not do this — an orchestrator holding the request can copy the line onto anything.
+    """
+    run = driver.Run("test-summary")
+    d = driver.data(run.initiator(["init", *scenarios.init_args()]))
+    delivery = d["messages"]["telemetry"].split("\n", 1)[0]
+
+    for _ in range(3):
+        out = json.loads(run.initiator(
+            ["handle", "--agent", "telemetry", "--reply", f"{delivery}\n\nTelemetry sees elevated errors."]).stdout)
+        assert out["ok"] is False and out["status"] == "ERROR"
+        assert "is not a JSON object" in out["error"]
+        assert "CONVENE needs" in out["error"]
+
+    # and the phase is still open: nothing was recorded for that agent
+    state = json.loads(next(p for p in (run.tmp / "state").iterdir()).read_text())
+    assert state["handle_replies"] == {}
+
+
+def test_the_bar_is_the_shape_not_how_much_the_reply_says():
+    """An empty-but-shaped reply is a legitimate answer and must pass; the same emptiness without the shape is not."""
+    run = driver.Run("test-readable")
+    d = driver.data(run.initiator(["init", *scenarios.init_args()]))
+    delivery = d["messages"]["telemetry"].split("\n", 1)[0]
+
+    def send(agent, body):
+        return json.loads(run.initiator(["handle", "--agent", agent, "--reply", f"{delivery}\n\n{body}"]).stdout)
+
+    assert send("telemetry", '{"agent": "telemetry", "roles": [], "capabilities": []}')["ok"] is True
+    refused = send("database", '{"agent": "database", "summary": "database is healthy"}')
+    assert refused["ok"] is False and "none of the agent-card fields" in refused["error"]
+
+
+def test_today_a_default_self_driving_run_locks_an_empty_verifiable_objective():
+    """Recorded, not endorsed. `handle` accepts --required-knowledge and --objective-clauses, so the self-driving
+    path *can* populate the objective — but nothing asks for them: `init` does not take them, no phase message
+    mentions them, and no `next_command` hint names them. A run that does not know to pass them locks an empty one.
+    """
     self_driven = driver.contract_of(scenarios.split_term_triggers_clarify())["verifiable_objective"]
     assert self_driven == {"owners": {}, "uncovered": [], "checks": []}
 
