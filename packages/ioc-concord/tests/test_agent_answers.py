@@ -345,3 +345,12 @@ def test_the_state_of_an_aborted_run_survives_a_restart(agent):
     b = agent.Agent("cost", store=store)
     assert b.report()["status"] == "aborted" and b.report()["reason"]["reason"] == "version"
     assert b.receive(W.build_cancel("alice", RUN, "version", uid="ca000000-0000-4000-8000-000000000002")).send == []
+
+
+def test_a_resend_of_a_message_of_a_run_the_agent_does_not_know_is_ignored(agent):
+    a = agent.Agent("cost")                                    # it never received the init
+    reply = W.build_init_reply("security", RUN, 0, 100, "plan", "because", 80, "good")
+    step = a.receive(W.build_resend("security", RUN, reply))
+    assert step.events[0]["reason"] == "unknown run" and step.send == [] and a.status() is None
+    score = W.build_score("security", RUN, [("seed-cost", 5, "r")])
+    assert a.receive(W.build_resend("security", RUN, score)).events[0]["reason"] == "unknown run"

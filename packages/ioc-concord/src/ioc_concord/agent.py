@@ -160,6 +160,9 @@ class Agent:
         """Steps 3 to 6 for `doc`. Returns whether its uuid is to be kept: it was processed."""
         attrs, tag = info["attrs"], info["tag"]
         where = {"kind": tag, "from": attrs.get("from"), "run_id": attrs.get("run_id")}
+        if run is None and tag != INIT:          # a message of a run it does not know, such as one carried by a resend
+            step.note("ignored", reason="unknown run", **where)
+            return False
         if attrs.get("version") != PROTOCOL_VERSION:
             step.note("ignored", reason="version", version=attrs.get("version"), **where)
             if tag == INIT:
