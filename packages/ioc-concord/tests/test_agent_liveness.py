@@ -73,7 +73,7 @@ def test_a_timer_that_expires_asks_again_and_the_wait_is_retries_plus_one_timeou
     assert (c["kind"], c["from"], c["reason"], c["agent"]) == ("cancel", "cost", "missing-agent", "security")
     s, rep = a.status(), a.report()
     assert (s["status"], s["outcome"], s["timers"]) == ("aborted", "ABORTED", {}) and a.next_wakeup() is None
-    assert rep["reason"] == {"reason": "missing-agent", "agent": "security", "superseded_by": None}
+    assert rep["reason"] == {"reason": "missing-agent", "agent": "security", "superseded_by": None, "note": None}
     assert a.tick(1000).send == [] and a.due() == []
 
 
@@ -254,7 +254,7 @@ def test_the_reporters_result_reaches_one_agent_but_not_the_other_and_then_the_r
     settle(net, 0)
     legal, sec = net.agents["legal"], net.agents["security"]
     assert (legal.status()["status"], legal.status()["outcome"]) == ("aborted", "ABORTED")      # computed an outcome, but never confirmed
-    assert legal.report()["reason"] == {"reason": "missing-agent", "agent": "cost", "superseded_by": None}
+    assert legal.report()["reason"] == {"reason": "missing-agent", "agent": "cost", "superseded_by": None, "note": None}
     assert (sec.status()["status"], sec.status()["outcome"], sec.report()["status"]) == ("ended", "SUCCESS", "disputed")
     assert counts(net, "cancel").count("legal") == 1 and counts(net, "cancel").count("security") == 1
 

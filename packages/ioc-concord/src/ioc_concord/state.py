@@ -6,7 +6,7 @@
 
     agent state   {"me": id, "runs": {run id: run}, "active": run id or None}
 
-    run           role           "participant" or "initiator"
+    run           role           "participant", or "initiator" for the agent that opened the run without being one of its participants
                   initiator      the agent that opened the run
                   participants   in the order of <participants>
                   params         satisfaction_threshold, eps (millionths), B, timeout, retries
@@ -22,7 +22,8 @@
                   held           the repairs and results that cannot be judged yet, as received, judged again as the state fills
                   expected       the ids of candidates that other messages prove to exist, whose proposal this agent lacks
                   damaged        {author|kind: how many times this agent has asked for a damaged message}
-                  abort          why the run aborted, as {"reason", "agent", "superseded_by"}, or None
+                  abort          why the run aborted, as {"reason", "agent", "superseded_by", "note"}, or None; the note is for the initiator
+                                 that gave up on a version refusal: {"agent", "text"}
                   cancel_sent    whether this agent has sent its cancel (it sends it once)
                   disputed       whether a cancel reached this agent after its run had ended with an outcome
                   status         "active" until the run has ended for this agent, then "ended" or "aborted"
@@ -50,12 +51,15 @@ def item_key(kind, author, item=None):
 
 
 def new_run(me, init, doc):
-    """The run that the parsed init `init` (see wire.parse_message) opens for `me`, with the init text `doc` as received."""
+    """The run that the parsed init `init` (see wire.parse_message) opens for `me`, with the init text `doc`: as received, or as
+    sent when `me` is the initiator. An initiator that is not a participant has the role INITIATOR: it negotiates nothing, and
+    only watches the init replies and the result."""
     params = dict(init["params"])
-    return {"role": PARTICIPANT, "run_id": init["run_id"], "initiator": init["from"], "participants": list(init["participants"]),
+    mine = init["from"] == me
+    return {"role": PARTICIPANT if me in init["participants"] else INITIATOR, "run_id": init["run_id"], "initiator": init["from"], "participants": list(init["participants"]),
             "params": params, "context": init["context"], "x_reject": init["x_reject"], "x_ideal": init["x_ideal"],
-            "schema": init["schema"], "engine": new_engine_state(init["participants"], params), "sent": {},
-            "received": {item_key("init", init["from"]): doc}, "uuids": [init["uuid"]], "outcome": None, "reported": None,
+            "schema": init["schema"], "engine": new_engine_state(init["participants"], params), "sent": {item_key("init", me): doc} if mine else {},
+            "received": {} if mine else {item_key("init", init["from"]): doc}, "uuids": [init["uuid"]], "outcome": None, "reported": None,
             "mismatches": {"sent": [], "received": []}, "timers": {}, "held": [], "expected": [], "damaged": {},
             "abort": None, "cancel_sent": False, "disputed": False,
             "status": RUN_ACTIVE}

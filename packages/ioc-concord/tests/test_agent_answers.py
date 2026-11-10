@@ -273,7 +273,7 @@ def test_a_cancel_ends_the_run_aborted_and_the_agent_passes_it_on_once(agent):
     assert again.send == [] and a.report()["status"] == "aborted"
     rep = a.report()
     assert (rep["outcome"], rep["winner"], rep["scores"], rep["reason"]) == (
-        "ABORTED", None, {}, {"reason": "missing-agent", "agent": "legal", "superseded_by": None})
+        "ABORTED", None, {}, {"reason": "missing-agent", "agent": "legal", "superseded_by": None, "note": None})
 
 
 def test_each_reason_of_a_cancel_is_passed_on_with_its_attributes(agent):

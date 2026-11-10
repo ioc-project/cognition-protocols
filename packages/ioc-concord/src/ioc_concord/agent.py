@@ -25,9 +25,9 @@ import time
 from ioc_concord.engine import add_anchor, add_proposal, add_ratings, evaluate, lacking, parse_candidate_id, timers_enabled
 from ioc_concord.errors import InvalidMessage, StateError
 from ioc_concord.protocol import ABORTED, PROTOCOL_VERSION, format_number
-from ioc_concord.state import PARTICIPANT, RUN_ABORTED, RUN_ACTIVE, RUN_ENDED, active_run, item_key, members, new_agent_state, new_run
-from ioc_concord.wire import (DATA_TAGS, INIT, KIND_OF_TAG, RESEND, build_cancel, build_error, build_init_reply, build_repair,
-                              build_resend, build_result, build_score, check_ok, locate, new_uuid, parse_message, peek)
+from ioc_concord.state import INITIATOR, PARTICIPANT, RUN_ABORTED, RUN_ACTIVE, RUN_ENDED, active_run, item_key, members, new_agent_state, new_run
+from ioc_concord.wire import (DATA_TAGS, ERROR, INIT, KIND_OF_TAG, RESEND, build_cancel, build_error, build_init, build_init_reply,
+                              build_repair, build_resend, build_result, build_score, check_ok, locate, new_uuid, parse_message, peek)
 
 
 class Step:
@@ -122,6 +122,13 @@ class Agent:
         # 2. the uuid is not one already accepted
         if run is not None and uid in run["uuids"]:
             return step.note("ignored", reason="duplicate", **where)
+        # a version refusal of the init is read whatever its version: the initiator relies on its root attributes and its text
+        if (tag == ERROR and run is not None and attrs.get("reason") == "version" and attrs.get("what") == "init"
+                and attrs.get("to") == self.me and run["initiator"] == self.me and sender in run["participants"]):
+            keep = self._on_version_refusal(run, info, step)
+            if keep and uid not in run["uuids"]:
+                run["uuids"].append(uid)
+            return
         # 3 to 6, for the message itself and, in a resend, for the message inside
         keep = self._unwrap(doc, info, run, step) if tag == RESEND else self._accept(doc, info, run, step)
         run = self.state["runs"].get(run_id)             # the init may have started it
@@ -204,13 +211,32 @@ class Agent:
         if self.me not in init["participants"]:
             step.note("ignored", reason="not a participant", **where)
             return False
-        if active_run(self.state) is not None:
+        mine = active_run(self.state)
+        if mine is not None and self._waits_for_replies(mine) and mine["run_id"] > init["run_id"]:
+            # two runs opened at about the same time: the one with the lower run id continues, and this agent joins it
+            self._abort(mine, step, "superseded", superseded_by=init["run_id"])
+        elif mine is not None:
             step.note("ignored", reason="busy", **where)
             self._error(step, init["from"], init["run_id"], "init", "busy", text="I am in another run.")
             return False
         self.state["runs"][init["run_id"]] = new_run(self.me, init, doc)
         self.state["active"] = init["run_id"]
         step.note("joined", initiator=init["from"], participants=init["participants"], run_id=init["run_id"])
+        return True
+
+    def _waits_for_replies(self, run):
+        """Whether this agent opened `run` and still waits for init replies."""
+        return run["initiator"] == self.me and len(run["engine"]["anchors"]) < len(run["engine"]["agents"])
+
+    def _on_version_refusal(self, run, info, step):
+        """A participant refuses the init because of its protocol version: the initiator ends its run `ABORTED` with the reason
+        "version" and sends the cancel, so that the participants that already joined end it too."""
+        where = {"kind": "error", "from": info["attrs"]["from"], "error": "version", "run_id": run["run_id"]}
+        if run["status"] != RUN_ACTIVE:
+            step.note("ignored", reason="run over", **where)
+            return False
+        step.note("refused", text=info["text"], **where)
+        self._abort(run, step, "version", note={"agent": info["attrs"]["from"], "text": info["text"]})
         return True
 
     def _record(self, run, msg, doc, step, resent=False):
@@ -224,6 +250,9 @@ class Agent:
             return self._record_cancel(run, msg, step)
         if run["status"] != RUN_ACTIVE:
             step.note("ignored", reason="run over", **where)
+            return False
+        if run["role"] == INITIATOR and kind not in ("init-reply", "result"):
+            step.note("ignored", reason="not for the initiator", **where)
             return False
         if kind == "repair" and author in run["participants"]:
             return self._record_repair(run, msg, doc, step)
@@ -276,13 +305,13 @@ class Agent:
         self._abort(run, step, msg["reason"], msg["agent"], msg["superseded_by"])
         return True
 
-    def _abort(self, run, step, reason, agent=None, superseded_by=None):
+    def _abort(self, run, step, reason, agent=None, superseded_by=None, note=None):
         """End the run `ABORTED` with `reason`, and send the cancel once. An agent whose run has ended with an outcome keeps it:
         its report is disputed. An aborted run sends no result."""
         why = {"run_id": run["run_id"], "reason": reason, "agent": agent, "superseded_by": superseded_by}
         if run["status"] == RUN_ACTIVE:
             run["status"], run["outcome"], run["abort"] = RUN_ABORTED, ABORTED, {"reason": reason, "agent": agent,
-                                                                                 "superseded_by": superseded_by}
+                                                                                 "superseded_by": superseded_by, "note": note}
             run["timers"], run["held"] = {}, []
             step.note("aborted", **why)
         elif run["status"] == RUN_ENDED:
@@ -370,6 +399,13 @@ class Agent:
         if run["reported"] is not None:
             step.note("ignored", reason="already recorded", **where)
             return True
+        if run["role"] == INITIATOR:        # it holds no copy of the run state to judge the winner by: it takes the result as it is
+            run["reported"] = {"outcome": msg["outcome"], "winning_candidate_id": winner}
+            run["received"][item_key("result", author)] = doc
+            run["status"], run["outcome"], run["timers"] = RUN_ENDED, msg["outcome"], {}
+            step.note("recorded", outcome=msg["outcome"], winner=winner, **where)
+            step.note("ended", outcome=msg["outcome"], run_id=run["run_id"])
+            return True
         if winner not in {c["id"] for c in run["engine"]["pool"]}:
             if run["outcome"] is None:
                 return None
@@ -395,6 +431,8 @@ class Agent:
         the reporter sends its result, any other participant compares the result it holds with its outcome."""
         if run["status"] != RUN_ACTIVE:
             return
+        if run["role"] == INITIATOR:
+            return self._sync_timers(run, step)
         self._replay_held(run, step)
         ev = evaluate(run["engine"])
         if ev["state"] == "done" and run["outcome"] is None:
@@ -452,9 +490,12 @@ class Agent:
         Messages owed in the spec). A batch is owed until nothing in it is lacking; the `candidate` is the first one lacking, which
         is what a request names."""
         out = {}
-        if run["role"] != PARTICIPANT or run["status"] != RUN_ACTIVE:
+        if run["status"] != RUN_ACTIVE:
             return out
         st, me, reporter = run["engine"], self.me, run["participants"][0]
+        if run["role"] == INITIATOR:           # an initiator that does not negotiate is owed the init replies, and no timer runs for the result
+            return {f"init-reply|{a}": {"author": a, "what": "init-reply", "candidate": None} for a in run["participants"]
+                    if a not in st["anchors"]}
 
         def owe(key, author, what, candidate=None):
             out[key] = {"author": author, "what": what, "candidate": candidate}
@@ -501,6 +542,10 @@ class Agent:
         if timers_enabled(run["params"]):
             t["deadline"] = step.now + run["params"]["timeout"]
         step.note("asked", author=t["author"], what=t["what"], candidate=t["candidate"], request=t["requests"], run_id=run["run_id"])
+        if t["what"] == "init-reply" and run["initiator"] == self.me:
+            # an agent that never received the init cannot answer an error: the initiator sends the init again, in a resend
+            step.send.append(build_resend(self.me, run["run_id"], run["sent"][item_key("init", self.me)], uid=self.new_uuid()))
+            return
         self._error(step, t["author"], run["run_id"], t["what"], "missing", candidate=t["candidate"])
 
     def _lacking_keys(self, run):
@@ -599,6 +644,25 @@ class Agent:
     # what the model wrote
     # ------------------------------------------------------------------
 
+    def start(self, participants, context, x_reject, x_ideal, spec, params=None, run_id=None, now=None):
+        """Open a run: build the `<concord-init>`, which the caller broadcasts, and keep it to send again. This agent is the initiator;
+        it is a participant too when it is listed in `participants`, and then it owes an init reply like the others. `spec` is the
+        candidate schema as a dict, `params` any of satisfaction_threshold, eps, B, timeout, retries (see wire.build_init). A fresh
+        run id is made when none is given. Raises StateError when the agent is in a run, and InvalidMessage when the run is not valid."""
+        if active_run(self.state) is not None:
+            raise StateError("start: the agent is in a run already")
+        text = build_init(self.me, participants, context, x_reject, x_ideal, spec, params=params,
+                          run_id=run_id or self.new_uuid(), uid=self.new_uuid())
+        init = parse_message(text)
+        run = self.state["runs"][init["run_id"]] = new_run(self.me, init, text)
+        self.state["active"] = init["run_id"]
+        step = self._step(now)
+        step.send.append(text)
+        step.note("started", participants=init["participants"], run_id=init["run_id"], role=run["role"])
+        self._advance(run, step)
+        self._save()
+        return step
+
     def submit_init_reply(self, run_id, raw_reject, raw_ideal, candidate, rationale, raw, reasoning, now=None):
         """Answer the `init-reply` task: the anchors, the seed candidate with its rationale, and the agent's own score for it with its
         reasoning. Scores are numbers from 0 to 100 with at most 6 decimal places (as text, int or float). Raises InvalidMessage
@@ -685,6 +749,8 @@ class Agent:
         run = self.state["runs"].get(run_id or self.state["active"])
         if run is None:
             return None
+        if run["role"] == INITIATOR:
+            return self._initiator_report(run)
         ev = evaluate(run["engine"])
         done = run["outcome"] not in (None, ABORTED)
         winner = next((c for c in run["engine"]["pool"] if c["id"] == ev["x_star"]), None) if done else None
@@ -709,3 +775,22 @@ class Agent:
                 "scores": ev["scores"] if done else {}, "shortfall": ev["shortfall"] if done else {}, "rounds": ev["t"],
                 "reason": run["abort"], "results_compared": compared,
                 "mismatches": {"sent": len(mismatches["sent"]), "received": list(mismatches["received"])}, "status": status}
+
+    def _initiator_report(self, run):
+        """The report of an initiator that is not a participant: it has no outcome of its own, and learns how the run ended from the
+        result of the reporter. Its status is "unverified", since there is nothing of its own to compare, unless a mismatch error
+        reaches it ("disputed"); "pending" before the result, "aborted" after a cancel or a give-up."""
+        rep, mismatches = run["reported"], run["mismatches"]
+        pool = {c["id"]: c for c in run["engine"]["pool"]}
+        if run["status"] == RUN_ABORTED:
+            status = "aborted"
+        elif mismatches["received"] or run["disputed"]:
+            status = "disputed"
+        else:
+            status = "unverified" if run["status"] == RUN_ENDED else "pending"
+        winner = None
+        if rep is not None and run["status"] != RUN_ABORTED:
+            winner = {"id": rep["winning_candidate_id"], "candidate": pool.get(rep["winning_candidate_id"], {}).get("candidate")}
+        return {"run_id": run["run_id"], "outcome": run["outcome"], "winner": winner, "scores": {}, "shortfall": {}, "rounds": None,
+                "reason": run["abort"], "results_compared": {"reporter": run["participants"][0], "result": rep, "matches": None},
+                "mismatches": {"sent": 0, "received": list(mismatches["received"])}, "status": status}
