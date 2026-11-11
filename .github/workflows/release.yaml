@@ -19,9 +19,16 @@ jobs:
       paths_released: ${{ steps.release.outputs.paths_released }}
       prs: ${{ steps.release.outputs.prs }}
     steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app-token
+        with:
+          app-id: ${{ vars.IOC_AUTOMATION_BOT_APP_ID }}
+          private-key: ${{ secrets.IOC_AUTOMATION_BOT_PRIVATE_KEY }}
+
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
+          token: ${{ steps.app-token.outputs.token }}
           target-branch: main
           config-file: .github/release-config.json
           manifest-file: .github/release-manifest.json
@@ -69,8 +76,15 @@ jobs:
       matrix:
         pr: ${{ fromJson(needs.release-please.outputs.prs) }}
     steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app-token
+        with:
+          app-id: ${{ vars.IOC_AUTOMATION_BOT_APP_ID }}
+          private-key: ${{ secrets.IOC_AUTOMATION_BOT_PRIVATE_KEY }}
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          token: ${{ steps.app-token.outputs.token }}
           ref: ${{ matrix.pr.headBranchName }}
           fetch-depth: 0
 
@@ -138,9 +152,13 @@ jobs:
           PYEOF
 
       - name: Commit catalog update to PR branch
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
           git add docs/ai-catalog.json
           git diff --cached --quiet && exit 0
           git commit -s -m "chore: update ai-catalog.json for new skill versions"
@@ -156,8 +174,15 @@ jobs:
       matrix:
         pr: ${{ fromJson(needs.release-please.outputs.prs) }}
     steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app-token
+        with:
+          app-id: ${{ vars.IOC_AUTOMATION_BOT_APP_ID }}
+          private-key: ${{ secrets.IOC_AUTOMATION_BOT_PRIVATE_KEY }}
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          token: ${{ steps.app-token.outputs.token }}
           ref: ${{ matrix.pr.headBranchName }}
 
       - name: Regenerate CONCORD-SPEC.html if spec changed in this PR
@@ -172,9 +197,13 @@ jobs:
             -o docs/protocols/concord/spec/CONCORD-SPEC.html
 
       - name: Commit rendered HTML to PR branch
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
           git add docs/protocols/concord/spec/CONCORD-SPEC.html
           git diff --cached --quiet && exit 0
           git commit -s -m "chore(concord): regenerate CONCORD-SPEC.html"
