@@ -27,19 +27,24 @@ bundle_tool = _bundle_tool()
 CONFIG = tomllib.loads((ROOT / "tools" / "bundle.toml").read_text())
 
 
-@lru_cache(maxsize=None)
-def bundled(module):
-    """{script path: the module as it exists inside that script}: the bundled block, run on its own.
+# The modules of the library that a script can bundle, in dependency order. They are those of the library as it is on disk: not the
+# list of tools/bundle.toml, which says what the scripts carry, at the revision they are pinned to.
+MODULES = ["errors", "protocol", "xmlutil", "schema", "engine", "wire", "store", "state", "liveness", "tasks", "report", "agent"]
 
-    The block is rendered whole (no tree shaking), so every name the tests call is there. The script carries the same code
-    minus what it never reaches, and test_bundled_scripts checks that it is exactly that. Scripts that bundle the same block are
-    tested once (under the name of the first): running the same code twice would only slow the tests down."""
+
+@lru_cache(maxsize=None)
+def _bundles():
+    """{script path: the library as it exists inside that script}: the bundled block of every script, run on its own.
+
+    The library is the one on disk, with every module of it (MODULES), not the revision the scripts are pinned to: these tests are
+    about the library as it is being written, and `just check-sync` is about the scripts. The block is rendered whole (no tree
+    shaking), so every name the tests call is there. Scripts that would carry the same block are tested once (under the name of the
+    first): running the same code twice would only slow the tests down."""
     out, seen = {}, set()
     for lib in CONFIG["library"]:
         for target in lib["target"]:
-            if module not in target["modules"]:
-                continue
-            block = bundle_tool.render(lib, target, (ROOT / target["file"]).read_text(), shake=False)
+            block = bundle_tool.render({**lib, "ref": bundle_tool.WORKTREE}, {**target, "modules": MODULES},
+                                       (ROOT / target["file"]).read_text(), shake=False)
             if block in seen:
                 continue
             seen.add(block)
@@ -47,6 +52,11 @@ def bundled(module):
             exec(compile(block, target["file"], "exec"), ns.__dict__)
             out[target["file"]] = ns
     return out
+
+
+def bundled(module):
+    """{script path: the module as it exists inside that script}, for a module of the library that a script can bundle."""
+    return _bundles() if module in MODULES else {}
 
 
 @lru_cache(maxsize=None)

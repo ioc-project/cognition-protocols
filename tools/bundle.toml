@@ -1,14 +1,17 @@
 # Which modules of a library are bundled into which self-contained scripts. Read by tools/bundle.py.
-# Edit the library, then run `just sync`; CI runs `just check-sync`.
+# A library is pinned to a git revision (`ref`: a commit id or a tag, on main): the scripts carry that version of it, so the library
+# can change without them. To adopt a newer library: change `ref` (and `modules` if the library's modules changed), run `just sync`,
+# update the skill, and let CI run `just check-sync`. `just sync --ref worktree` tries a library that is not committed yet.
 
 [[library]]
 name = "ioc_concord"
 path = "packages/ioc-concord"          # holds pyproject.toml (the version) and src/<name>/
+ref = "ioc-concord-v0.1.0"            # the release the scripts carry; a tag, or a commit id of main
 
 [[library.target]]
 file = "protocols/concord/skills/concord-initiator/scripts/concord_initiator.py"
-modules = ["errors", "protocol", "xmlutil", "schema", "engine", "wire", "store", "state", "liveness", "tasks", "report", "agent"]
+modules = ["errors", "xmlutil", "schema", "engine", "wire", "store", "state"]
 
 [[library.target]]
 file = "protocols/concord/skills/concord-receiver/scripts/concord_receiver.py"
-modules = ["errors", "protocol", "xmlutil", "schema", "engine", "wire", "store", "state", "liveness", "tasks", "report", "agent"]
+modules = ["errors", "xmlutil", "schema", "engine", "wire", "store", "state"]

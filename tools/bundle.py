@@ -11,6 +11,12 @@ install and the library stays the only source.
 
     python3 tools/bundle.py            write every bundled block (run it after editing a library)
     python3 tools/bundle.py --check    exit 1 if a script differs from its library, change nothing (for CI)
+    python3 tools/bundle.py --ref REV  bundle the library as it is at the git revision REV instead of its pin
+                                       (`--ref worktree`: the files on disk, for trying a library that is not committed yet)
+
+A library is pinned to a git revision, a commit id or a tag (`ref` in tools/bundle.toml): the scripts carry that version of the
+library, not whatever is on disk, so the library can change without the scripts. To adopt a newer library, change the pin and run
+`just sync`. The pin must be a commit that is on `main` (or a tag), so that a fresh clone has it.
 
 tools/bundle.toml says which modules go into which script. A script marks where its block goes with two lines:
 
@@ -30,16 +36,41 @@ import argparse
 import ast
 import hashlib
 import re
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = Path(__file__).resolve().parent / "bundle.toml"
+WORKTREE = "worktree"      # as a `ref`: read the library from the files on disk, not from a git revision
 
 
 class BundleError(Exception):
     pass
+
+
+class MissingSource(BundleError):
+    """A file that is not in the library (on disk, or at its pinned revision)."""
+
+
+def read_source(lib, rel):
+    """The text of `rel`, a path from the repository root, in the revision that `lib` is pinned to (`ref`), or on disk when it is not
+    pinned or its ref is `worktree`. Raises BundleError when the revision or the file is not there."""
+    ref = lib.get("ref")
+    if not ref or ref == WORKTREE:
+        try:
+            return (ROOT / rel).read_text()
+        except FileNotFoundError:
+            raise MissingSource(f"{lib['name']}: no such file ({rel})")
+    git = ["git", "-C", str(ROOT)]
+    if subprocess.run(git + ["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], capture_output=True).returncode != 0:
+        raise BundleError(f"{lib['name']} is pinned to {ref}, which this clone does not have. Fetch the history and the tags "
+                          "(`git fetch --tags --unshallow`), or check `ref` in tools/bundle.toml")
+    shown = subprocess.run(git + ["show", f"{ref}:{rel}"], capture_output=True, text=True)
+    if shown.returncode != 0:
+        raise MissingSource(f"{lib['name']}: no such file ({rel}) at {ref}")
+    return shown.stdout
 
 
 def marker_re(name):
@@ -88,10 +119,13 @@ class Module:
 
     def __init__(self, lib, name):
         self.lib, self.name = lib, name
-        self.path = ROOT / lib["path"] / "src" / lib["name"] / f"{name}.py"
-        if not self.path.is_file():
-            raise BundleError(f"{lib['name']}.{name}: no such module ({self.path.relative_to(ROOT)})")
-        text = self.path.read_text()
+        rel = (Path(lib["path"]) / "src" / lib["name"] / f"{name}.py").as_posix()
+        try:
+            text = read_source(lib, rel)
+        except MissingSource:
+            at = f" at {lib['ref']}" if lib.get("ref") not in (None, WORKTREE) else ""
+            raise BundleError(f"{lib['name']}.{name}: no such module ({rel}{at})")
+        self.path = ROOT / rel
         self.tree = ast.parse(text, filename=str(self.path))
         self.where = f"{lib['name']}.{name}"
         self.imports, self.deps, self.defined = {}, {}, []   # imports: source -> the names it binds
@@ -217,7 +251,7 @@ def reachable(mods, script_names):
 
 
 def version_of(lib):
-    return tomllib.loads((ROOT / lib["path"] / "pyproject.toml").read_text())["project"]["version"]
+    return tomllib.loads(read_source(lib, f"{lib['path']}/pyproject.toml"))["project"]["version"]
 
 
 def render(lib, target, script_text, shake=None):
@@ -261,9 +295,13 @@ def render(lib, target, script_text, shake=None):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--check", action="store_true", help="exit 1 if a script differs from its library; change nothing")
+    ap.add_argument("--ref", help="bundle the library at this git revision instead of its pin (`worktree`: the files on disk)")
     ap.add_argument("--config", type=Path, default=CONFIG)
     args = ap.parse_args(argv)
     config = tomllib.loads(args.config.read_text())
+    if args.ref:
+        for lib in config["library"]:
+            lib["ref"] = args.ref
     drifted = []
     try:
         for lib in config["library"]:
