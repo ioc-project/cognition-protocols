@@ -40,3 +40,9 @@ class StateError(ConcordError):
     """A saved state cannot be loaded."""
 
     code = "state_error"
+
+
+class MissingState(StateError):
+    """Nothing has been saved yet. It is not a fault, unlike a saved state that cannot be read: only this one means "start empty"."""
+
+    code = "missing_state"

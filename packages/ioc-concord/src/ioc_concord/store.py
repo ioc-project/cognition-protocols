@@ -10,14 +10,14 @@ import os
 from pathlib import Path
 from typing import Protocol
 
-from ioc_concord.errors import StateError
+from ioc_concord.errors import MissingState, StateError
 
 
 class Store(Protocol):
     """What a state store must offer."""
 
     def load(self) -> dict:
-        """The saved state. Raises StateError if there is none or it cannot be read."""
+        """The saved state. Raises MissingState if nothing has been saved, and StateError if what is saved cannot be read."""
 
     def save(self, state: dict) -> None:
         """Replace the saved state with `state`."""
@@ -37,7 +37,7 @@ class FileStore:
 
     def load(self):
         if not self.path.exists():
-            raise StateError(f"no state file at {self.path}")
+            raise MissingState(f"no state file at {self.path}")
         try:
             return json.loads(self.path.read_text(encoding="utf-8"))
         except ValueError as exc:
