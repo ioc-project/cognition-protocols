@@ -36,7 +36,7 @@ class MemStore:
 
     def load(self):
         if self.text is None:
-            raise self.agent_mod.StateError("no state")
+            raise self.agent_mod.MissingState("no state")
         return json.loads(self.text)
 
     def save(self, state):
@@ -617,3 +617,17 @@ def test_a_repair_run_that_spends_its_budget_ends_in_best_effort(agent):
         s, rep = net.agents[name].status(), net.agents[name].report()
         assert (s["outcome"], s["x_star"], s["status"], rep["rounds"]) == ("BEST_EFFORT", "seed-cost", "ended", 1)
         assert rep["shortfall"] == {"security": 300_000} and rep["status"] == "confirmed"
+
+
+def test_a_saved_state_that_cannot_be_read_is_an_error_and_never_a_fresh_start(agent):
+    for text in ("{oops", "[]", "null", "5"):
+        store = MemStore(agent)
+        store.text = text
+        if text.startswith("{"):
+            def load(text=text):
+                raise agent.StateError("state file is not valid JSON")
+            store.load = load
+        with pytest.raises(agent.StateError) as e:
+            agent.Agent("cost", store=store)
+        assert not isinstance(e.value, agent.MissingState), text
+    assert agent.Agent("cost", store=MemStore(agent)).status() is None                  # nothing saved: a fresh start

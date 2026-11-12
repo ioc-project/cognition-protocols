@@ -133,14 +133,14 @@ class Chaos:
 
 
 class MemStore:
-    """What a file would keep: the JSON of the state. It raises the StateError of the implementation under test."""
+    """What a file would keep: the JSON of the state. It raises the MissingState of the implementation under test."""
 
     def __init__(self, agent_mod):
         self.agent_mod, self.text = agent_mod, None
 
     def load(self):
         if self.text is None:
-            raise self.agent_mod.StateError("none")
+            raise self.agent_mod.MissingState("none")
         return json.loads(self.text)
 
     def save(self, state):
