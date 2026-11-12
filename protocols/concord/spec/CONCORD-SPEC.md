@@ -4,7 +4,7 @@ Version 0.1.0 <!-- x-release-please-version -->
 
 ## Abstract
 
-CONCORD is a multi-agent negotiation protocol that produces a single outcome satisfying agents with different, potentially conflicting criteria. Given a set of participant agents and a shared candidate schema, the protocol iteratively proposes, scores, and repairs candidates until either every agent clears a satisfaction threshold (SUCCESS) or a budget of repair rounds is exhausted (BEST_EFFORT). If a participant stops answering, a participant refuses the run because it speaks another protocol version, a participant sends an invalid message, or the run is cancelled, it ends in error (ABORTED) for the agents that are still running.
+CONCORD is a multi-agent negotiation protocol that produces a single outcome satisfying agents with different, potentially conflicting criteria. Given a set of participant agents and a shared candidate schema, the protocol iteratively proposes, scores, and repairs candidates until either every agent clears a satisfaction threshold (SUCCESS) or a budget of repair rounds is exhausted (BEST_EFFORT). If a participant stops answering, a participant refuses the run because it speaks another protocol version, or the run is cancelled, it ends in error (ABORTED) for the agents that are still running.
 
 ## Overview
 
@@ -58,7 +58,7 @@ These are supplied once at run start and are immutable for the run. The second c
 | `x_reject` | `anchors/x_reject` | yes | — | Outcome description anchoring the bottom (worst) of each participant's scale |
 | `x_ideal` | `anchors/x_ideal` | yes | — | Outcome description anchoring the top (best) of each participant's scale |
 
-`satisfaction_threshold` and `eps` are plain decimal numbers with at most 6 decimal places, written with digits and an optional decimal point (no exponent); the range in the table is checked on the value as written.
+`satisfaction_threshold` and `eps` are written as numbers in the form given in [Numbers](#numbers), and the range in the table is checked on the value read from that text.
 
 `x_reject` and `x_ideal` must describe outcome states ("error rate returns to 0"), not proposals or mechanisms, as an anchor that names an action biases the scoring scale.
 
@@ -84,7 +84,7 @@ START
 
 SUCCESS or BEST_EFFORT  →  the reporter (the first participant in `<participants>`) sends its <concord-result>;
                            the others wait for it and compare it with their own outcome
-an agent stays silent after retries requests, a message is invalid, an init is refused for its version, or the run is cancelled
+an agent stays silent after retries requests, an init is refused for its version, or the run is cancelled
                            →  every agent still running aborts (ABORTED), each telling the others with a <concord-cancel>
 ```
 
@@ -116,9 +116,9 @@ Participants always report raw scores on a personal 0–100 scale anchored at `r
 s = clamp((raw - raw_reject) / (raw_ideal - raw_reject), 0.0, 1.0)
 ```
 
-Raw scores and anchors are plain decimal numbers from 0 to 100, written with digits and an optional decimal point and at most 6 decimal places (`82` or `82.0`); a message with a value outside that range, or written in another form (an exponent, `NaN`, `infinity`), is invalid (see [Invalid messages](#invalid-messages)). A normalized score can still fall outside [0,1] when a raw score lies beyond an anchor, and is then clamped. Only raw scores travel in messages. Participants must never send a normalized value as their own raw rating.
+Raw scores and anchors are numbers from 0 to 100 in the form given in [Numbers](#numbers); a message with a value outside that range, or written in another form, is invalid (see [Invalid messages](#invalid-messages)). A normalized score can still fall outside [0,1] when a raw score lies beyond an anchor, and is then clamped. Only raw scores travel in messages. Participants must never send a normalized value as their own raw rating.
 
-**Rounding.** Every agent must reach the same decisions, so the arithmetic is fixed. Each normalized score is computed exactly from the decimal values of the message, as a rational number, and then rounded to 6 decimal places, half up. `τ` and `eps` have at most 6 decimal places (see [Configuration Parameters](#configuration-parameters)), so they are exact. Every comparison below (floor, leximin vectors, ties, ACCEPT, SUCCESS and the bottleneck) uses the rounded values, and `i[k] + eps` is computed on them. An implementation compares them as integers in millionths, so that no floating-point error can change a decision.
+**Rounding.** Every agent must reach the same decisions, so the arithmetic is fixed. Each normalized score is computed exactly from the decimal values of the message, as a rational number, and then rounded to 6 decimal places, half up. `τ` and `eps` have at most 6 decimal places (see [Numbers](#numbers)), so they are exact. Every comparison below (floor, leximin vectors, ties, ACCEPT, SUCCESS and the bottleneck) uses the rounded values, and `i[k] + eps` is computed on them. An implementation compares them as integers in millionths, so that no floating-point error can change a decision.
 
 ### Candidate Selection (SELECT)
 
@@ -171,9 +171,9 @@ The participant with the lowest normalized score on `x*` is the bottleneck. Ties
 |---|---|
 | `SUCCESS` | `floor(x*) >= τ` AND every participant has rated `x*` |
 | `BEST_EFFORT` | `floor(x*) < τ` AND `t >= B` (budget exhausted) |
-| `ABORTED` | An agent stays silent after `retries` requests (see [Timeouts and abort](#timeouts-and-abort)); a participant refuses the init because of its protocol version (see [Version](#version)); an agent receives an invalid message (see [Invalid messages](#invalid-messages)); or the run is cancelled (see `<concord-cancel>`) |
+| `ABORTED` | An agent stays silent after `retries` requests (see [Timeouts and abort](#timeouts-and-abort)); a participant refuses the init because of its protocol version (see [Version](#version)); or the run is cancelled (see `<concord-cancel>`) |
 
-Each participant computes its outcome from its own copy of the run state, and the reporter's `<concord-result>` confirms it (see [`<concord-result>`](#concord-result)). A reader that is not a participant learns how the run ended from that message. An aborted run has no outcome to confirm: an agent that aborts sends no result. An outcome is final for the agent that holds it: a later cancel never changes it.
+Each participant computes its outcome from its own copy of the run state, and the reporter's `<concord-result>` confirms it (see [`<concord-result>`](#concord-result)). A reader that is not a participant learns how the run ended from that message. An aborted run has no outcome to confirm: an agent that aborts sends no result. A run has ended for a participant that is not the reporter when it has its outcome and holds the reporter's result, and for the reporter when it has sent its result. The outcome of an ended run is final: a later cancel never changes it. Before that an agent has an outcome but is still running, and if it gives up it ends `ABORTED`.
 
 ### Run report
 
@@ -186,7 +186,7 @@ The report of a run is not a message: nothing is sent. It is complete once the c
 | final scores | Each participant's normalized score on `x*` |
 | shortfall | Each participant below τ, and by how much; empty for `SUCCESS` |
 | rounds | The number of repair rounds used |
-| reason | For `ABORTED` only: "missing-agent" with the agent that was named, "invalid" with the agent that sent the message, "superseded", or "version" (the initiator also gives the agent and the two versions) |
+| reason | For `ABORTED` only: "missing-agent" with the agent that was named, "superseded", or "version" (the initiator also gives the agent and the two versions) |
 | results compared | The reporter's result and whether it matches this one (for the reporter, its own result); the mismatch errors sent and received (see `<concord-result>`) |
 | status | `confirmed`, `unverified` or `disputed`, as below |
 
@@ -211,6 +211,10 @@ Every message carries these attributes on its root element:
 | `check` | `<concord-init>`, `<concord-init-reply>`, `<concord-repair>`, `<concord-score>`, `<concord-result>` | Integrity fingerprint of the document (see [Integrity check](#integrity-check)) |
 
 An agent id, in `from`, `to`, `agent` and `<participants>`, the initiator's included, is 1 to 64 ASCII characters, each a letter, a digit, `_` or `-`. `run_id` and `uuid` are UUIDs written in lowercase hexadecimal, with hyphens. In the examples, `RUNID` and `OTHER-RUNID` stand for a run id.
+
+### Numbers
+
+A number in a message (a raw score, an anchor, `satisfaction_threshold`, `eps`) is written as one to three digits, optionally followed by a decimal point and one to six digits: `[0-9]{1,3}(\.[0-9]{1,6})?`. The digits are the ASCII characters `0` to `9`. `82`, `82.0`, `0.5` and `007` are valid. `.5`, `82.`, `82.1234567`, `+5`, `-0`, `1e2`, `NaN`, a number with a space or an underscore, and non-ASCII digits are not. The value is read from this text exactly, as a decimal, and a range is checked on that value: 0 to 100 for a score or an anchor, above 0 and at most 1 for `τ`, above 0 for `eps`.
 
 ### `<concord-init>`
 
@@ -263,7 +267,9 @@ If init replies are missing, the initiator sends `<concord-init>` again (see [Ti
   {"enum": ["option A", "option B", "option C"]}
   ```
 
-A schema needs a `description` or an `enum`. The supported keywords are `type` (only `"string"`), `enum`, `description`, `title`, `pattern` (a regular expression in the ECMA 262 syntax, used with the `u` flag; the candidate matches if the expression is found anywhere in it, unless it is anchored with `^` and `$`), `minLength` and `maxLength` (counted in Unicode code points). Any other keyword is refused when the run is created, so a rule is never silently left unenforced. The JSON is ordinary XML text: `<`, `>` and `&` inside it are escaped, a `"` is not.
+A schema needs a `description` or an `enum`. The supported keywords are `type` (only `"string"`), `enum`, `description`, `title`, `pattern` (a regular expression of the subset below), `minLength` and `maxLength` (counted in Unicode code points). Any other keyword is refused when the run is created, so a rule is never silently left unenforced. The JSON is ordinary XML text: `<`, `>` and `&` inside it are escaped, a `"` is not.
+
+A `pattern` uses only this subset, so that every agent reads it the same way, whatever its language. It is made of literal characters; character classes `[…]` with literal characters and ranges, where a `^` right after the `[` negates the class; groups `( )` and `(?: )`; alternation `|`; the quantifiers `*`, `+`, `?`, `{n}`, `{n,}` and `{n,m}`; and the anchors `^` and `$`. A backslash either escapes one punctuation character so that it stands for itself (`\.`, `\\`, `\-`), or forms `\d` (`[0-9]`), `\w` (`[A-Za-z0-9_]`) or `\s` (space, tab, carriage return, line feed). A `.` is any character except carriage return and line feed. `^` is the start of the candidate and `$` is its end; `$` does not match before a final line feed. The candidate matches if the expression is found anywhere in it, unless it is anchored, and characters are Unicode code points. Anything else is outside the subset: lookahead and lookbehind, backreferences, named groups, `\b`, `\p{…}`, `\u` escapes, and flags of any kind. A pattern outside the subset is refused like an unsupported keyword.
 
 ### `<concord-init-reply>`
 
@@ -311,7 +317,7 @@ Sent by the bottleneck: a repair proposal, with its own score for the new candid
 
 `id` is `r<N>-<agent>`. The proposal and the proposer's score travel together and cannot be separated. The other participants score the new candidate in their own `<concord-score>` messages. A repair may propose a candidate that is already in the pool, for instance when the bottleneck holds that its earlier proposal is right and needs to argue it better. Its rationale then says so and gives the new arguments.
 
-Only the bottleneck of the round sends a repair, and only when one is owed: the incumbent's floor is below τ and `t < B`. A repair from any other agent, or when none is owed, is invalid (see [Invalid messages](#invalid-messages)).
+Only the bottleneck of the round sends a repair, and only when one is owed: the incumbent's floor is below τ and `t < B`. A repair from any other agent, or when none is owed, is ignored (see [Invalid messages](#invalid-messages)).
 
 ### `<concord-score>`
 
@@ -330,7 +336,7 @@ Sent by each participant: its scores on the candidates of the others that it has
 </concord-score>
 ```
 
-Every participant rates every candidate in the pool on the same raw 0–100 scale used at anchoring. It rates its own candidates inside the proposal, in the init reply or the repair, and the others' in `<concord-score>`. A score message covers the candidates of the others that the sender has not rated yet: once the init replies are in it holds one entry per seed of another participant, and after a repair it holds a single entry, for the new candidate. A `<concord-score>` never covers a candidate its sender proposed: such a message is invalid. Reasoning and rationale text is the only channel through which a participant's private domain knowledge reaches the other participants, so participants should state everything relevant, including evidence against a candidate. For the same reason, everything a participant writes in a message is read by every agent of the run, so a participant must not write what it needs to keep private.
+Every participant rates every candidate in the pool on the same raw 0–100 scale used at anchoring. It rates its own candidates inside the proposal, in the init reply or the repair, and the others' in `<concord-score>`. A score message covers the candidates of the others that the sender has not rated yet: once the init replies are in it holds one entry per seed of another participant, and after a repair it holds a single entry, for the new candidate. A `<concord-score>` never covers a candidate its sender proposed: an entry for one is ignored. Reasoning and rationale text is the only channel through which a participant's private domain knowledge reaches the other participants, so participants should state everything relevant, including evidence against a candidate. For the same reason, everything a participant writes in a message is read by every agent of the run, so a participant must not write what it needs to keep private.
 
 ### `<concord-result>`
 
@@ -361,7 +367,7 @@ The sections follow the path of a message and of a missing one: first the order 
 
 An agent handles a message in this order, and stops at the first step that rejects it:
 
-1. The run is known, the sender is a participant of the run or its initiator, and the sender is not the agent itself: on a broadcast channel an agent hears its own messages, and ignores them. A `<concord-init>` for a run the agent does not know is not rejected here: it goes through steps 3 to 5 first, and the agent accepts the run only if it passes (see [One run at a time](#one-run-at-a-time)).
+1. The run is known, the sender is a participant of the run or its initiator, and the sender is not the agent itself: on a broadcast channel an agent hears its own messages, and ignores them. Anything that is not a CONCORD message, because it does not parse or its root element is not one of these, is ignored here too. A `<concord-init>` for a run the agent does not know is not rejected here: it goes through steps 3 to 5 first, and the agent accepts the run only if it passes (see [One run at a time](#one-run-at-a-time)).
 2. The `uuid` is not one the agent has accepted.
 3. The `version` is its own. The one exception is a `<concord-error reason="version">`, which is read whatever its version (see [Version](#version)).
 4. The `check` is correct, for the messages that carry one.
@@ -400,7 +406,7 @@ Every agent that receives a cancel for its run and has not sent one yet does the
 
 An agent whose run has already ended with an outcome, and that receives a cancel, keeps its outcome and sends its own cancel once, as above. Its report is `disputed` (see [Run report](#run-report)), since it cannot tell whether the other agents ended in the same way.
 
-`ABORTED` certifies no candidate. A data message that arrives after an abort is ignored. When the network fails, for instance when the centre of a star stops, the agents are cut off from each other, and each ends its run on its own timers.
+`ABORTED` certifies no candidate. A data message that arrives after the run has ended or aborted is ignored. When the network fails, for instance when the centre of a star stops, the agents are cut off from each other, and each ends its run on its own timers.
 
 A timer is a running process: an implementation must keep one running while the agent waits.
 
@@ -436,11 +442,11 @@ The check detects accidental change, such as text shortened or reworded while an
 
 ### Invalid messages
 
-It is the author's responsibility to validate a message before it stores and sends it. A candidate must satisfy the candidate schema, `raw_ideal` must exceed `raw_reject`, and every raw score and anchor must be a plain decimal number from 0 to 100. Any message is invalid when its `uuid`, or a `reply_to`, `ref` or `superseded_by` it carries, is not a UUID in lowercase hexadecimal with hyphens, or when an agent id in its `to` or `agent` attribute does not follow the rule of [Attributes of messages](#attributes-of-messages). A message whose `run_id` is not such a UUID names no run the agent knows, and is ignored at the first step of the [Order of checks](#order-of-checks). A `<proposal>` is invalid when its `id` is not `seed-<from>` in an init reply, or not `r<N>-<from>` in a repair with `N` the number of the repair round (see [Candidate ID Scheme](#candidate-id-scheme)). A `<concord-repair>` is also invalid when its sender is not the bottleneck of the round, or when no repair is owed (see [`<concord-repair>`](#concord-repair)). A receiver whose copy of the run state is incomplete first asks for the messages it lacks before it judges a repair. A `<concord-score>` is invalid when it rates a candidate its sender proposed or rates the same candidate twice. A rating of a candidate the receiver does not hold is not invalid: the proposal was lost (see [Lost messages](#lost-messages)). A `<concord-init>` is invalid when it breaks a rule of [Configuration Parameters](#configuration-parameters) or the candidate schema rules: fewer than 2 participants or a repeated one, an agent id that does not follow the rule of [Attributes of messages](#attributes-of-messages), a number that is not in the form given in [Configuration Parameters](#configuration-parameters), a value out of its range, a missing required element, or an unsupported schema keyword. A `<concord-result>` is invalid when its sender is not the reporter, when its `outcome` is neither `SUCCESS` nor `BEST_EFFORT`, or when its `winning_candidate_id` is not a candidate of the run; a receiver whose copy of the run state is incomplete first asks for the messages it lacks before it judges the winner. A `<concord-error>` or `<concord-resend>` that does not follow its schema is dropped: it is not recorded, nobody answers it and it aborts nothing, and the message inside a `<concord-resend>` follows the rules of its own kind. A `<concord-cancel>` is invalid when its `reason` is not `superseded`, `version`, `missing-agent` or `invalid`, when its `reason` needs an attribute that is missing (`superseded_by` for `superseded`, `agent` for `missing-agent` and `invalid`), or when its `agent` is not a participant of the run (for `reason="invalid"`, a participant or the initiator). A message that fails validation is not stored and not sent: the author creates it again. If a message arrives changed, the receiver's `check` catches it (see [Integrity check](#integrity-check)).
+It is the author's responsibility to validate a message before it stores and sends it, so an invalid message should never reach a receiver. A candidate must satisfy the candidate schema, `raw_ideal` must exceed `raw_reject`, and every raw score and anchor must be a number from 0 to 100 in the form given in [Numbers](#numbers). Any message is invalid when its `uuid`, or a `reply_to`, `ref` or `superseded_by` it carries, is not a UUID in lowercase hexadecimal with hyphens, or when an agent id in its `to` or `agent` attribute does not follow the rule of [Attributes of messages](#attributes-of-messages). A message whose `run_id` is not such a UUID names no run the agent knows, and is ignored at the first step of the [Order of checks](#order-of-checks). A `<proposal>` is invalid when its `id` is not `seed-<from>` in an init reply, or not `r<N>-<from>` in a repair with `N` the number of the repair round (see [Candidate ID Scheme](#candidate-id-scheme)). A `<concord-repair>` is invalid when its sender is not the bottleneck of the round, or when no repair is owed (see [`<concord-repair>`](#concord-repair)). A receiver whose copy of the run state is incomplete first asks for the messages it lacks before it judges a repair. In a `<concord-score>`, an entry that rates a candidate its sender proposed, or a candidate the sender has already rated, is ignored, and the other entries are kept. A rating of a candidate the receiver does not hold is not invalid: the proposal was lost (see [Lost messages](#lost-messages)). A `<concord-init>` is invalid when it breaks a rule of [Configuration Parameters](#configuration-parameters) or the candidate schema rules: fewer than 2 participants or a repeated one, an agent id that does not follow the rule of [Attributes of messages](#attributes-of-messages), a number that is not in the form given in [Numbers](#numbers), a `pattern` outside the subset of [Candidate schema](#candidate-schema), a value out of its range, a missing required element, or an unsupported schema keyword. A `<concord-result>` is invalid when its sender is not the reporter, when its `outcome` is neither `SUCCESS` nor `BEST_EFFORT`, or when its `winning_candidate_id` is not a candidate of the run; a receiver whose copy of the run state is incomplete first asks for the messages it lacks before it judges the winner. A `<concord-error>` or `<concord-resend>` that does not follow its schema is dropped: it is not recorded, nobody answers it and it aborts nothing, and the message inside a `<concord-resend>` follows the rules of its own kind. A `<concord-cancel>` is invalid when its `reason` is not `superseded`, `version` or `missing-agent`, when its `reason` needs an attribute that is missing (`superseded_by` for `superseded`, `agent` for `missing-agent`), or when its `agent` is not a participant of the run. A message that fails validation is not stored and not sent: the author creates it again. If a message arrives changed, the receiver's `check` catches it (see [Integrity check](#integrity-check)).
 
-The receiver validates what it receives as well, which costs little. An invalid message does not get better with time, so waiting for it again would only delay the end. A receiver that is in the run and finds a message invalid, although it passed its check, does not record it and aborts at once: it ends its run with `ABORTED` and the reason "invalid", stops its timers and sends `<concord-cancel reason="invalid" agent="X">`, with the id of the author, which every agent passes on as described under [Timeouts and abort](#timeouts-and-abort).
+The receiver validates what it receives as well, which costs little. A message that is invalid, although it passed its check, is ignored: it is not recorded, nobody answers it and it aborts nothing. The message stays owed to the receiver, whose timer asks for it again, and the run ends like for any silent agent if no valid message comes (see [Timeouts and abort](#timeouts-and-abort)). Since every author validates before it sends, this happens only with an agent that does not follow the protocol, or with agents that disagree on a rule. A receiver whose copy of the run state is incomplete first asks for the messages it lacks before it judges a repair or a result.
 
-An invalid `<concord-init>` is the one case in which the receiver is not in the run: it does not record the init and does not join. It sends `<concord-error what="init" reason="invalid">` to the author, with the reason in the text of the error. Nobody answers this error. The initiator ends its run the same way when it receives it from a participant of its run: `ABORTED` with the reason "invalid", naming itself, and a `<concord-cancel reason="invalid" agent="X">` so that the participants that already joined end it too.
+An invalid `<concord-init>` is the one invalid message that gets an answer: the receiver does not join, and sends `<concord-error what="init" reason="invalid">` to the author, with the reason in the text of the error. Nobody answers it, and the initiator does not act on it: its timer sends the init again, like for any participant that stays silent.
 
 ### Version
 
@@ -479,7 +485,7 @@ Reports a problem with a message. It mostly asks for the message to be sent agai
 
 Besides the attributes above, an error carries the common attributes; its `uuid` is what the re-send names in `reply_to`. Each `<concord-error>` is a new transmission with its own new `uuid`, also when it repeats an earlier request after a timeout, since a receiver drops a `uuid` it has already accepted. The author answers each one with a `<concord-resend>` that names that `uuid` in `reply_to`. The text inside is optional and for readers only; for `reason="invalid"` it states why the message was not recorded, and for `reason="version"` it gives the two versions.
 
-Only the author answers an error, and every other agent ignores it, except for `reason="mismatch"`, which every agent reads. The author sends the stored original, word for word, wrapped in a `<concord-resend>` whose `reply_to` is the `uuid` of the error. The exceptions are `reason="mismatch"`, `reason="busy"`, `reason="invalid"` and `reason="version"`, which nobody answers: they only inform the author (the initiator acts on `version`, see [Version](#version), and on `invalid`, see [Invalid messages](#invalid-messages)). In the other direction, a `<concord-result>` that its author has not sent yet is sent now, as there is no stored original (see [`<concord-result>`](#concord-result)).
+Only the author answers an error, and every other agent ignores it, except for `reason="mismatch"`, which every agent reads. The author sends the stored original, word for word, wrapped in a `<concord-resend>` whose `reply_to` is the `uuid` of the error. The exceptions are `reason="mismatch"`, `reason="busy"`, `reason="invalid"` and `reason="version"`, which nobody answers: they only inform the author (the initiator acts on `version`, see [Version](#version)). In the other direction, a `<concord-result>` that its author has not sent yet is sent now, as there is no stored original (see [`<concord-result>`](#concord-result)).
 
 An agent sends each data message (init, init reply, repair, score, result) once and keeps it. It may re-send only that stored original and never writes a new version of a message it has already sent. A receiver that has recorded a message ignores a different one from the same author for the same item (an init reply; a score for the same candidate; a repair with the same id): the first one recorded stands.
 
@@ -516,12 +522,11 @@ Besides `reply_to`, the wrapper carries the common attributes, with its own `uui
 
 ### `<concord-cancel>`
 
-Ends the run for every agent. It has four reasons, which say where it starts:
+Ends the run for every agent. It has three reasons, which say where it starts:
 
 - `superseded`: the initiator ends its own run while it still waits for init replies, because another `<concord-init>` has arrived that wins by the run id rule (see [One run at a time](#one-run-at-a-time)).
 - `version`: the initiator ends its run because a participant has refused the init because of its protocol version (see [Version](#version)).
 - `missing-agent`: an agent of the run has found an agent missing (see [Timeouts and abort](#timeouts-and-abort)).
-- `invalid`: an agent of the run has received an invalid message (see [Invalid messages](#invalid-messages)). The cancel names the author of that message; for an invalid init, the initiator names itself.
 
 Whatever the reason, an agent that receives a cancel for its run for the first time ends the run and sends its own cancel, once, with the same reason and the same attributes. This is how the notice reaches an agent that cannot be reached from the one that started it.
 
@@ -535,11 +540,11 @@ Whatever the reason, an agent that receives a cancel for its run for the first t
 
 | Attribute | Presence | Meaning |
 |---|---|---|
-| `reason` | always | `superseded` (another run continues), `version` (a participant refused the init because of its version), `missing-agent` (an agent stayed silent) or `invalid` (an agent received an invalid message) |
+| `reason` | always | `superseded` (another run continues), `version` (a participant refused the init because of its version), or `missing-agent` (an agent stayed silent) |
 | `superseded_by` | with `reason="superseded"` | The run id of the run that continues |
-| `agent` | with `reason="missing-agent"` or `reason="invalid"` | The id of the agent that was found missing, or that sent the invalid message |
+| `agent` | with `reason="missing-agent"` | The id of the agent that was found missing |
 
-A participant that receives it ends the run as `ABORTED`, at whatever stage the run is, with the reason of the cancel: `superseded`, `version`, `missing-agent` or `invalid`. The initiator's own run ends the same way. An agent whose run has already ended with an outcome keeps it (see [Timeouts and abort](#timeouts-and-abort)). An aborted run is the one exception to the confirmation: nobody sends a `<concord-result>` for it. A cancel is accepted from any participant of the run and from its initiator. A cancel for a run the agent has no state for, for example one that arrives before the init, is ignored. A cancel carries no `check`. If a cancel is lost, the agents that did not get it end the run on their own timers, since the agent that aborted sends nothing more.
+A participant that receives it ends the run as `ABORTED`, at whatever stage the run is, with the reason of the cancel: `superseded`, `version` or `missing-agent`. The initiator's own run ends the same way. An agent whose run has already ended with an outcome keeps it (see [Timeouts and abort](#timeouts-and-abort)). An aborted run is the one exception to the confirmation: nobody sends a `<concord-result>` for it. A cancel is accepted from any participant of the run and from its initiator. A cancel for a run the agent has no state for, for example one that arrives before the init, is ignored. A cancel carries no `check`. If a cancel is lost, the agents that did not get it end the run on their own timers, since the agent that aborted sends nothing more.
 
 ### One run at a time
 
@@ -596,12 +601,12 @@ These summarize rules stated in the sections above. Where wording differs, the s
 1. **No certification over silence.** SUCCESS is never declared if any participant has not submitted scores for `x*`.
 2. **Threshold is fixed.** `satisfaction_threshold` never changes during a run.
 3. **Anchors are fixed.** An agent's anchors are the ones in its first init reply. A later, different init reply is ignored, since replacing anchors would invalidate every earlier comparison.
-4. **One proposer per round.** The bottleneck is determined algorithmically by each participant's own decision engine; nobody chooses it. A repair from any other agent for that round is invalid (see [`<concord-repair>`](#concord-repair)).
+4. **One proposer per round.** The bottleneck is determined algorithmically by each participant's own decision engine; nobody chooses it. A repair from any other agent for that round is ignored (see [`<concord-repair>`](#concord-repair)).
 5. **Messages are sent verbatim.** Every agent sends message content exactly as produced — no preamble, rewording, or added template.
 6. **Run to complete.** Once a run has started it ends, for each agent, with one of the outcomes (`SUCCESS`, `BEST_EFFORT` or `ABORTED`); it never ends without one.
 7. **Termination is distributed.** Each participant computes its outcome independently from the same messages and compares it with the reporter's result. A difference is reported, never negotiated.
 8. **A damaged document is never used.** A document that fails its `check` is not recorded; it is asked for again.
-9. **Silence or an invalid message ends the run.** An agent never continues on an incomplete copy of the run state or after an invalid message: if a message it is owed has not arrived after `retries` requests, it aborts the run and tells every other agent with `<concord-cancel reason="missing-agent">`; it does the same with `reason="invalid"` when it receives an invalid message; and every agent that receives a cancel, whatever its reason, does the same, once; an agent whose run has ended keeps its outcome and only passes the cancel on.
+9. **Silence ends the run.** An agent never continues on an incomplete copy of the run state: if a message it is owed has not arrived after `retries` requests, it aborts the run and tells every other agent with `<concord-cancel reason="missing-agent">`, and every agent that receives a cancel, whatever its reason, does the same, once; an agent whose run has ended keeps its outcome and only passes the cancel on.
 10. **One message per item.** An agent sends each message once and may re-send only the stored original, and only its author does. A different message from the same author for an item already recorded is ignored.
 11. **One uuid per transmission.** Every send, a re-send included, has a new `uuid`, and an agent processes an accepted one at most once.
 12. **One run at a time.** An agent is in at most one active run and refuses a second init as busy. Two initiators that both receive the other's init settle it by run id, and the lower one continues.
