@@ -72,13 +72,6 @@ no floating-point error can change a decision: `82.5` is `82_500_000`. Builders 
 float (read from its shortest text, so at most 6 decimal places); the wire carries the text of the spec (`82.5`); parsers and
 reports give millionths. The scores in a task are text, normalized between 0 and 1.
 
-## Extensions that are not in the spec
-
-- **`timeout = 0`** in the init switches the timers off: nobody asks again and nobody gives up on a clock, so a run never aborts on
-  silence. The spec requires `timeout` above 0, so another implementation answers such an init as invalid.
-- **Report statuses `aborted` and `pending`.** The spec lists `confirmed`, `unverified` and `disputed`. An aborted run reports
-  `aborted`, and a run that has not ended reports `pending`.
-
 ## Modules
 
 | Module | Contents |
