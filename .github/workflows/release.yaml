@@ -56,7 +56,7 @@ jobs:
           gh release upload "$tag" docs/protocols/concord/spec/CONCORD-SPEC.html --clobber
 
       - name: Zip skill and upload to its release
-        if: ${{ matrix.path != 'protocols/concord/spec' }}
+        if: ${{ contains(matrix.path, '/skills/') }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
