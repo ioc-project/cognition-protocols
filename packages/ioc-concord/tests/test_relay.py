@@ -149,6 +149,58 @@ def test_a_run_id_in_capitals_is_not_a_uuid_and_names_no_run(relay):
     assert r.receive(init) == [init] and list(r.state["runs"]) == [lower]
 
 
+# --- the spokes --------------------------------------------------------------------------------
+
+def test_the_targets_are_every_spoke_but_the_origin_and_all_of_them_for_an_own_message(relay):
+    r = relay.Relay()
+    assert r.spokes == () and r.targets() == [] and r.targets("a") == []
+    for spoke in ("a", "b", "c"):
+        r.add_spoke(spoke)
+    assert r.spokes == ("a", "b", "c")
+    assert r.targets("b") == ["a", "c"] and r.targets() == ["a", "b", "c"]
+    assert r.targets("nobody") == ["a", "b", "c"]                           # an origin that is not registered leaves them all
+
+
+def test_spokes_are_added_once_in_order_and_removed_when_they_go(relay):
+    r = relay.Relay(spokes=["a", "b"])
+    r.add_spoke("c")
+    r.add_spoke("a")                                                        # twice: nothing changes, and the order stays
+    assert r.spokes == ("a", "b", "c")
+    r.remove_spoke("b")
+    r.remove_spoke("b")                                                     # not registered any more: nothing happens
+    assert r.spokes == ("a", "c") and r.targets("a") == ["c"]
+    r.add_spoke("b")
+    assert r.spokes == ("a", "c", "b")                                      # a spoke that comes back is last
+
+
+def test_a_spoke_is_any_hashable_handle_that_the_caller_can_send_through(relay):
+    class Link:
+        def __init__(self):
+            self.sent = []
+    one, two = Link(), Link()
+    r = relay.Relay(spokes=[one, two])
+    for spoke in r.targets(one):
+        spoke.sent.append("x")
+    assert one.sent == [] and two.sent == ["x"]
+
+
+def test_the_spokes_are_not_part_of_the_saved_state_and_a_restarted_relay_has_none(relay):
+    store = MemStore(relay)
+    r = relay.Relay(store=store, spokes=["a", "b"])
+    r.receive(init_doc())
+    assert "spokes" not in json.loads(store.text) and json.loads(store.text)["runs"] == {RUN: True}
+    again = relay.Relay(store=store)
+    assert again.spokes == () and list(again.state["runs"]) == [RUN]        # the runs are kept, the links connect again
+    again.add_spoke("a")
+    assert again.targets("a") == []
+
+
+def test_registering_spokes_changes_nothing_about_what_is_passed_on(relay):
+    bare, linked = relay.Relay(), relay.Relay(spokes=["a", "b"])
+    for text in (init_doc(), score(), score(OTHER), "hello", W.build_resend("alice", OTHER, init_doc(run_id=OTHER))):
+        assert bare.receive(text) == linked.receive(text)
+
+
 # --- an agent that has a relay -----------------------------------------------------------------
 
 def centre(agent, store=None, **kw):
@@ -222,6 +274,12 @@ class Star:
 
     def __init__(self, spokes, hub):
         self.spokes, self.hub, self.queue, self.log = spokes, hub, [], []
+        for name in spokes:
+            self.relay.add_spoke(name)                                      # the links of the centre: here, the names of the spokes
+
+    @property
+    def relay(self):
+        return self.hub if hasattr(self.hub, "should_pass_on") else self.hub.relay
 
     def from_spoke(self, name, step):
         self.queue += [(name, text) for text in step.send]
@@ -231,9 +289,8 @@ class Star:
             self.deliver(text, None)
 
     def deliver(self, text, origin):
-        for name, a in self.spokes.items():
-            if name != origin:
-                self.from_spoke(name, a.receive(text))
+        for name in self.relay.targets(origin):
+            self.from_spoke(name, self.spokes[name].receive(text))
 
     def pump(self):
         while self.queue:
@@ -314,6 +371,9 @@ def test_a_relay_that_restarts_in_the_middle_of_a_run_keeps_passing_it_on(agent)
                                                           {"type": "string", "description": "d"}, run_id=RUN))
     star.pump()
     star.hub = Relay(store=store)                                           # the centre restarts: only the saved run ids remain
+    assert star.relay.spokes == () and list(star.relay.state["runs"]) == [RUN]
+    for name in star.spokes:
+        star.relay.add_spoke(name)                                          # the links connect again and register again
     star.drive()
     assert {n: a.report()["status"] for n, a in star.spokes.items()} == {"alice": "unverified", "cost": "confirmed", "security": "confirmed"}
 

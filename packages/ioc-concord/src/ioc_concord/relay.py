@@ -10,10 +10,15 @@ the one a message came from, and its own messages go to every spoke. Passing on 
 and it does not depend on what the centre does with it as an agent. It passes a message on even when it drops it as a duplicate,
 ignores it, or has ended or aborted the run, since the spokes behind it still need it.
 
-A `Relay` makes that decision, and keeps what it needs for it: the ids of the runs it knows. A centre that does not take part in any run
-is just a `Relay`; one that does gives it to its `Agent` (`Agent(me, relay=relay)`), which then says in `step.forward` what to pass on.
-The caller does the sending: a message to pass on goes to every spoke except the one it came from, an own message of the agent to
-every spoke.
+A `Relay` makes that decision, and keeps what it needs for it: the ids of the runs it knows, and the spokes. A centre that does not take
+part in any run is just a `Relay`; one that does gives it to its `Agent` (`Agent(me, relay=relay)`), which then says in `step.forward` what
+to pass on. The relay never sends anything: the caller does, to the spokes that `targets` names, which are every spoke except the one a
+message came from, and every spoke for an own message of the agent.
+
+The spokes are the links of the centre, which only the transport knows (the init lists the agents that negotiate, not the links, and a
+spoke need not be listed in it), so the caller registers them: `add_spoke` when one connects, `remove_spoke` when it goes. A spoke is any
+hashable handle that the caller can send through: a connection, a socket id, a name. They are not saved, since they are live links that
+connect again after a restart, unlike the run ids.
 
 The centre knows a run once it has passed on that run's `<concord-init>`, bare or inside a `<concord-resend>`, since the spokes learn
 the run only from that message. It passes on a message of any other run only if it knows it. To decide it reads only the name and the
@@ -38,9 +43,10 @@ class Relay:
     `relay.state`, {"runs": {run id: True}}, saved when a run is learned or forgotten: the ids are a set, kept as a dict so that the
     state is JSON."""
 
-    def __init__(self, store=None):
+    def __init__(self, store=None, spokes=()):
         self.store = store
         self.state = self._load()
+        self._spokes = dict.fromkeys(spokes)               # in the order they were added; not part of the state
 
     def _load(self):
         if self.store is None:
@@ -94,3 +100,21 @@ class Relay:
         """Drop a run: the centre no longer passes on its messages. Call it when the state of the run is dropped, not when it ends."""
         if self.state["runs"].pop(run_id, None) is not None:
             self._save()
+
+    @property
+    def spokes(self):
+        """The spokes, in the order they were added."""
+        return tuple(self._spokes)
+
+    def add_spoke(self, spoke):
+        """Register a spoke: a link of the centre, as a hashable handle that the caller can send through. Adding one twice changes nothing."""
+        self._spokes.setdefault(spoke)
+
+    def remove_spoke(self, spoke):
+        """Drop a spoke that is gone. A spoke that was not registered changes nothing."""
+        self._spokes.pop(spoke, None)
+
+    def targets(self, origin=None):
+        """The spokes to send a message to: every spoke except `origin`, the one the message came from. With no origin, which is the case
+        for an own message of the agent, every spoke. An origin that is not registered leaves them all."""
+        return [spoke for spoke in self._spokes if spoke != origin]
