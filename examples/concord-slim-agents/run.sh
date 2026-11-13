@@ -4,7 +4,7 @@
 #
 # Run the evacuation scenario: a SLIM node and three agents. participant-a starts a CONCORD run with the other two.
 #
-#   ./run.sh [--model M] [--threshold T] [--temperature X] [--timeout S] [--scenario FILE]
+#   ./run.sh [--transport star] [--model M] [--threshold T] [--temperature X] [--timeout S] [--scenario FILE]
 #
 # Needs LLM_API_KEY and LLM_MODEL (LLM_BASE_URL for a proxy such as LiteLLM), unless --fake-llm (keyword answers, to check the plumbing). Logs and the record of each agent go to runs/<time>/.
 set -euo pipefail
@@ -16,20 +16,24 @@ esac
 OUT="${RUN_DIR:-runs/$(date +%Y%m%d-%H%M%S)}"      # RUN_DIR: where to write (batch.py sets it)
 mkdir -p "$OUT"
 PIDS=()
+AGENT_PIDS=()
 trap 'kill "${PIDS[@]}" 2>/dev/null || true' EXIT INT TERM
 
 uv sync --quiet
-uv run python -m concord_slim_agents server > "$OUT/server.log" 2>&1 &
-PIDS+=($!)
-sleep 2
+case " $* " in *" --transport star "*) ;; *)       # a SLIM node is needed over SLIM only; a star is direct connections
+    uv run python -m concord_slim_agents server > "$OUT/server.log" 2>&1 &
+    PIDS+=($!)
+    sleep 2 ;;
+esac
 for a in participant-b participant-c; do
     uv run python -m concord_slim_agents agent "$a" --out "$OUT" "$@" > "$OUT/$a.log" 2>&1 &
     PIDS+=($!)
+    AGENT_PIDS+=($!)
 done
 sleep 2
 status=0
 uv run python -m concord_slim_agents agent participant-a --out "$OUT" "$@" 2>&1 | tee "$OUT/participant-a.log" || status=$?
-wait "${PIDS[@]:1}" 2>/dev/null || true
+wait "${AGENT_PIDS[@]}" 2>/dev/null || true
 echo "==> logs and records in $OUT"
 tail -n 1 "$OUT"/participant-*.log
 exit $status

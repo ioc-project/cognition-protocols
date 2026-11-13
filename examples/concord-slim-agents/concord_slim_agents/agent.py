@@ -111,7 +111,7 @@ class ConcordAgent:
         out_dir.mkdir(parents=True, exist_ok=True)
         store = FileStore(out_dir / f"{me}-state.json")
         store.path.unlink(missing_ok=True)
-        self.node = Agent(me, store=store)
+        self.node = Agent(me, store=store, relay=getattr(group, "relay", None))   # only the centre of a star has a relay
         self.tools = tools_for(options)
         self.llm = llm or client_from_env(fresh)
         self.config = config or {}                          # what this agent ran with, saved in its record (see verify.py)
@@ -124,11 +124,18 @@ class ConcordAgent:
 
     # --- the node's side --------------------------------------------------------------------------------------------------
 
-    async def _flush(self, step):
+    async def _flush(self, step, origin=None):
+        """Do what the node says: log its events, send its messages and, for the centre of a star, pass on what it names (`origin` is
+        who the message that produced the step came from)."""
         for event in step.events:
             self.events.append(event)
             detail = {k: v for k, v in event.items() if k not in ("event", "at")}
             self.log(f"event {event['event']} {json.dumps(detail, default=str)[:300]}")
+        for text in step.forward:
+            to = await self.group.forward(text, origin)
+            event = {"event": "forwarded", "at": time.time(), "from": origin, "to": to}
+            self.events.append(event)
+            self.log(f"event forwarded {json.dumps({'from': origin, 'to': to})}")
         for text in step.send:
             await self.group.send(text)
 
@@ -297,7 +304,7 @@ class ConcordAgent:
             if got:
                 step = self.node.receive(got[1])
                 self.inbox += step.accepted                          # what the node took: the model reads it before its next task
-                await self._flush(step)
+                await self._flush(step, origin=got[0])
             await self._flush(self.node.tick())
             status = self.node.status()
             if status and status["status"] != "active":
