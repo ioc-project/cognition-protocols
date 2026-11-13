@@ -24,6 +24,7 @@ import time
 
 from ioc_concord.engine import add_anchor, add_proposal, add_ratings, evaluate, parse_candidate_id, timers_enabled
 from ioc_concord.errors import InvalidMessage, MissingState, StateError
+from ioc_concord.guidance import render_task
 from ioc_concord.liveness import earliest_deadline, expired_keys, owed_batches, sync_timers
 from ioc_concord.protocol import ABORTED, PROTOCOL_VERSION
 from ioc_concord.report import report_of, status_of
@@ -36,13 +37,15 @@ from ioc_concord.wire import (DATA_TAGS, ERROR, INIT, KIND_OF_TAG, RESEND, build
 
 class Step:
     """What a call produced: `send`, the messages to broadcast (text), `forward`, the messages to pass on when the agent is the centre of
-    a star (see relay.py: the text received, unchanged, or nothing), and `events`, what happened (dicts with an `event` name, the time
-    `at`, and details), for a log."""
+    a star (see relay.py: the text received, unchanged, or nothing), `accepted`, the texts received that the agent took (it joined a run
+    or recorded the message), which its model should read before its next task (see guidance.py), and `events`, what happened (dicts
+    with an `event` name, the time `at`, and details), for a log."""
 
     def __init__(self, now):
         self.now = now
         self.send = []
         self.forward = []
+        self.accepted = []
         self.events = []
 
     def note(self, event, **details):
@@ -109,6 +112,8 @@ class Agent:
         if self.relay is not None:
             step.forward = self.relay.receive(text)         # first, and whatever the agent does with the message: it is mechanical
         self._handle(text, step)
+        if any(e["event"] in ("joined", "recorded") for e in step.events):
+            step.accepted.append(text)
         self._save()
         return step
 
@@ -636,6 +641,10 @@ class Agent:
     # ------------------------------------------------------------------
     # what the model must write
     # ------------------------------------------------------------------
+
+    def instructions(self, task):
+        """The text that tells the agent's model what a task of `due()` asks of it (see guidance.py)."""
+        return render_task(self._run(task["run_id"], "instructions"), self.me, task)
 
     def due(self):
         """The tasks the agent's model owes now, as dicts with a `kind`:
