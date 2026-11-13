@@ -29,7 +29,7 @@ CONFIG = tomllib.loads((ROOT / "tools" / "bundle.toml").read_text())
 
 # The modules of the library that a script can bundle, in dependency order. They are those of the library as it is on disk: not the
 # list of tools/bundle.toml, which says what the scripts carry, at the revision they are pinned to.
-MODULES = ["errors", "protocol", "xmlutil", "schema", "engine", "wire", "store", "state", "liveness", "tasks", "report", "agent"]
+MODULES = ["errors", "protocol", "xmlutil", "schema", "engine", "wire", "store", "state", "liveness", "tasks", "report", "relay", "guidance", "agent"]
 
 
 @lru_cache(maxsize=None)
@@ -75,5 +75,5 @@ def _fixture(module):
     return fixture
 
 
-engine, xmlutil, schema, errors, protocol, wire, store, state, agent = (_fixture(m) for m in (
-    "engine", "xmlutil", "schema", "errors", "protocol", "wire", "store", "state", "agent"))
+engine, xmlutil, schema, errors, protocol, wire, store, state, relay, guidance, agent = (_fixture(m) for m in (
+    "engine", "xmlutil", "schema", "errors", "protocol", "wire", "store", "state", "relay", "guidance", "agent"))

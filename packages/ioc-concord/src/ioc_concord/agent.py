@@ -23,7 +23,8 @@ of UUIDs are injected, with the standard library as default, so that a run can b
 import time
 
 from ioc_concord.engine import add_anchor, add_proposal, add_ratings, evaluate, parse_candidate_id, timers_enabled
-from ioc_concord.errors import InvalidMessage, StateError
+from ioc_concord.errors import InvalidMessage, MissingState, StateError
+from ioc_concord.guidance import render_task
 from ioc_concord.liveness import earliest_deadline, expired_keys, owed_batches, sync_timers
 from ioc_concord.protocol import ABORTED, PROTOCOL_VERSION
 from ioc_concord.report import report_of, status_of
@@ -35,12 +36,16 @@ from ioc_concord.wire import (DATA_TAGS, ERROR, INIT, KIND_OF_TAG, RESEND, build
 
 
 class Step:
-    """What a call produced: `send`, the messages to broadcast (text), and `events`, what happened (dicts with an `event` name,
-    the time `at`, and details), for a log."""
+    """What a call produced: `send`, the messages to broadcast (text), `forward`, the messages to pass on when the agent is the centre of
+    a star (see relay.py: the text received, unchanged, or nothing), `accepted`, the texts received that the agent took (it joined a run
+    or recorded the message), which its model should read before its next task (see guidance.py), and `events`, what happened (dicts
+    with an `event` name, the time `at`, and details), for a log."""
 
     def __init__(self, now):
         self.now = now
         self.send = []
+        self.forward = []
+        self.accepted = []
         self.events = []
 
     def note(self, event, **details):
@@ -52,13 +57,15 @@ class Step:
 
 class Agent:
     """The node of the agent `me`. `store` keeps its state between calls (None keeps it in memory only). `clock` gives the time in
-    seconds, `uuid_fn` a new UUID as text."""
+    seconds, `uuid_fn` a new UUID as text. With a `relay` (see relay.py) the agent is the centre of a star: besides what it does as an
+    agent, it says in `step.forward` which of the messages it receives to pass on to the spokes. Without one `step.forward` stays empty."""
 
-    def __init__(self, me, store=None, clock=time.time, uuid_fn=new_uuid):
+    def __init__(self, me, store=None, clock=time.time, uuid_fn=new_uuid, relay=None):
         self.me = me
         self.store = store
         self.clock = clock
         self.new_uuid = uuid_fn
+        self.relay = relay
         self.state = self._load()
 
     # ------------------------------------------------------------------
@@ -70,8 +77,10 @@ class Agent:
             return new_agent_state(self.me)
         try:
             state = self.store.load()
-        except StateError:
+        except MissingState:                    # nothing saved yet; a state that cannot be read is an error, never a fresh start
             return new_agent_state(self.me)
+        if not isinstance(state, dict):
+            raise StateError("the saved state is not the state of an agent")
         if state.get("me") != self.me:
             raise StateError(f"the saved state belongs to {state.get('me')!r}, not to {self.me!r}")
         return state
@@ -100,7 +109,11 @@ class Agent:
     def receive(self, text, now=None):
         """Handle `text`, whatever it is, in the order of checks of the spec. Returns a Step."""
         step = self._step(now)
+        if self.relay is not None:
+            step.forward = self.relay.receive(text)         # first, and whatever the agent does with the message: it is mechanical
         self._handle(text, step)
+        if any(e["event"] in ("joined", "recorded") for e in step.events):
+            step.accepted.append(text)
         self._save()
         return step
 
@@ -629,6 +642,10 @@ class Agent:
     # what the model must write
     # ------------------------------------------------------------------
 
+    def instructions(self, task):
+        """The text that tells the agent's model what a task of `due()` asks of it (see guidance.py)."""
+        return render_task(self._run(task["run_id"], "instructions"), self.me, task)
+
     def due(self):
         """The tasks the agent's model owes now, as dicts with a `kind`:
 
@@ -660,6 +677,8 @@ class Agent:
         step = self._step(now)
         step.send.append(text)
         step.note("started", participants=init["participants"], run_id=init["run_id"], role=run["role"])
+        if self.relay is not None:
+            self.relay.learn(text)              # the centre sends this init to the spokes: what comes back for the run is passed on
         self._advance(run, step)
         self._save()
         return step
