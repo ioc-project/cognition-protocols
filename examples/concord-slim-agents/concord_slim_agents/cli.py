@@ -5,20 +5,51 @@
 """Command line: `python -m concord_slim_agents server` runs the SLIM node, `... agent NAME` runs one participant."""
 import argparse
 import asyncio
+import importlib.metadata
 import json
 import os
+import subprocess
 import sys
 import time
 import uuid
+from urllib.parse import urlparse
 from pathlib import Path
 
 from concord_slim_agents.agent import ConcordAgent
 from concord_slim_agents.fake_llm import FakeLLM
-from concord_slim_agents.scenario import AGENTS, INITIATOR, Scenario, system_prompt
+from concord_slim_agents.scenario import AGENTS, FACT_ORDER_SEED, INITIATOR, Scenario, system_prompt
 from concord_slim_agents.transport import Group, serve
 
 HERE = Path(__file__).resolve().parent.parent
 NAMESPACE = "concord/evac"
+
+
+def _git(root):
+    """The commit of the code that ran, and whether it had changes that are not committed (None when it is not a git checkout)."""
+    try:
+        sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=root, capture_output=True, text=True, check=True).stdout.strip()
+        dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "."], cwd=root, capture_output=True, text=True).stdout.strip())
+        return {"commit": sha, "uncommitted_changes": dirty}
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def _version(name):
+    try:
+        return importlib.metadata.version(name)
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
+def run_config(args, scenario, system, session):
+    """What this agent ran with, for the record of the run (never the key: only the host of the endpoint)."""
+    return {"agent": args.name, "model": args.model, "fake_llm": args.fake_llm, "temperature": args.temperature,
+            "threshold": args.threshold, "fresh": args.fresh, "session": session, "timeout": args.timeout,
+            "scenario": scenario.id, "scenario_file": args.scenario, "fact_order_seed": FACT_ORDER_SEED,
+            "endpoint_host": urlparse(os.environ.get("LLM_BASE_URL", "")).netloc or None,
+            "versions": {"python": sys.version.split()[0], "ioc_concord": _version("ioc-concord"), "anthropic": _version("anthropic"),
+                         "slim_bindings": _version("slim-bindings")},
+            "code": _git(HERE), "system_prompt": system}
 
 
 async def run_agent(args):
@@ -37,13 +68,15 @@ async def run_agent(args):
                    f"participants {', '.join(AGENTS)}, and the options as the only candidates."
                    + (f" Use satisfaction_threshold {args.threshold}." if args.threshold is not None else ""))
     system = system_prompt(scenario, me)
+    run_nonce = None
     if args.fresh:
         # a request that is new every run: an exact-match cache on the way cannot answer it from an earlier run
         run_nonce = uuid.uuid4().hex[:8]
         system += f"\n(session {run_nonce})\n"
         log(f"fresh: session {run_nonce}")
     agent = ConcordAgent(me, group, system, scenario.options, args.model, out_dir,
-                         kickoff=kickoff, timeout=args.timeout, threshold=args.threshold, temperature=args.temperature, fresh=args.fresh, log=log,
+                         kickoff=kickoff, timeout=args.timeout, threshold=args.threshold, temperature=args.temperature, fresh=args.fresh,
+                         config=run_config(args, scenario, system, run_nonce), log=log,
                          llm=FakeLLM() if args.fake_llm else None)
     await group.connect()
     log("connected")

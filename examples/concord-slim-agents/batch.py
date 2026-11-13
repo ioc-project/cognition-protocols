@@ -7,6 +7,7 @@
 
     uv run python batch.py --thresholds 0.7 --repeats 5 [any other flag of run.sh: --model, --temperature, --fake-llm, ...]
 
+Each run is checked by verify.py (a referee of the protocol and the harness); a run that fails is left out of the totals.
 Each run is a `run.sh` in its own folder, runs/batch-<time>/t<threshold>-r<n>/ (the runs share one SLIM address, so they are
 never parallel). The table and a summary per threshold are printed at the end and written to summary.json next to the runs.
 """
@@ -19,6 +20,8 @@ import sys
 import time
 from collections import defaultdict
 from pathlib import Path
+
+import verify
 
 HERE = Path(__file__).resolve().parent
 AGENTS = ("participant-a", "participant-b", "participant-c")
@@ -113,20 +116,32 @@ def main():
             row = rows[-1]
             if row["outcome"] in ("FAILED", "NO RECORD"):
                 row["error"] = failure(run_dir, done.stderr)
+                row["valid"] = None                                   # nothing to verify
                 print(f"    {row['outcome']}: {row['error']}\n    logs: {run_dir}", flush=True)
                 continue
-            print(f"    {row['outcome']} {row['winner']} rounds={row['rounds']} status={row['status']} tokens={row['tokens']}", flush=True)
-    print(f"\n{'run':<22}{'outcome':<13}{'winner':<12}{'rounds':<8}{'status':<11}{'tokens':<8}{'right'}")
+            result = verify.verify(run_dir)                            # a referee for the run: see verify.py
+            row["valid"] = not result["failed"]
+            row["failed_checks"] = [c[1] for c in result["checks"] if c[2] == "FAIL"]
+            print(f"    {row['outcome']} {row['winner']} rounds={row['rounds']} status={row['status']} tokens={row['tokens']} "
+                  f"verify={'ok' if row['valid'] else 'FAILED ' + ','.join(row['failed_checks'])}", flush=True)
+    print(f"\n{'run':<22}{'outcome':<13}{'winner':<12}{'rounds':<8}{'status':<11}{'tokens':<8}{'valid':<8}{'right'}")
     for r in rows:
+        valid = "n/a" if r["valid"] is None else "yes" if r["valid"] else "NO"
         print(f"{r['run']:<22}{str(r['outcome']):<13}{str(r['winner']):<12}{str(r['rounds']):<8}{str(r['status']):<11}"
-              f"{str(r['tokens']):<8}{'yes' if r['winner'] == CORRECT else 'no'}")
+              f"{str(r['tokens']):<8}{valid:<8}{'yes' if r['winner'] == CORRECT else 'no'}")
     by = defaultdict(list)
     for r in rows:
         by[r["threshold"]].append(r)
-    print("\nthreshold   runs  right   avg rounds")
+    # only the runs that passed the referee count: a run that broke the protocol says nothing about the models
+    print("\nthreshold   runs  valid  right   avg rounds   (the totals count the valid runs only)")
     for t, rs in by.items():
-        done = [r["rounds"] for r in rs if isinstance(r["rounds"], int)]
-        print(f"{str(t or 'agent'):<12}{len(rs):<6}{sum(r['winner'] == CORRECT for r in rs):<8}{(sum(done) / len(done)) if done else '-'}")
+        ok = [r for r in rs if r["valid"]]
+        done = [r["rounds"] for r in ok if isinstance(r["rounds"], int)]
+        print(f"{str(t or 'agent'):<12}{len(rs):<6}{len(ok):<7}{sum(r['winner'] == CORRECT for r in ok):<8}{(sum(done) / len(done)) if done else '-'}")
+    excluded = [r for r in rows if r["valid"] is False]
+    if excluded:
+        print("\nexcluded, failed verification: " + "; ".join(f"{r['run']} ({','.join(r['failed_checks'])})" for r in excluded)
+              + "\n  run `uv run python verify.py <run folder>` for the detail")
     print_replays(rows)
     (base).mkdir(parents=True, exist_ok=True)
     (base / "summary.json").write_text(json.dumps(rows, indent=2))

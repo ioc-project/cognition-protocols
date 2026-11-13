@@ -13,6 +13,8 @@ move to the library later.
     render_init_reply     the task owed after the init
     render_score          the task owed once there are proposals of the others to rate
 """
+import re
+
 from ioc_concord.protocol import format_number
 from ioc_concord.schema import render_schema
 
@@ -40,7 +42,8 @@ A run goes like this:
    option clears everyone or the budget is spent (BEST_EFFORT).
 4. Result. The run is over once the first participant has reported the outcome and the others have compared it with their own.
 
-The tools check and send what you write: you write only the content.
+What you receive: the messages of the other participants, exactly as they were sent: the init, their first answers, their scores
+and their repairs. What you send: the answers the tools build from what you write; you write only the content.
 """
 
 # ---------------------------------------------------------------------------------------------------------------------------
@@ -309,6 +312,8 @@ HINT_FORMAT = ("The candidate must be exactly as the format says: put any extra 
 HINT_NUMBER = "Give every score as a number from 0 to 100 on your raw scale, and call the tool again."
 HINT_DEFAULT = ("Fix what the message says and call the tool again. Never work around it: the tool is the only way to answer, "
                 "and it writes the message itself.")
+HINT_SHAPE = ("Send it in the shape the tool takes: a list is a list of separate entries, not one piece of text, and an entry is an "
+              "object with the fields the tool takes. Then call the tool again.")
 HINT_UNEXPECTED = ("Call the tool again once, with the same values. If it fails again, stop: do not try to work around it.")
 
 UNEXPECTED = "the tool failed unexpectedly: {kind}: {detail}"
@@ -325,6 +330,22 @@ def lacks(parts, sent=(), takes=()):
     if sent and takes:
         out += f" You sent: {', '.join(map(str, sent))}. The tool takes: {', '.join(takes)}."
     return out
+
+
+def _kind(value):
+    """What a value is, in words the model reads."""
+    if isinstance(value, str):
+        return "text"
+    if isinstance(value, bool):
+        return "true or false"
+    if isinstance(value, (int, float)):
+        return "a number"
+    return "a list" if isinstance(value, list) else "an object" if isinstance(value, dict) else type(value).__name__
+
+
+def wrong_shape(field, expected, got):
+    """The sentence for an argument that has the wrong shape, such as a list sent as one piece of text."""
+    return f"`{field}` must be {expected}, not {_kind(got)}."
 
 
 def settled(text):
@@ -347,6 +368,8 @@ def hint_for(text):
         return HINT_FORMAT
     if "from 0 to 100" in m or "must be a number" in m:
         return HINT_NUMBER
+    if "must be a list" in m or "must be an object" in m:
+        return HINT_SHAPE
     if "failed unexpectedly" in m:
         return HINT_UNEXPECTED
     return HINT_DEFAULT
@@ -359,3 +382,59 @@ def refusal(text, repeats=1):
     if repeats >= 2 and not settled(text):
         out += " " + REPEATED.format(n=repeats)
     return out
+
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# what the agent receives: the messages of the others, as they arrived. In the skills the agent passed each delivery (the replies of
+# the other agents, as XML) to its script, so they stayed in its context; here the node reads them, and the model gets the same text
+# in front of its next task. A resend is shown as the message it carries.
+# ---------------------------------------------------------------------------------------------------------------------------
+
+DELIVERY_HEADER = "CONCORD messages you received since your last answer, exactly as they arrived (every message goes to all the participants):"
+
+
+def unwrap(text):
+    """The message a `concord-resend` carries (the resend itself says nothing new), or `text` if it is not one."""
+    if not re.search(r"<concord-resend\b", text):
+        return text
+    start = re.search(r"<concord-(?!resend\b)[a-z-]+\b", text)
+    end = list(re.finditer(r"</concord-(?!resend\b)[a-z-]+\s*>", text))
+    return text[start.start():end[-1].end()] if start and end else text
+
+
+def render_delivery(texts):
+    """The messages received since the last answer, as the agent reads them ('' when there are none)."""
+    return DELIVERY_HEADER + "\n\n" + "\n\n".join(unwrap(t).strip() for t in texts) if texts else ""
+
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# the end: in the spec the reporter (the first participant) announces the outcome to all the others in a `concord-result`, and
+# each participant compares it with its own. The old receiver skill ended with: "Nothing is due from you then: do not re-open the
+# decision, do not re-propose, and do not send an acknowledgement. If SUCCESS, proceed with the winning candidate. If BEST_EFFORT,
+# say so when you report, naming the agents below their floor."
+# ---------------------------------------------------------------------------------------------------------------------------
+
+_END_RULES = ("Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If SUCCESS, "
+              "proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below their floor.")
+
+
+def render_end(me, report):
+    """What the agent knows when its run is over, from its report (see ioc_concord.Agent.report)."""
+    if report["outcome"] == "ABORTED":
+        why = (report.get("reason") or {})
+        return ("The run was aborted" + (f" ({why.get('reason')}" + (f", agent {why['agent']}" if why.get("agent") else "") + ")"
+                                         if why.get("reason") else "") + ". There is no outcome to act on: nothing is certified.")
+    cmp_ = report["results_compared"]
+    reporter = cmp_["reporter"]
+    who = "You reported" if reporter == me else f"{reporter} reported"
+    win = report["winner"]
+    lines = [f"The run is over. {who} the result to all the participants: {report['outcome']}, winning candidate {win['id']} "
+             f"({win['candidate']}).",
+             "Final scores of the winning candidate, normalized 0-1: "
+             + ", ".join(f"{a} {format_number(s)}" for a, s in report["scores"].items()) + f". Repair rounds used: {report['rounds']}."]
+    if report["shortfall"]:
+        lines.append("Below the bar: " + ", ".join(f"{a} by {format_number(s)}" for a, s in report["shortfall"].items()) + ".")
+    if reporter != me and cmp_["matches"] is not None:
+        lines.append("Your own outcome " + ("matches" if cmp_["matches"] else "DIFFERS from") + " the reporter's result.")
+    lines.append(f"Status of the run for you: {report['status']}.")
+    return "\n".join(lines) + "\n" + _END_RULES

@@ -23,7 +23,7 @@ from ioc_concord.errors import ConcordError
 from ioc_concord.store import FileStore
 
 from concord_slim_agents.guidance import (NO_TOOL, START_PARAMS, UNEXPECTED, UNKNOWN_TOOL, check_answer, lacks, refusal, render_init_reply,
-                                          render_repair, render_score, run_view, settled)
+                                          render_delivery, render_end, render_repair, render_score, run_view, settled, wrong_shape)
 from concord_slim_agents.transport import SessionClosed
 
 MAX_TURNS_WITHOUT_PROGRESS = 3
@@ -96,7 +96,7 @@ TOOL_OF_TASK = {"init-reply": "submit_init_reply", "score": "submit_score", "rep
 
 
 class ConcordAgent:
-    def __init__(self, me, group, system, options, llm_model, out_dir, kickoff=None, timeout=None, threshold=None, temperature=None, fresh=True, log=print, llm=None):
+    def __init__(self, me, group, system, options, llm_model, out_dir, kickoff=None, timeout=None, threshold=None, temperature=None, fresh=True, config=None, log=print, llm=None):
         self.me, self.group, self.system, self.options, self.model, self.log = me, group, system, options, llm_model, log
         self.kickoff = kickoff                              # the first message to the model, for the agent that starts the run
         self.timeout = timeout
@@ -109,7 +109,9 @@ class ConcordAgent:
         self.node = Agent(me, store=store)
         self.tools = tools_for(options)
         self.llm = llm or client_from_env(fresh)
+        self.config = config or {}                          # what this agent ran with, saved in its record (see verify.py)
         self.messages = []
+        self.inbox = []                                     # the messages of the others, not yet shown to the model
         self.usage = {"input": 0, "output": 0, "calls": 0}
         self.events = []
         self.last_refusal = None
@@ -140,6 +142,9 @@ class ConcordAgent:
         run_id = status["run_id"] if status else None
         if name not in self.tools or (self._offered and name not in self._offered):
             return self._refuse(name, UNKNOWN_TOOL.format(name=name, tools=", ".join(self._offered or self.tools)))
+        shape = self._wrong_shape(name, args)
+        if shape:
+            return self._refuse(name, shape)
         missing = self._missing(name, args)
         if missing:
             return self._refuse(name, missing)
@@ -193,6 +198,22 @@ class ConcordAgent:
             return lacks(nested + top)
         return lacks(top, sent=list(args) if isinstance(args, dict) else [], takes=list(schema["properties"])) if top else ""
 
+    def _wrong_shape(self, name, args):
+        """The arguments that are not in the shape the tool takes (a list sent as text, an entry that is not an object), as a sentence
+        (empty when all are right). What is missing is said by `_missing`; this is for what is there but wrong."""
+        out = []
+        for k, prop in self.tools[name]["input_schema"]["properties"].items():
+            v = args.get(k)
+            if v is None or prop.get("type") != "array":
+                continue
+            items = prop.get("items") if isinstance(prop.get("items"), dict) else {}
+            fields = ", ".join(items.get("properties", {}))
+            if not isinstance(v, list):
+                out.append(wrong_shape(k, f"a list of entries ({fields})" if fields else "a list", v))
+            elif fields:
+                out += [wrong_shape(f"{k}` entry `{n}", f"an object with {fields}", e) for n, e in enumerate(v, 1) if not isinstance(e, dict)]
+        return " ".join(out)
+
     def _anchors(self, run_id):
         """The raw anchors of this agent as numbers, or None before its init reply."""
         run = self.node.state["runs"].get(run_id) if run_id else None
@@ -220,7 +241,9 @@ class ConcordAgent:
 
     async def _turn(self, text, tool_names, task=None):
         """One turn: tell the model what is owed, and let it call the tools until one is accepted."""
-        self._say([{"type": "text", "text": text}])
+        delivery = render_delivery(self.inbox)               # what the others sent since the last answer, in front of the task
+        self.inbox = []
+        self._say([{"type": "text", "text": f"{delivery}\n\n{text}" if delivery else text}])
         if getattr(self.llm, "wants_task", False):
             self.llm.task = task
         tools = [self.tools[n] for n in tool_names]
@@ -269,7 +292,10 @@ class ConcordAgent:
                 self.log("the session is closed")
                 break
             if got:
-                await self._flush(self.node.receive(got[1]))
+                step = self.node.receive(got[1])
+                if any(e["event"] in ("joined", "recorded") for e in step.events):     # the node took it: the model will read it too
+                    self.inbox.append(got[1])
+                await self._flush(step)
             await self._flush(self.node.tick())
             status = self.node.status()
             if status and status["status"] != "active":
@@ -289,11 +315,23 @@ class ConcordAgent:
             task = tasks[0]
             self.log(f"task {task['kind']}")
             await self._turn(self._render(task), [TOOL_OF_TASK[task["kind"]]], task)
+        self._close_conversation()
+
+    def _close_conversation(self):
+        """The end of the run as the spec has it: the reporter's result reaches every other agent, and each knows how it ended. No model
+        call follows: it goes into the conversation, so the record shows what the agent knew."""
+        report = self.node.report()
+        if report is None:
+            return
+        delivery = render_delivery(self.inbox)
+        self.inbox = []
+        end = render_end(self.me, report)
+        self._say([{"type": "text", "text": f"{delivery}\n\n{end}" if delivery else end}])
 
     def finish(self):
         """Write what happened, and return the report of the run."""
         report = self.node.report()
-        record = {"agent": self.me, "report": report, "status": self.node.status(), "usage": self.usage,
+        record = {"agent": self.me, "config": self.config, "report": report, "status": self.node.status(), "usage": self.usage,
                   "events": self.events, "transcript": self.messages}
         (self.out_dir / f"{self.me}.json").write_text(json.dumps(record, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
         return report

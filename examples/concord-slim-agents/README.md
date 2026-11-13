@@ -35,3 +35,25 @@ By hand, in four terminals: `uv run python -m concord_slim_agents server`, then 
 More than one run: `uv run python batch.py --thresholds 0.7 --repeats 5` runs them one after the other and prints
 what each decided. `--temperature` is the sampling of the model (default 0.7). The facts of each agent are always shown in the same
 order (`FACT_ORDER_SEED` in `scenario.py`).
+
+## What an agent has in its context
+
+One conversation per agent, kept whole for the whole run (`ConcordAgent.messages`, saved as `transcript` in `<agent>.json`):
+
+1. the system prompt: the scenario, its facts, the run description (and, for participant-a, how to start the run);
+2. before each task, **the messages of the other participants it has not read yet, exactly as they were sent** (the init with its
+   parameters, their first answers, their scores with their reasoning, their repairs), as the deliveries of the skills were;
+3. the task (`guidance.py`), and its own answer and any refusal;
+4. at the end, the result announced by the reporter (the first participant) and how the run ended: no model call follows.
+
+`show.py` prints what went over SLIM; the transcript is what each model read.
+
+## Checking a run
+
+`uv run python verify.py runs/<run folder>` (or `show.py <run folder> --verify`) is a referee. It reads the messages each agent kept and
+checks them with its own code, written from the spec, not with the library's engine: that the right agent repaired in every round, that
+the incumbent and the outcome follow the rules and match the result message, that every message is valid (integrity check, ids, numbers,
+schema, who rated what), that all agents recorded every message, and that the conversation of each model holds what its node
+recorded and the threshold is the one asked for. A failed check means the run cannot be trusted. `batch.py` runs it on every run and
+leaves the runs that fail out of the totals. What the models did (refusals, repeated repairs, scores close to the bar) is only
+reported. Each agent's record also holds its configuration (model, temperature, threshold, versions, the system prompt).
