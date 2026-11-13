@@ -20,11 +20,15 @@ import traceback
 from anthropic import AsyncAnthropic
 from ioc_concord.agent import Agent
 from ioc_concord.errors import ConcordError
+from ioc_concord.guidance import (START_PARAMS, UNEXPECTED, check_answer, lacks, refusal, render_delivery, render_end, run_view, settled,
+                                  wrong_shape)
 from ioc_concord.store import FileStore
 
-from concord_slim_agents.guidance import (NO_TOOL, START_PARAMS, UNEXPECTED, UNKNOWN_TOOL, check_answer, lacks, refusal, render_init_reply,
-                                          render_delivery, render_end, render_repair, render_score, run_view, settled, wrong_shape)
 from concord_slim_agents.transport import SessionClosed
+
+# what the model reads when it does not call a tool as the harness expects; the rest of the wording is ioc_concord.guidance
+UNKNOWN_TOOL = "{name} is not a tool you have for this task: use {tools}."
+NO_TOOL = "Answer with the tool: it is the only way to answer, and nothing was sent."
 
 MAX_TURNS_WITHOUT_PROGRESS = 3
 MAX_TOOL_ROUNDS = 4
@@ -93,6 +97,7 @@ def client_from_env(fresh=True):
 
 
 TOOL_OF_TASK = {"init-reply": "submit_init_reply", "score": "submit_score", "repair": "submit_repair"}
+TASK_OF_TOOL = {tool: task for task, tool in TOOL_OF_TASK.items()}
 
 
 class ConcordAgent:
@@ -127,14 +132,14 @@ class ConcordAgent:
         for text in step.send:
             await self.group.send(text)
 
-    def _refuse(self, name, text):
+    def _refuse(self, name, error):
         """The refusal the model reads for the call `name`, and the books on it: the last one, how many times in a row, and whether the
-        call is already answered (then the turn is over)."""
-        self._repeats = self._repeats + 1 if (name, text) == self._last_key else 1
-        self._last_key = (name, text)
-        self.last_refusal = f"{name}: {text}"
-        self._settled = self._settled or settled(text)
-        return refusal(text, self._repeats), True
+        call is already answered (then the turn is over). `error` is an error of the library, or the text of a refusal."""
+        self._repeats = self._repeats + 1 if (name, str(error)) == self._last_key else 1
+        self._last_key = (name, str(error))
+        self.last_refusal = f"{name}: {error}"
+        self._settled = self._settled or settled(error)
+        return refusal(error, self._repeats), True
 
     async def _run_tool(self, name, args):
         """Call the node for a tool of the model. Returns (what the model reads, is_error)."""
@@ -148,7 +153,7 @@ class ConcordAgent:
         missing = self._missing(name, args)
         if missing:
             return self._refuse(name, missing)
-        problems = check_answer(name, args, self._anchors(run_id))
+        problems = check_answer(TASK_OF_TOOL.get(name), self._answer_of(args), self._anchors(run_id))
         if problems:
             return self._refuse(name, " ".join(problems))
         try:
@@ -168,7 +173,7 @@ class ConcordAgent:
             else:
                 step = node.submit_repair(run_id, args["candidate"], args["rationale"], args["own_score"], args["reasoning"])
         except ConcordError as e:
-            return self._refuse(name, str(e))
+            return self._refuse(name, e)
         except Exception as e:                                     # a bug or a call of a shape nobody foresaw: never a bare traceback
             self.log(f"tool {name} failed unexpectedly:\n{traceback.format_exc()}")
             return self._refuse(name, UNEXPECTED.format(kind=type(e).__name__, detail=e))
@@ -214,21 +219,19 @@ class ConcordAgent:
                 out += [wrong_shape(f"{k}` entry `{n}", f"an object with {fields}", e) for n, e in enumerate(v, 1) if not isinstance(e, dict)]
         return " ".join(out)
 
+    @staticmethod
+    def _answer_of(args):
+        """What the model sent, under the names the library's checks use: the tools call the score of a proposal `own_score`, and the
+        score of a rating `score`; the library calls both `raw`."""
+        return {**args, "raw": args.get("own_score"), "scores": [{**s, "raw": s.get("score")} for s in args.get("scores") or []
+                                                                   if isinstance(s, dict)]}
+
     def _anchors(self, run_id):
         """The raw anchors of this agent as numbers, or None before its init reply."""
         run = self.node.state["runs"].get(run_id) if run_id else None
         view = run_view(run, self.me) if run else None
         a = view and view["anchors"]
         return {k: float(v) for k, v in a.items()} if a else None
-
-    def _render(self, task):
-        """The text the model reads for `task` (see guidance.py)."""
-        run = self.node.state["runs"][task["run_id"]]
-        if task["kind"] == "init-reply":
-            return render_init_reply(self.me, task, run["participants"])
-        if task["kind"] == "score":
-            return render_score(self.me, task, run_view(run, self.me))
-        return render_repair(self.me, task, run["context"], run["schema"])
 
     # --- the model's side -------------------------------------------------------------------------------------------------
 
@@ -293,8 +296,7 @@ class ConcordAgent:
                 break
             if got:
                 step = self.node.receive(got[1])
-                if any(e["event"] in ("joined", "recorded") for e in step.events):     # the node took it: the model will read it too
-                    self.inbox.append(got[1])
+                self.inbox += step.accepted                          # what the node took: the model reads it before its next task
                 await self._flush(step)
             await self._flush(self.node.tick())
             status = self.node.status()
@@ -314,7 +316,7 @@ class ConcordAgent:
                                    f"{self.last_refusal}")
             task = tasks[0]
             self.log(f"task {task['kind']}")
-            await self._turn(self._render(task), [TOOL_OF_TASK[task["kind"]]], task)
+            await self._turn(self.node.instructions(task), [TOOL_OF_TASK[task["kind"]]], task)
         self._close_conversation()
 
     def _close_conversation(self):

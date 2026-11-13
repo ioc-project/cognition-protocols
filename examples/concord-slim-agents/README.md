@@ -43,7 +43,7 @@ One conversation per agent, kept whole for the whole run (`ConcordAgent.messages
 1. the system prompt: the scenario, its facts, the run description (and, for participant-a, how to start the run);
 2. before each task, **the messages of the other participants it has not read yet, exactly as they were sent** (the init with its
    parameters, their first answers, their scores with their reasoning, their repairs), as the deliveries of the skills were;
-3. the task (`guidance.py`), and its own answer and any refusal;
+3. the task (`Agent.instructions`, wording in `ioc_concord.guidance`), and its own answer and any refusal;
 4. at the end, the result announced by the reporter (the first participant) and how the run ended: no model call follows.
 
 `show.py` prints what went over SLIM; the transcript is what each model read.

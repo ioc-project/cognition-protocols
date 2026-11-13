@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-from concord_slim_agents.guidance import INITIATOR_GUIDANCE, RUN_DESCRIPTION
+from ioc_concord.guidance import INITIATOR_GUIDANCE, RUN_DESCRIPTION
 
 # The facts of an agent are shown in one fixed, mixed order (the same in every run), so that the runs differ only by the model.
 FACT_ORDER_SEED = 0

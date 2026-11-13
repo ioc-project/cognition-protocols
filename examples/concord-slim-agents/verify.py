@@ -203,13 +203,12 @@ def check_protocol(run, rep):
         return rp
     stages, repairs, agents = rp["stages"], rp["repairs"], rp["agents"]
     # A1: the author of repair N is the bottleneck after stage N-1, and no repair is sent when none is owed
-    wrong, owed_ok = [], True
+    wrong = []
     for n, (rid, who) in enumerate(repairs):
         st = stages[n]
         if who != st["bottleneck"]:
             wrong.append(f"{rid} by {who}, the bottleneck was {st['bottleneck']}")
         if st["floor"] >= rp["tau"] or n >= rp["budget"]:
-            owed_ok = False
             wrong.append(f"{rid} sent when no repair was owed (floor {st['floor'] / MILLION:.3f}, round {n})")
         if rid != f"r{n + 1}-{who}":
             wrong.append(f"{rid} is not r{n + 1}-{who}")
@@ -219,7 +218,6 @@ def check_protocol(run, rep):
     rep.add("A", "A2", True, "the incumbent follows the SELECT and ACCEPT rules",
             " -> ".join(dict.fromkeys(s["xstar"] for s in stages)) + f" (bar {rp['tau'] / MILLION}, eps from the init)")
     # A3: the outcome, the result message, the reporter, the reports of the agents
-    last = stages[-1]
     problems = []
     if rp["final"] is None:
         problems.append("the run stopped but neither SUCCESS (floor at the bar) nor BEST_EFFORT (budget spent) holds")

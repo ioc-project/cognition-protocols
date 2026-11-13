@@ -6,7 +6,6 @@
 import argparse
 import asyncio
 import importlib.metadata
-import json
 import os
 import subprocess
 import sys
