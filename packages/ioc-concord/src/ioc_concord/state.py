@@ -2,66 +2,93 @@
 # Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 # SPDX-License-Identifier: Apache-2.0
 #
-"""The two states a run is made of: the run state the initiator keeps and the state each agent keeps. Both are plain dicts,
-so any `Store` can hold either; these constructors are the one place that says what is in them."""
-import json
+"""The state of an agent: every run it knows, as plain JSON-able dicts that a `Store` can keep.
 
-from ioc_concord.errors import InvalidRun
-from ioc_concord.schema import render_schema, validate_schema
-from ioc_concord.wire import DEFAULT_PARAMS
+    agent state   {"me": id, "runs": {run id: run}, "active": run id or None}
 
-STATE_VERSION = 2
+    run           role           "participant", or "initiator" for the agent that opened the run without being one of its participants
+                  initiator      the agent that opened the run
+                  participants   in the order of <participants>
+                  params         satisfaction_threshold, eps (millionths), B, timeout, retries
+                  context, x_reject, x_ideal, schema
+                  engine         the state of the decision engine (see engine.py)
+                  sent           {item key: the original text this agent sent for that item}
+                  sent_by_uuid   {uuid: the same texts}, to find the one a damaged-document request names
+                  received       {item key: the original text it recorded for that item}
+                  uuids          {uuid: True} for every transmission it has accepted
+                  outcome        the outcome this agent computed: SUCCESS, BEST_EFFORT, ABORTED, or None while it is not known
+                  reported       the reporter's result as {"outcome", "winning_candidate_id"}, once this agent holds it
+                  mismatches     {"sent": how many mismatch errors this agent sent, "last": the text of the last, "received": [authors
+                                 of those it got]}
+                  timers         {timer key: {author, what, candidate, requests, deadline, asked}} for the messages the agent is owed
+                  held           {uuid: the text} of the repairs and results that cannot be judged yet, judged again as the state fills
+                  expected       the ids of candidates that other messages prove to exist, whose proposal this agent lacks
+                  abort          why the run aborted, as {"reason", "agent", "superseded_by", "note"}, or None; the note is for the initiator
+                                 that gave up on a version refusal: {"agent", "text"}
+                  cancel_sent    whether this agent has sent its cancel (it sends it once)
+                  disputed       whether a cancel reached this agent after its run had ended with an outcome
+                  status         "active" until the run has ended for this agent, then "ended" or "aborted"
 
+An item is what a message is about: an init reply of an agent, a score of an agent on a candidate, a repair, the result. The
+first message recorded for an item stands, and the original is kept word for word so that it can be sent again.
+"""
+from ioc_concord.engine import new_engine_state
+from ioc_concord.errors import StateError
+from ioc_concord.protocol import is_agent_id
+from ioc_concord.wire import peek
 
-def check_run(agents, satisfaction_threshold, eps, B):
-    """Raises InvalidRun unless these are the parameters of a run that can be played."""
-    if len(agents) < 2:
-        raise InvalidRun("a negotiating set needs at least 2 agents")
-    if len(set(agents)) != len(agents):
-        raise InvalidRun("duplicate agent names")
-    if not (0 < satisfaction_threshold <= 1):
-        raise InvalidRun("satisfaction_threshold must be in (0, 1]")
-    if eps <= 0:
-        raise InvalidRun("eps must be > 0")
-    if B < 1:
-        raise InvalidRun("B must be >= 1")
-
-
-def new_run_state(agents, context, x_reject, x_ideal, spec, satisfaction_threshold=DEFAULT_PARAMS["satisfaction_threshold"],
-                  eps=DEFAULT_PARAMS["eps"], B=DEFAULT_PARAMS["B"], relay=True,
-                  state_id=None):
-    """The state of a new run, as the initiator keeps it: the engine state plus the brief that the requests are built from.
-    `spec` is the candidate schema (see `ioc_concord.schema`); `state_id` names the run in every message."""
-    check_run(agents, satisfaction_threshold, eps, B)
-    spec = validate_schema(spec)
-    st = {
-        "version": STATE_VERSION,
-        "params": {"satisfaction_threshold": satisfaction_threshold, "eps": eps, "B": B, "W": "leximin"},
-        "agents": list(agents),
-        "schema": render_schema(spec),
-        "schema_json": json.dumps(spec, ensure_ascii=False, sort_keys=True),
-        "options": list(spec["enum"]) if "enum" in spec else None,
-        "context": context,
-        "x_reject": x_reject,
-        "x_ideal": x_ideal,
-        "anchors": {},
-        "pool": [],
-        "raw": {a: {} for a in agents},
-        "score_reasoning": {},
-        "x_star": None,
-        "t": 0,
-        "pending": None,
-        "outcome": None,
-        "log": [],
-        "relay": relay,
-    }
-    if state_id is not None:
-        st["state_id"] = state_id
-    return st
+PARTICIPANT, INITIATOR = "participant", "initiator"
+RUN_ACTIVE, RUN_ENDED, RUN_ABORTED = "active", "ended", "aborted"
 
 
-def new_agent_state(me, state_id=None):
-    """The state an agent keeps for one run: its picture of the run (`mirror`, filled in from the messages it reads), what it
-    was asked, and what it has sent."""
-    return {"me": me, "id": state_id, "mirror": None, "asked": {}, "outbox": {}, "resend": None,
-            "sent": {"anchor": False, "seed": False, "repair": [], "rated": []}, "lead": None}
+def new_agent_state(me):
+    if not is_agent_id(me):
+        raise StateError(f"an agent id is 1 to 64 letters, digits, _ or -, not {me!r}")
+    return {"me": me, "runs": {}, "active": None}
+
+
+def item_key(kind, author, item=None):
+    """The key of an item: `init-reply|cost`, `score|cost|seed-security`, `result|cost`."""
+    return "|".join(p for p in (kind, author, item) if p)
+
+
+def keep_uuid(run, uid):
+    """Remember that the transmission `uid` has been accepted."""
+    run["uuids"][uid] = True
+
+
+def keep_sent(run, key, text):
+    """Keep `text`, the original that this agent sent for the item `key`, to send it again word for word."""
+    run["sent"][key] = text
+    run["sent_by_uuid"][peek(text)["attrs"]["uuid"]] = text
+
+
+def new_run(me, init, doc):
+    """The run that the parsed init `init` (see wire.parse_message) opens for `me`, with the init text `doc`: as received, or as
+    sent when `me` is the initiator. An initiator that is not a participant has the role INITIATOR: it negotiates nothing, and
+    only watches the init replies and the result."""
+    params = dict(init["params"])
+    mine = init["from"] == me
+    run = {"role": PARTICIPANT if me in init["participants"] else INITIATOR, "run_id": init["run_id"],
+            "initiator": init["from"], "participants": list(init["participants"]), "params": params, "context": init["context"],
+            "x_reject": init["x_reject"], "x_ideal": init["x_ideal"], "schema": init["schema"],
+            "engine": new_engine_state(init["participants"], params),
+            "sent": {}, "sent_by_uuid": {}, "received": {} if mine else {item_key("init", init["from"]): doc},
+            "uuids": {init["uuid"]: True}, "outcome": None, "reported": None,
+            "mismatches": {"sent": 0, "last": None, "received": []},
+            "timers": {}, "held": {}, "expected": [], "abort": None, "cancel_sent": False, "disputed": False,
+            "status": RUN_ACTIVE}
+    if mine:
+        keep_sent(run, item_key("init", me), doc)
+    return run
+
+
+def members(run):
+    """The agents that may send a message of the run: its participants and its initiator."""
+    return set(run["participants"]) | {run["initiator"]}
+
+
+def active_run(state):
+    """The run that is active for the agent, or None."""
+    run = state["runs"].get(state["active"]) if state["active"] else None
+    return run if run is not None and run["status"] == RUN_ACTIVE else None

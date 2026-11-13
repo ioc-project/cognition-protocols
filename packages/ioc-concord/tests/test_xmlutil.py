@@ -3,36 +3,54 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 """The XML helpers, as imported and as bundled into each script (see conftest.py)."""
-import xml.etree.ElementTree as ET
+import hashlib
+
+DOC = '''<concord-score version="0.3.0" from="cost" run_id="R" uuid="U" check="deadbeef">
+  <score candidate_id="seed-a">
+    <raw>82.0</raw>
+    <reasoning>cost   is   fine,
+      "quoted" &lt; 5</reasoning>
+  </score>
+</concord-score>'''
 
 
-def test_esc_makes_text_and_attribute_values_safe(xmlutil):
-    assert xmlutil.esc('a < b & "c" > d') == "a &lt; b &amp; &quot;c&quot; &gt; d"
-    assert xmlutil.esc(5) == "5"
+def test_esc_text_keeps_quotes_and_esc_attr_escapes_them(xmlutil):
+    assert xmlutil.esc_text('a < b & "c" > d') == 'a &lt; b &amp; "c" &gt; d'
+    assert xmlutil.esc_attr('a < b & "c" > d') == "a &lt; b &amp; &quot;c&quot; &gt; d"
+    assert xmlutil.esc_text(5) == "5"
 
 
-def test_cdata_survives_its_own_terminator(xmlutil):
-    el = ET.fromstring("<r>" + xmlutil.cdata("x ]]> <y> & z") + "</r>")
-    assert el.text == "x ]]> <y> & z"
+def test_canonical_text_drops_check_and_squeezes_text_only(xmlutil):
+    assert xmlutil.canonical_text(DOC) == (
+        '<concord-score version="0.3.0" from="cost" run_id="R" uuid="U"><score candidate_id="seed-a"><raw>82.0</raw>'
+        '<reasoning>cost is fine, "quoted" &lt; 5</reasoning></score></concord-score>')
 
 
-def test_text_element_adds_a_child_with_text(xmlutil):
-    root = ET.Element("r")
-    child = xmlutil.text_element(root, "k", "v")
-    assert child is root.find("k") and child.text == "v"
+def test_canonical_text_leaves_attribute_order_quotes_and_entities_alone(xmlutil):
+    assert xmlutil.canonical_text('<a z="1"  b=\'2\' check="x">&amp; &quot;</a>') == '<a z="1"  b=\'2\'>&amp; &quot;</a>'
+    assert xmlutil.canonical_text('<e check="x"/>') == "<e/>"
+    assert xmlutil.canonical_text("\n<a>\n</a>\n") == "<a></a>"
 
 
-def test_escape_bare_chars_repairs_copied_text_and_leaves_markup(xmlutil):
-    fixed = xmlutil.escape_bare_chars("<r>cost < 5 & risk &amp; <b>ok</b> &#38;</r>")
-    assert fixed == "<r>cost &lt; 5 &amp; risk &amp; <b>ok</b> &#38;</r>"
-    ET.fromstring(fixed)
+def test_compute_check_is_8_lowercase_hex_of_the_sha256_of_the_canonical_text(xmlutil):
+    want = hashlib.sha256(xmlutil.canonical_text(DOC).encode("utf-8")).hexdigest()[:8]
+    assert xmlutil.compute_check(DOC) == want and len(want) == 8
 
 
-def test_document_patterns_find_a_complete_element_in_prose(xmlutil):
-    reply = "<concord-score-reply agent='a'><score/></concord-score-reply>"
-    ack = "<concord-ack agent='a'></concord-ack>"
-    anchor = "<concord-anchor><x/></concord-anchor>"
-    text = f"words {reply} more {ack} and {anchor} and <concord-score-reply>never closed"
-    assert [m.group(0) for m in xmlutil.DOC_RE.finditer(text)] == [reply, ack, anchor]
-    assert [m.group(0) for m in xmlutil.REPLY_RE.finditer(text)] == [reply]
-    assert [m.group(0) for m in xmlutil.AGENT_DOC_RE.finditer(text)] == [reply, ack]
+def test_check_ignores_whitespace_and_the_check_attribute_but_not_content(xmlutil):
+    base = xmlutil.compute_check(DOC)
+    assert xmlutil.compute_check(DOC.replace('check="deadbeef"', 'check="other"')) == base
+    assert xmlutil.compute_check(DOC.replace("\n  ", "\n\n      ")) == base
+    assert xmlutil.compute_check(DOC.replace("82.0", "28.0")) != base
+    assert xmlutil.compute_check(DOC.replace("cost   is", "cost is")) == base
+    assert xmlutil.compute_check(DOC.replace('"quoted"', "quoted")) != base
+
+
+def test_with_check_adds_a_check_that_verifies(xmlutil):
+    bare = DOC.replace(' check="deadbeef"', "")
+    doc = xmlutil.with_check(bare)
+    assert xmlutil.check_of(doc) == xmlutil.compute_check(bare)
+    assert xmlutil.verify_check(doc)
+    assert not xmlutil.verify_check(doc.replace("82.0", "81.0"))
+    assert not xmlutil.verify_check(bare)
+    assert xmlutil.with_check('<c a="1"/>').endswith('check="%s"/>' % xmlutil.compute_check('<c a="1"/>'))

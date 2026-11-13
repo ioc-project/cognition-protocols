@@ -2,44 +2,70 @@
 # Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 # SPDX-License-Identifier: Apache-2.0
 #
-"""XML helpers shared by every CONCORD document: escaping, building elements, repairing copied text, and the patterns
-that find a CONCORD document inside free text."""
+"""XML text helpers: escaping, and the integrity check of a document.
+
+The check works on the text of a document, exactly as it was sent: a document is never parsed and written again before its
+check is computed or verified.
+"""
+import hashlib
 import re
-import xml.etree.ElementTree as ET
 
-# A complete <concord-...> element anywhere in a text: last resort, so an invented tag still gets a precise error.
-DOC_RE = re.compile(r"<(concord-[a-z-]+)\b[^>]*>.*?</\1\s*>", re.DOTALL)
-# A complete <concord-...-reply> element.
-REPLY_RE = re.compile(r"<(concord-[a-z-]+-reply)\b[^>]*>.*?</\1\s*>", re.DOTALL)
-# What an agent sends back: a reply, an acknowledgement or an error.
-AGENT_DOC_RE = re.compile(r"<(concord-(?:anchor|candidate|score)-reply|concord-ack|concord-error)\b[^>]*>.*?</\1\s*>",
-                          re.DOTALL)
-
-_BARE_LT_RE = re.compile(r"<(?![a-zA-Z/?!])")
-_BARE_AMP_RE = re.compile(r"&(?!(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);)")
+_WS = " \t\r\n"
+_START_TAG_RE = re.compile(r"<[^>]*>")
+_CHECK_ATTR_RE = re.compile(r' check="[^"]*"')
+_CHECK_VALUE_RE = re.compile(r'\scheck="([^"]*)"')
+_TEXT_RUN_RE = re.compile(r">([^<]*)<")
+_BLANKS_RE = re.compile(r"[ \t\r\n]+")
 
 
-def esc(v):
-    """`v` as XML text or attribute value."""
-    return (str(v).replace("&", "&amp;").replace("<", "&lt;")
-            .replace(">", "&gt;").replace('"', "&quot;"))
+def esc_text(v):
+    """`v` as XML text: `<`, `>` and `&` are escaped, a `"` is not."""
+    return str(v).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def cdata(s):
-    """`s` as a CDATA section."""
-    return "<![CDATA[" + str(s).replace("]]>", "]]]]><![CDATA[>") + "]]>"
+def esc_attr(v):
+    """`v` as the value of an attribute: `<`, `>`, `&` and `"` are escaped."""
+    return esc_text(v).replace('"', "&quot;")
 
 
-def text_element(parent, tag, text):
-    """Add <tag>text</tag> under `parent` and return it."""
-    el = ET.SubElement(parent, tag)
-    el.text = text
-    return el
+def _squeeze(match):
+    text = match.group(1)
+    return ">" + ("" if not text.strip(_WS) else _BLANKS_RE.sub(" ", text).strip(_WS)) + "<"
 
 
-def escape_bare_chars(xml_text):
-    """Escape what an agent un-escaped while copying: a `<` that does not start a tag and an `&` that is not part of an
-    entity. The scripts print `&lt;` and `&amp;`, but a model copying the text often turns them back into `<` and `&`.
-    Applied to every document before it is parsed, so one such character never costs a whole reply; the meaning of
-    the text is unchanged."""
-    return _BARE_LT_RE.sub("&lt;", _BARE_AMP_RE.sub("&amp;", xml_text))
+def canonical_text(doc):
+    """The text the check is computed over: the document without its `check` attribute (and the space before it), with
+    each stretch of text between a `>` and the next `<` made of whitespace only removed, and each other one with its runs of
+    whitespace made one space and none left at either end. Nothing else changes."""
+    doc = doc.strip(_WS)
+    start = _START_TAG_RE.match(doc)
+    if start:
+        doc = _CHECK_ATTR_RE.sub("", start.group(0), count=1) + doc[start.end():]
+    return _TEXT_RUN_RE.sub(_squeeze, doc)
+
+
+def compute_check(doc):
+    """The `check` of `doc`: the first 8 lowercase hex characters of the SHA-256 of its canonical text, as UTF-8."""
+    return hashlib.sha256(canonical_text(doc).encode("utf-8")).hexdigest()[:8]
+
+
+def check_of(doc):
+    """The value of the `check` attribute on the root element of `doc`, or None when it has none."""
+    start = _START_TAG_RE.match(doc.strip(_WS))
+    m = _CHECK_VALUE_RE.search(start.group(0)) if start else None
+    return m.group(1) if m else None
+
+
+def verify_check(doc):
+    """True when `doc` carries a `check` and it is the one `compute_check` gives."""
+    claimed = check_of(doc)
+    return claimed is not None and claimed == compute_check(doc)
+
+
+def with_check(doc_without_check):
+    """`doc_without_check`, whose root start tag has no `check`, with the attribute added as its last attribute."""
+    doc = doc_without_check.strip(_WS)
+    start = _START_TAG_RE.match(doc)
+    tag = start.group(0)
+    closing = "/>" if tag.endswith("/>") else ">"
+    return tag[:-len(closing)] + f' check="{compute_check(doc)}"' + closing + doc[start.end():]

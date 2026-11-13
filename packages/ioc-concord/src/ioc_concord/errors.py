@@ -23,16 +23,17 @@ class SchemaError(ConcordError):
     code = "invalid_schema"
 
 
-class ReplyError(ConcordError):
-    """A reply or request could not be read: it is not CONCORD XML, not well-formed, or lacks a field it needs."""
-
-    code = "invalid_reply"
-
-
 class InvalidRun(ConcordError):
     """The parameters of a run are not valid (too few agents, a threshold out of range, ...)."""
 
     code = "invalid_run"
+
+
+class InvalidMessage(ConcordError):
+    """A message breaks a rule of the protocol: it is not well-formed, lacks a field, or a value is out of range. The text
+    is what goes into a `<concord-error reason="invalid">`."""
+
+    code = "invalid_message"
 
 
 class StateError(ConcordError):

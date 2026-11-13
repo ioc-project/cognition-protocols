@@ -7,6 +7,7 @@ import importlib.util
 import sys
 import tomllib
 import types
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
@@ -26,25 +27,41 @@ bundle_tool = _bundle_tool()
 CONFIG = tomllib.loads((ROOT / "tools" / "bundle.toml").read_text())
 
 
-def bundled(module):
-    """{script path: the module as it exists inside that script}: the bundled block, run on its own.
+# The modules of the library that a script can bundle, in dependency order. They are those of the library as it is on disk: not the
+# list of tools/bundle.toml, which says what the scripts carry, at the revision they are pinned to.
+MODULES = ["errors", "protocol", "xmlutil", "schema", "engine", "wire", "store", "state", "liveness", "tasks", "report", "agent"]
 
-    The library is the one on disk, not the revision the scripts are pinned to (tools/bundle.toml): these tests are about the library as
-    it is being written, and `just check-sync` is about the scripts. The block is rendered whole (no tree shaking), so every name the
-    tests call is there."""
-    out = {}
+
+@lru_cache(maxsize=None)
+def _bundles():
+    """{script path: the library as it exists inside that script}: the bundled block of every script, run on its own.
+
+    The library is the one on disk, with every module of it (MODULES), not the revision the scripts are pinned to: these tests are
+    about the library as it is being written, and `just check-sync` is about the scripts. The block is rendered whole (no tree
+    shaking), so every name the tests call is there. Scripts that would carry the same block are tested once (under the name of the
+    first): running the same code twice would only slow the tests down."""
+    out, seen = {}, set()
     for lib in CONFIG["library"]:
         for target in lib["target"]:
-            if module not in target["modules"]:
+            block = bundle_tool.render({**lib, "ref": bundle_tool.WORKTREE}, {**target, "modules": MODULES},
+                                       (ROOT / target["file"]).read_text(), shake=False)
+            if block in seen:
                 continue
-            block = bundle_tool.render({**lib, "ref": bundle_tool.WORKTREE}, target, (ROOT / target["file"]).read_text(), shake=False)
+            seen.add(block)
             ns = types.ModuleType(f"bundled_{Path(target['file']).stem}")
             exec(compile(block, target["file"], "exec"), ns.__dict__)
             out[target["file"]] = ns
     return out
 
 
+def bundled(module):
+    """{script path: the module as it exists inside that script}, for a module of the library that a script can bundle."""
+    return _bundles() if module in MODULES else {}
+
+
+@lru_cache(maxsize=None)
 def implementations(module):
+    """{name: the module}: the library, and each distinct bundled block. Built once per module for the whole run."""
     import importlib
     impls = {"library": importlib.import_module(f"ioc_concord.{module}")}
     impls.update({Path(f).name: ns for f, ns in bundled(module).items()})
@@ -58,5 +75,5 @@ def _fixture(module):
     return fixture
 
 
-engine, xmlutil, schema, errors, wire, store, state = (_fixture(m) for m in (
-    "engine", "xmlutil", "schema", "errors", "wire", "store", "state"))
+engine, xmlutil, schema, errors, protocol, wire, store, state, agent = (_fixture(m) for m in (
+    "engine", "xmlutil", "schema", "errors", "protocol", "wire", "store", "state", "agent"))
