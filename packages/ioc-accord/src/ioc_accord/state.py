@@ -48,6 +48,8 @@ def blank_state() -> dict:
         "handle_replies": {},  # {phase_key: {agent: raw_text}}
         "clarify_terms": [],   # populated by ground advance when ambiguous pairs exist
         "issued": {},          # {phase:agent -> True} prevents re-sending the same message
+        "issued_checks": {},   # {phase:agent -> check} fingerprint of the message that was sent
+        "check_fail": {},      # {phase:agent -> consecutive unverifiable replies}
         "required_knowledge": [],
         "objective_clauses": [],
     }

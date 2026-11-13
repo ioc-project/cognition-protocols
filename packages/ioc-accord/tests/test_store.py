@@ -45,3 +45,25 @@ def test_a_locked_mutation_is_written_back_whole(store, tmp_path):  # noqa: F811
     reloaded = store.load_state(path)
     assert reloaded["roster"] == [{"identity": "sre"}]
     assert reloaded["handle_replies"] == {}          # the file was truncated, not overwritten in place
+
+
+def test_a_failed_call_records_nothing(store, tmp_path):  # noqa: F811
+    path = tmp_path / "state.json"
+    store.save_state(path, {"roster": []})
+    with pytest.raises(ValueError):
+        with store.locked_state(path) as st:
+            st["roster"] = [{"identity": "sre"}]
+            raise ValueError("something went wrong half way")
+    assert store.load_state(path)["roster"] == []
+
+
+def test_a_refusal_leaves_its_bookkeeping_behind(store, tmp_path):  # noqa: F811
+    """The count of unverifiable attempts has to survive the refusal, or the next attempt starts from zero."""
+    path = tmp_path / "state.json"
+    store.save_state(path, {"check_fail": {}})
+    with pytest.raises(Exception) as exc:
+        with store.locked_state(path) as st:
+            st["check_fail"]["convene:sre"] = 1
+            raise store.AccordRefusal("no check line")
+    assert exc.value.code == "refused"
+    assert store.load_state(path)["check_fail"] == {"convene:sre": 1}

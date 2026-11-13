@@ -17,9 +17,33 @@ def test_every_request_names_its_handler_and_its_session(wire, session, builder)
     session["state_id"] = "abc12345"
     msg = getattr(wire, builder)(session)
     kind = builder.removeprefix("build_").removesuffix("_msg").upper() + "_REQUEST"
-    assert msg.startswith('<accord-delivery state="abc12345"></accord-delivery>')
+    header, body = msg.split("\n\n", 1)
+    assert header == f'<accord-delivery state="abc12345" check="{wire.reply_check(body)}"></accord-delivery>'
     assert kind in msg
     assert f"follow its {kind} handler" in msg
+
+
+def test_a_check_ignores_whitespace_but_nothing_else(wire):  # noqa: F811
+    assert wire.reply_check("GROUND_REQUEST\n\nKEY_TERMS: []") == wire.reply_check("GROUND_REQUEST KEY_TERMS:[]")
+    assert wire.reply_check("a") != wire.reply_check("b")
+    assert len(wire.reply_check("a")) == 8
+
+
+def test_every_message_is_fingerprinted_by_the_body_that_follows_it(wire, session):  # noqa: F811
+    session["state_id"] = "abc12345"
+    pairs = [{"term": "severity", "agents": ["sre", "net"], "sim": 0.6}]
+    for msg in (wire.build_convene_msg(session), wire.build_frame_msg(session, "sre"),
+                wire.build_ground_msg(session), wire.build_clarify_msg(session, "sre", pairs),
+                wire.build_verify_msg(session)):
+        header, body = msg.split("\n\n", 1)
+        assert wire._CHECK_RE.search(header).group(1) == wire.reply_check(body)
+
+
+def test_two_agents_sent_different_messages_get_different_checks(wire, session):  # noqa: F811
+    session["obs"] = [{"text": "latency spike", "agent": "sre", "kind": "term"}]
+    session["frame"] = [{"id": "s1", "text": "latency spike", "support": 1}]
+    sre, dba = wire.build_frame_msg(session, "sre"), wire.build_frame_msg(session, "dba")
+    assert wire._CHECK_RE.search(sre).group(1) != wire._CHECK_RE.search(dba).group(1)
 
 
 def test_the_task_is_escaped_before_it_reaches_a_message(wire, session):  # noqa: F811

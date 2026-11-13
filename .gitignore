@@ -3,6 +3,9 @@
 site/
 .build/
 
+# Python package build output (uv build writes here; CI publishes from it)
+dist/
+
 # Python cache
 __pycache__/
 *.pyc
