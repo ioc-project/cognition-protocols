@@ -6,6 +6,7 @@
 
     uv run --no-project --with pytest python -m pytest tools
 """
+import subprocess
 import sys
 import textwrap
 from pathlib import Path
@@ -31,15 +32,25 @@ def repo(tmp_path, monkeypatch):
     def config(*modules):
         return tmp_path / "bundle.toml", {"name": "lib", "path": "pkg", "target": [{"file": "script.py", "modules": list(modules)}]}
 
-    def run(*modules, check=False, shake=False, script=None):
+    def run(*modules, check=False, shake=False, script=None, ref=None, args=()):
         if script:
             (tmp_path / "script.py").write_text(SCRIPT.replace("return 1", script))
         path, lib = config(*modules)
-        path.write_text("[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nfile = 'script.py'\n"
+        pin = f"ref = {ref!r}\n" if ref else ""
+        path.write_text(f"[[library]]\nname = 'lib'\npath = 'pkg'\n{pin}[[library.target]]\nfile = 'script.py'\n"
                         f"modules = {list(modules)!r}\nshake = {str(shake).lower()}\n")
-        return bundle.main(["--config", str(path)] + (["--check"] if check else []))
+        return bundle.main(["--config", str(path)] + (["--check"] if check else []) + list(args))
 
-    write.run, write.root = run, tmp_path
+    def commit():
+        """Commit the library as it is, in a git repository made here; the id of the commit."""
+        git = ["git", "-C", str(tmp_path), "-c", "user.name=t", "-c", "user.email=t@example.com"]
+        if not (tmp_path / ".git").exists():
+            subprocess.run(git + ["init", "-q"], check=True)
+        subprocess.run(git + ["add", "pkg"], check=True)
+        subprocess.run(git + ["commit", "-q", "-m", "lib"], check=True)
+        return subprocess.run(git + ["rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
+
+    write.run, write.root, write.commit = run, tmp_path, commit
     return write
 
 
@@ -196,3 +207,63 @@ def test_a_module_nothing_reaches_is_left_out_whole(repo):
     assert repo.run("a", "b", shake=True, script="f()") == 0
     out = (repo.root / "script.py").read_text()
     assert "[a]" in out and "lib.b" not in out
+
+
+# --- a library pinned to a git revision ---------------------------------------------------------------------
+
+def test_a_pinned_library_is_read_from_its_revision_and_not_from_disk(repo, capsys):
+    repo("one", "X = 1\n")
+    pin = repo.commit()
+    assert repo.run("one", ref=pin) == 0                                  # the script now carries the pinned version
+    repo("one", "X = 2\n")                                                 # the library moves on, uncommitted
+    assert "X = 1" in (repo.root / "script.py").read_text()
+    assert repo.run("one", ref=pin, check=True) == 0                      # still in sync with the pin
+    assert repo.run("one", check=True) == 1                               # but not with the files on disk
+    assert repo.run("one", ref=pin) == 0 and "X = 1" in (repo.root / "script.py").read_text()
+
+
+def test_ref_on_the_command_line_overrides_the_pin(repo):
+    repo("one", "X = 1\n")
+    pin = repo.commit()
+    assert repo.run("one", ref=pin) == 0
+    repo("one", "X = 2\n")
+    assert repo.run("one", ref=pin, check=True, args=["--ref", "worktree"]) == 1      # the files on disk differ
+    assert repo.run("one", ref=pin, args=["--ref", "worktree"]) == 0
+    assert "X = 2" in (repo.root / "script.py").read_text()
+    assert repo.run("one", ref=pin, check=True, args=["--ref", "worktree"]) == 0
+    assert repo.run("one", ref="nonsense", check=True, args=["--ref", "HEAD"]) == 1   # HEAD is the commit, not the disk
+
+
+def test_the_version_in_the_block_comes_from_the_pinned_revision(repo):
+    repo("one", "X = 1\n")
+    pin = repo.commit()
+    (repo.root / "pkg/pyproject.toml").write_text('[project]\nname = "lib"\nversion = "9.9.9"\n')
+    assert repo.run("one", ref=pin) == 0
+    assert "BUNDLED lib 1.2.3 " in (repo.root / "script.py").read_text()
+    assert repo.run("one", args=["--ref", "worktree"]) == 0
+    assert "BUNDLED lib 9.9.9 " in (repo.root / "script.py").read_text()
+
+
+def test_a_revision_the_clone_does_not_have_is_explained(repo, capsys):
+    repo("one", "X = 1\n")
+    repo.commit()
+    assert repo.run("one", ref="0" * 40, check=True) == 2
+    err = capsys.readouterr().err
+    assert "pinned to " + "0" * 40 in err and "git fetch --tags" in err
+
+
+def test_a_module_that_was_not_in_the_pinned_revision_is_named_with_the_revision(repo, capsys):
+    repo("one", "X = 1\n")
+    pin = repo.commit()
+    repo("two", "Y = 1\n")                                                 # added after the pin
+    assert repo.run("one", "two", ref=pin) == 2
+    assert f"lib.two: no such module (pkg/src/lib/two.py at {pin})" in capsys.readouterr().err
+
+
+def test_a_tag_can_be_the_pin(repo):
+    repo("one", "X = 1\n")
+    repo.commit()
+    subprocess.run(["git", "-C", str(repo.root), "tag", "lib-v1"], check=True)
+    repo("one", "X = 2\n")
+    assert repo.run("one", ref="lib-v1") == 0 and "X = 1" in (repo.root / "script.py").read_text()
+    assert repo.run("one", ref="lib-v1", check=True) == 0
