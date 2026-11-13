@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
+LIBRARY = "ioc_concord"
 
 
 def _bundle_tool():
@@ -24,6 +25,7 @@ def _bundle_tool():
 
 bundle_tool = _bundle_tool()
 CONFIG = tomllib.loads((ROOT / "tools" / "bundle.toml").read_text())
+LIBS = [lib for lib in CONFIG["library"] if lib["name"] == LIBRARY]
 
 
 def bundled(module):
@@ -32,7 +34,7 @@ def bundled(module):
     The block is rendered whole (no tree shaking), so every name the tests call is there. The script carries the same code
     minus what it never reaches, and test_bundled_scripts checks that it is exactly that."""
     out = {}
-    for lib in CONFIG["library"]:
+    for lib in LIBS:
         for target in lib["target"]:
             if module not in target["modules"]:
                 continue
@@ -45,7 +47,7 @@ def bundled(module):
 
 def implementations(module):
     import importlib
-    impls = {"library": importlib.import_module(f"ioc_concord.{module}")}
+    impls = {"library": importlib.import_module(f"{LIBRARY}.{module}")}
     impls.update({Path(f).name: ns for f, ns in bundled(module).items()})
     return impls
 

@@ -24,3 +24,8 @@ check-sync:
 test-concord:
     uv run --no-project --with pytest python -m pytest tools protocols/concord/tests -q -p no:cacheprovider
     uv run --directory packages/ioc-concord pytest -q -p no:cacheprovider
+
+# Run the ACCORD tests: the bundler and the ioc-accord library (also as bundled in each script)
+test-accord:
+    uv run --no-project --with pytest python -m pytest tools -q -p no:cacheprovider
+    uv run --directory packages/ioc-accord pytest -q -p no:cacheprovider
