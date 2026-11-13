@@ -39,6 +39,8 @@ All agents run the same protocol.
 
 The state machine is distributed. Each participant moves as soon as its own copy of the run state says it is its turn. It scores once the seeds have reached it, and repairs when every score is in and it is the bottleneck. Participants detect gaps and errors in the protocol through their own copy of the run state. The protocol allows for resending lost messages, and aborts the run when a participant stops responding (see [Timeouts and abort](#timeouts-and-abort)).
 
+How a participant produces the judgement its messages contain (its anchors, a candidate, a rationale, a score) is outside the protocol. Appendix A (informative) describes the context an agent that uses a language model should give it.
+
 ---
 
 ## Configuration Parameters
@@ -611,3 +613,98 @@ These summarize rules stated in the sections above. Where wording differs, the s
 11. **One uuid per transmission.** Every send, a re-send included, has a new `uuid`, and an agent processes an accepted one at most once.
 12. **One run at a time.** An agent is in at most one active run and refuses a second init as busy. Two initiators that both receive the other's init settle it by run id, and the lower one continues.
 13. **One version.** Every message carries the protocol version. An agent does not process a message of another version. If it is the init, the agent refuses it with an error and the run is aborted at once; otherwise the sender goes unheard and the timers end the run.
+
+---
+
+## Appendix A: Context management for agents (informative)
+
+This appendix is informative: nothing in it changes what a message means or when it is valid. The protocol says who sends what, and when. It does not say how an agent produces the judgement a message contains: the anchors, a candidate, a rationale, a score. When that judgement comes from a language model, what the model has in its context decides whether the protocol does its job. This appendix says what context an agent should give it, and what goes wrong without it.
+
+In this appendix the **node** is the part of an agent that implements the protocol: the state, the order of checks, the decision engine, the timers, and the building and sending of messages. The **reasoner** is the part that supplies judgement, usually a language model. A **task** is what the node asks of the reasoner at one point of a run: a first answer, a score, or a repair.
+
+### A.1 Why the context matters
+
+Information moves through a run in one way only: in the text of the messages. The rationale of a proposal and the reasoning of a score are, in the words of [`<concord-score>`](#concord-score), "the only channel through which a participant's private domain knowledge reaches the other participants". A reasoner that is not given the messages of the others cannot use that channel. It rates candidates without the evidence the others wrote, and it cannot learn that an option it likes has been ruled out by a fact it does not hold.
+
+A node is enough to run the protocol: it receives the messages, keeps the state, takes the decisions and sends the answers, and a run completes with a valid outcome. But the answers are written by the reasoner, and it can only decide as well as it can see. If it is given only its own task, and not what the other agents decided and wrote, it cannot weigh their evidence, and the outcome, though valid, may be a poor one. Context management is how an agent gives the reasoner what it needs to take the right decision.
+
+### A.2 The split of work
+
+The node decides and the reasoner writes content. The node tracks the run, works out when a judgement is owed (see [Messages owed](#messages-owed)), checks every message it receives, takes every decision of the [Scoring Model](#scoring-model), and builds, validates and sends every message, the `check` included. The reasoner supplies only what no code can: its anchors, its candidate and rationale, its scores and their reasoning. It does not write message text, does not compute normalized scores, floors or the bottleneck, and does not decide that the run is over. This is the division the specification already requires: "Code computes and verifies the check, never an agent by hand" (see [Integrity check](#integrity-check)), and every agent sends message content exactly as produced (see [Invariants](#invariants), 5).
+
+A judgement is owed when the state says so, never because a message asks for it: nothing in the protocol requests a score or a repair. A node should work out what is owed from its state each time, and not from a queue of requests, so that it is still right after a restart from stored state.
+
+### A.3 What the reasoner knows throughout
+
+Some context does not change during a run. The reasoner should have it from its first answer to its last:
+
+- **Its role and what it knows.** The criteria its role gives it, and its private knowledge, the facts only it holds. The protocol supplies no criteria (see [Roles](#roles)).
+- **The run.** What the init carries: the problem (`context`), the two outcomes that anchor the scale, the candidate schema, the participants and their order, and the parameters, the threshold included. An agent that shows the reasoner the init message shows all of this. The threshold is fixed and public (see [Invariants](#invariants), 2): every participant receives it in the init, and a repairer needs it to know what it has to reach. Ratings that cluster just above a visible threshold are to be expected (see A.8); the answer is to set the threshold at the genuine bar (see [Configuration Parameters](#configuration-parameters)), not to keep it from the reasoner.
+- **How a run goes.** A few sentences on the steps and on what each answer is used for: the first answer fixes the scale and seeds the pool, scores decide the incumbent, a repair is owed by the bottleneck alone, and the reporter announces the end. A reasoner that knows why its reasoning text matters writes it for the others.
+- **How to weigh evidence** (see A.6).
+- **What it receives and what it sends.** It receives the messages of the others as they were sent. What it sends is built by the node from what it writes.
+
+### A.4 What to deliver before each task
+
+**Every message the node accepts from another agent should reach the reasoner, in full and as sent, before its next task.** That means the init, the first answers, the scores with their reasoning, the repairs and the result: not a summary, and not only the part the task is about.
+
+- Deliver what the node accepted, in the order it was received. A message the node ignored (a duplicate, an invalid message, one from an unknown run) is not evidence of anything and need not be shown. A `<concord-resend>` is shown as the message it carries.
+- A task may restate the candidates to rate in its own words. That does not replace the messages: the reasoner should be able to read, and quote, what each agent wrote.
+- Keep what was delivered. The conversation of the reasoner should grow through the run, with earlier deliveries, tasks and its own answers staying in it. The reasoner has to keep its raw scale consistent for the whole run (see [Raw vs Normalized](#raw-vs-normalized)), and its own earlier ratings are how it does so. If the context has to be limited, what can safely be dropped depends on the agent. The reasoner should keep at least the init, every proposal, the ratings and reasoning on the incumbent, and its own earlier ratings.
+
+For example, the context before a task could read:
+
+```
+CONCORD messages you received since your last answer, exactly as they arrived:
+
+<concord-init version="0.3.0" from="alice" run_id="…" …> … </concord-init>
+
+<concord-init-reply version="0.3.0" from="security" run_id="…" …> … </concord-init-reply>
+
+[the task follows]
+```
+
+### A.5 What each task carries
+
+| Task | The reasoner should be able to see | The instructions should make clear |
+|---|---|---|
+| **First answer** (after the init) | The init: the problem, the two anchor outcomes, the candidate schema (for a closed list, the options as listed), the participants and the parameters | The anchors are the satisfaction of its role if each outcome happened: low for the reject outcome and strictly higher for the ideal one, not measurements of the current state, on a raw 0–100 scale and never normalized, and fixed for the run (see [`<concord-init-reply>`](#concord-init-reply)). It proposes the one candidate that best suits its role, not a compromise, with the facts that support it and the evidence against the other options, where it has any. It rates its own proposal on the same scale. What it writes is read by every agent, and what it leaves out is invisible to them |
+| **Score** (once every init reply is in, then after each repair) | The candidates of the others it has not rated, each with its rationale and the proposer's reasoning for its own score; its own anchors; its own earlier ratings; what the others have scored and why | It rates exactly the candidates listed, never one it proposed. It uses the raw scale of its anchors for the whole run, so that the same quality gets the same number. Its reasons are concrete and include evidence against a candidate. It changes a number only for a named fact and says which and from whom. It does not refuse to score (see [`<concord-score>`](#concord-score)) |
+| **Repair** (the bottleneck only) | The incumbent and its rationale; every participant's normalized score on it and their reasoning; the threshold, the floor and each shortfall; how many repairs remain; the candidates already in the pool | It proposes one candidate that it rates well and that does not knowingly push another participant below the threshold (their reasoning says what they are protecting). It answers the strongest argument against its position. It may re-propose a candidate already in the pool, saying so and giving new arguments (see [`<concord-repair>`](#concord-repair)). If it believes none exists, it gives the best it has and states the conflict. The numbers it was shown are normalized and are never sent as its own raw score. It does not change the threshold or its anchors |
+| **End** (when the run is over for it) | The reporter's result; the winning candidate; the final normalized scores; who is below the threshold; whether its own outcome matches the reporter's | The decision is made and is not reopened. When it reports on the run, it says so if the outcome is `BEST_EFFORT` and names who fell short (see [Confirmation](#confirmation)) |
+
+### A.6 Weighing evidence
+
+The protocol cannot check what a participant writes. It can only make the others read it. What they do with it depends on what the reasoner has been told about evidence. The instructions should convey at least these points:
+
+1. What the agent holds is a fact. What other agents report from their own evidence is evidence: it is used, applied to every candidate it bears on, and not set aside only because the agent cannot check it.
+2. Evidence is weighed, not taken as certain. A specific report counts for more than a vague one. When two reports conflict, the reasoner says so and says which it relies on and why.
+3. A conclusion or a reading offered by another agent is an argument and not a fact. The reasoner's own facts change only when another agent reports evidence that contradicts them, never because someone offers another reading of them.
+4. Nothing is invented: no fact it does not hold and nobody reported, no cause that reconciles two reports, no fix, delay or way around that nobody reported.
+5. Before it rates a candidate, the reasoner states what the evidence implies for it, in its own words, and checks that the number matches that reasoning.
+6. The number another agent gave and the wording of a candidate are not reasons.
+7. Ratings are honest: not inflated to seem agreeable, not deflated for leverage, and not softened to make a candidate look acceptable. The threshold is not lowered.
+8. Everything relevant is written, evidence against a candidate included, since what is not written is invisible to the others, and everything written is read by every agent. A participant must not write what it needs to keep private (see [`<concord-score>`](#concord-score)).
+
+### A.7 Answers and refusals
+
+The reasoner returns its content in named fields that the node can validate: the two anchors, a candidate, a rationale, a score and its reasoning, and for a score message one entry for each candidate. The node builds the message from them, so the reasoner never writes message text. Because the author validates a message before it sends it (see [Invalid messages](#invalid-messages)), an answer can be refused, and what the refusal says matters:
+
+- Say what is wrong and what to do about it, never the complaint alone.
+- Name a missing field, and show what the answer contained next to what was expected. A reasoner that copies its own earlier answer repeats the same omission when it is told only that the answer is invalid.
+- Tell a mistake from an answer that is already given or not owed. The second is not to be retried.
+- Limit the retries and, if the answer cannot be obtained, stop with an error that says why. Silence ends the run for every agent (see [Timeouts and abort](#timeouts-and-abort)), so a reasoner that never answers is an agent that goes missing. The `timeout` has to be longer than the slowest turn of the reasoner, as [Timeouts and abort](#timeouts-and-abort) says.
+
+### A.8 Failure modes
+
+These are typical failure modes of an agent whose reasoner lacks the context described above, with their usual causes and remedies. The list is not exhaustive, and a cause given here is the usual one, not the only one.
+
+| Symptom | Typical cause | Remedy |
+|---|---|---|
+| The run ends on the first candidate that everyone rates above the threshold, although a participant holds a fact that rules it out | The reasoners rated without the evidence the others wrote, and the threshold is low compared with the scores the reasoner tends to give | Deliver the messages of the others (A.4). Set the threshold at the genuine bar |
+| Repairs follow one another and ratings do not move: participants do not answer each other's reasons | The reasoner saw the proposals of the others but not the reasoning attached to their scores | Deliver every score message with its reasoning to every agent (A.4) |
+| A reasoner sends the same incomplete answer many times | The refusal named no field, and the reasoner copied its previous answer | Name the field and show what was sent next to what was expected; limit the retries (A.7) |
+| A repairer proposes the same candidate round after round, without a new argument, until the repair budget is spent | The instructions do not ask what is new, or the reasoner has no other candidate it can rate well | Ask for a new argument, or a statement of the conflict (A.5). `BEST_EFFORT` is a legitimate end, and repeating a candidate is allowed, but it spends the budget |
+| A participant drops a fact it holds because the others read it differently | The point on evidence (A.6, 3) was not conveyed or not followed | State it in the instructions. This is a limit of the protocol: it cannot check claims |
+| A rationale or reasoning asserts something no participant holds, and others rate on it | The point on invention (A.6, 4) was not conveyed or not followed | State it in the instructions. The protocol cannot check this either, so a reader of a run should expect it |
+| Ratings of the winning candidate sit just above the threshold | The threshold is public, and a reasoner can aim at it | Instruct honest ratings (A.6, 7), set the threshold at the genuine bar, and do not read a score at the threshold as strong agreement |
