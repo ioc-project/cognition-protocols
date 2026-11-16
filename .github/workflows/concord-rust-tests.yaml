@@ -1,0 +1,64 @@
+name: concord-rust-tests
+
+# The Rust port of the ioc-concord library (packages/ioc-concord-rs). Two jobs that run side by side:
+#   concord-rust-library  formatting, clippy without warnings, the documentation without warnings, and the tests
+#   concord-rust-msrv     the crate builds, and its tests pass, on the oldest Rust it declares (`rust-version` in its Cargo.toml)
+
+on:
+  pull_request:
+    paths:
+      - "packages/ioc-concord-rs/**"
+      - ".github/workflows/concord-rust-tests.yaml"
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  concord-rust-library:
+    name: concord-rust-library
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/ioc-concord-rs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Toolchain
+        run: rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+
+      - name: Formatting
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps
+
+      - name: Tests
+        run: cargo test
+
+  concord-rust-msrv:
+    name: concord-rust-msrv
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/ioc-concord-rs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Oldest supported Rust
+        run: |
+          msrv=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
+          rustup toolchain install "$msrv" --profile minimal
+          cargo "+$msrv" check --all-targets
+          cargo "+$msrv" test
