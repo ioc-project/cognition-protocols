@@ -6,6 +6,7 @@ on:
   push:
     tags:
       - "ioc-concord-v*"
+      - "ioc-accord-v*"
       - "ioc-concord-mce-metrics-v*"
       - "ioc-accord-mce-metrics-v*"
 
@@ -31,10 +32,12 @@ jobs:
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import os
+          # Longest names first: a prefix match must not claim a tag that belongs to another package.
           packages = [
               ("ioc-accord-mce-metrics", "protocols/accord/mce-metrics"),
               ("ioc-concord-mce-metrics", "protocols/concord/mce-metrics"),
               ("ioc-concord", "packages/ioc-concord"),
+              ("ioc-accord", "packages/ioc-accord"),
           ]
           tag = os.environ["TAG"]
           for name, path in packages:

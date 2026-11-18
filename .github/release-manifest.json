@@ -5,6 +5,7 @@
     "protocols/accord/skills/accord-receiver": "0.1.1",
     "protocols/concord/spec": "0.1.0",
     "packages/ioc-concord": "0.1.0",
+    "packages/ioc-accord": "0.1.0",
     "protocols/concord/mce-metrics": "0.1.0",
     "protocols/accord/mce-metrics": "0.1.0"
 }
