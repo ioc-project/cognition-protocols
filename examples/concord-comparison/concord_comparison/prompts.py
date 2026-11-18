@@ -13,9 +13,9 @@ Not here, because they are not ours:
 `python -m concord_comparison.prompts` prints the prompts of a scenario (the system prompt of a participant in each mode, the opening).
 
 The scenarios and their prompts:
-  free speech (A over a star, B over SLIM): FREE_DESCRIPTION, opening(mode="free"), tools `post` / `stay_silent` / `final_answer`;
-  CONCORD (C over a star, D over SLIM): SHARE_DESCRIPTION + RUN_DESCRIPTION, opening(mode="concord"), step 1 (`post`), then the tools of
-  CONCORD. In both the participant is asked for its private final choice at the end (`final_answer`).
+  free speech (A over a star, B over SLIM): STEP1 + STEP2_FREE, opening(mode="free"), tools `post` / `stay_silent` / `final_answer`;
+  CONCORD (C over a star, D over SLIM): STEP1 + STEP2_CONCORD + RUN_DESCRIPTION, opening(mode="concord"), step 1 (`post`), then the
+  tools of CONCORD. In both the participant is asked for its private final choice at the end (`final_answer`).
 """
 import re
 
@@ -48,13 +48,18 @@ you know is part of the evidence, not all of it. Do not invent facts: use what y
 {run}
 """
 
-# free speech (A, B)
-FREE_DESCRIPTION = """## How you decide together
-You are in a shared channel with the other two leaders: everything anyone posts is read by all of them, and by a facilitator who
-does not take part. There is no procedure and no turn order. Work together with them to reach a final decision on where to evacuate.
+# "How you decide together": step 1 is the same in every scenario, step 2 is what differs.
+STEP1 = """## How you decide together
+You decide in two steps, in a shared channel with the other two leaders: everything anyone posts is read by all of them, and by a
+facilitator who does not take part.
 
-Only what you write in the channel reaches the others: what you leave out is invisible to them, and what another leader writes is
-evidence you can use.
+Step 1: share what you know. You will be asked to post once, in plain text. List your facts as they are, one per line. You may say
+which option you lean towards, as a provisional view, and say what you would like to learn from the others. Only what you write
+reaches them: a fact you leave out is invisible to them, and what another leader writes is evidence you can use."""
+
+# step 2, free speech (A, B)
+STEP2_FREE = """Step 2: decide in the discussion. There is no procedure and no turn order: you keep talking with the other two leaders
+until you reach a final decision on where to evacuate.
 
 Each time new messages arrive, you decide what to do with them: answer, ask a question, add something you know, change your mind,
 say that you agree, or leave them alone if you have nothing to add. You are not obliged to reply. When you are convinced that the
@@ -62,15 +67,8 @@ group has settled, say so, and say on which option.
 
 The facilitator closes the session when the discussion has gone quiet. After that you will be asked privately for your final choice."""
 
-# CONCORD (C, D): step 1, in free text, then the CONCORD procedure. It comes before the library's RUN_DESCRIPTION.
-SHARE_DESCRIPTION = """## How you decide together
-You decide in two steps, in a shared channel with the other two leaders. Everything anyone posts is read by all of them.
-
-Step 1: share what you know. You will be asked to post once, in plain text. List your facts as they are, one per line. You may say which
-option you lean towards, as a provisional view, and say what you would like to learn from the others. Only what you write reaches them: a fact you leave out
-is invisible to them.
-
-Step 2: decide with the procedure. The facilitator then starts the CONCORD procedure and you will receive its instructions. Before
+# step 2, CONCORD (C, D): this paragraph comes before the library's RUN_DESCRIPTION, which describes the procedure
+STEP2_CONCORD = """Step 2: decide with the procedure. The facilitator then starts the CONCORD procedure and you will receive its instructions. Before
 you score, read what the others posted in step 1. Your first proposal and your scores should rest on all the facts that are now on
 the table, yours and theirs, not only on your own. If a fact from another leader changes how an option looks, say so in your
 rationale and score the option accordingly."""
@@ -83,7 +81,7 @@ def system_prompt(scenario, agent, mode):
     """The system prompt of `agent` for `mode` ("free" or "concord")."""
     facts = "\n".join(f"- {f}" for f in scenario.facts_for(agent))
     options = "\n".join(f"- {o}" for o in scenario.options)
-    run = FREE_DESCRIPTION if mode == "free" else f"{SHARE_DESCRIPTION}\n\n{RUN_DESCRIPTION}"
+    run = f"{STEP1}\n\n{STEP2_FREE}" if mode == "free" else f"{STEP1}\n\n{STEP2_CONCORD}\n\n{RUN_DESCRIPTION}"
     return PARTICIPANT.format(me=agent, scenario=scenario.text, facts=facts, options=options, run=run)
 
 
