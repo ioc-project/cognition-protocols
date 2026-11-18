@@ -38,6 +38,12 @@ instructions themselves are the library's (`ioc_concord.guidance`), and the fact
     uv run python show.py runs/<run folder>         # the messages of a run (--text for the full text, --verify for the referee)
     uv run python metrics.py runs/batch-<time>      # the cost of a batch (--judge labels the free-speech posts with the model)
 
+**Tasks.** `scenarios/` holds three versions of the evacuation task, with the same options and the same structure (4 shared facts, 4 hidden
+ones split over the three leaders) but different facts, so the right answer differs: `evacuation-west-city`, `evacuation-east-town`,
+`evacuation-north-hill` (the facts are those of the `hidden-profile` task set). `batch.py --tasks all` (or `--tasks west-city,east-town`)
+runs every scenario on each task, in turns; each run is scored against the correct answer of its own task, and the run folders carry the
+task in their name (`B-east-town-r0`, `D-east-town-t0.7-r0`). Without `--tasks`, the task is `--scenario` (West City by default).
+
 `--fake-llm` checks the plumbing without a key. Each run writes `runs/<time>/` (a log and a `<agent>.json` per agent, the
 facilitator's included). The exit status of `run.sh` is 0 when the outcome (the winner, or the option the participants agreed on) is
 the correct answer.

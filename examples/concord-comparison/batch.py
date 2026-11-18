@@ -215,9 +215,10 @@ def run_with_limit(cmd, env, limit):
             return proc.communicate()[1], True
 
 
-def one(base, key, t, n, rest, scenario_file, scenario, parallel=1, limit=900):
+def one(base, key, t, n, rest, scenario_file, scenario, parallel=1, limit=900, task=None):
     name, mode, transport = SCENARIOS[key]
-    label = f"{key}-t{t if t is not None else 'agent'}-r{n}" if mode == "concord" else f"{key}-r{n}"
+    where_task = f"-{task}" if task else ""                              # the task is in the name only when a batch has several
+    label = f"{key}{where_task}-t{t if t is not None else 'agent'}-r{n}" if mode == "concord" else f"{key}{where_task}-r{n}"
     run_dir = base / label
     where, env = [], {**os.environ, "RUN_DIR": str(run_dir)}
     if parallel > 1:                                                    # runs in parallel each have their own SLIM node and star port
@@ -229,7 +230,7 @@ def one(base, key, t, n, rest, scenario_file, scenario, parallel=1, limit=900):
     emit(f"==> {label} ({name})")
     t0 = time.time()
     stderr, timed_out = run_with_limit(cmd, env, limit)
-    row = {"run": label, "scheme": SCHEME, "scenario": key, "mode": mode, "transport": transport, "threshold": t if mode == "concord" else None,
+    row = {"run": label, "scheme": SCHEME, "scenario": key, "task": scenario.id, "correct": scenario.correct, "mode": mode, "transport": transport, "threshold": t if mode == "concord" else None,
            "seconds": round(time.time() - t0), "first_answers": first_answers(run_dir), **read(run_dir, mode, scenario)}
     if timed_out:                                                        # whatever it wrote, a run that did not end in time is not a result
         row.update(outcome="TIMEOUT", valid=None, error=f"the run did not end in {limit}s and was stopped")
@@ -256,7 +257,7 @@ def one(base, key, t, n, rest, scenario_file, scenario, parallel=1, limit=900):
     return row
 
 
-def summarize(rows, correct):
+def summarize(rows):
     print(f"\n{'scenario':<24}{'runs':<6}{'valid':<7}{'right':<7}{'agents right':<14}{'facts shared':<14}{'avg tokens':<12}{'avg secs':<10}{'avg msgs':<10}{'misrouted':<11}{'dropped'}")
     for sc, (name, _, _) in SCENARIOS.items():
         rs = [r for r in rows if r["scenario"] == sc]
@@ -264,10 +265,20 @@ def summarize(rows, correct):
             continue
         ok = [r for r in rs if r["valid"]]                              # only valid runs count
         avg = lambda key: round(sum(r[key] for r in ok if isinstance(r.get(key), (int, float))) / max(1, len(ok)))
-        agents = f"{sum(f == correct for r in ok for f in r['finals'])}/{3 * len(ok)}"
+        agents = f"{sum(f == r['correct'] for r in ok for f in r['finals'])}/{3 * len(ok)}"
         facts = f"{sum(r['shared'][0] for r in ok)}/{sum(r['shared'][1] for r in ok)}"
-        print(f"{sc + ' ' + name:<24}{len(rs):<6}{len(ok):<7}{sum(r['winner'] == correct for r in ok):<7}{agents:<14}{facts:<14}"
+        print(f"{sc + ' ' + name:<24}{len(rs):<6}{len(ok):<7}{sum(r['winner'] == r['correct'] for r in ok):<7}{agents:<14}{facts:<14}"
               f"{avg('tokens'):<12}{avg('seconds'):<10}{avg('posts'):<10}{sum(r.get('misrouted', 0) for r in ok):<11}{sum(r.get('dropped', 0) for r in ok)}")
+    tasks = sorted({r["task"] for r in rows})
+    if len(tasks) > 1:                                                  # right answers by task: "right/valid runs"
+        print(f"\n{'right by task':<24}" + "".join(f"{t.removeprefix('evacuation-'):<14}" for t in tasks))
+        for sc, (name, _, _) in SCENARIOS.items():
+            if any(r["scenario"] == sc for r in rows):
+                cells = []
+                for t in tasks:
+                    ok = [r for r in rows if r["scenario"] == sc and r["task"] == t and r["valid"]]
+                    cells.append(f"{sum(r['winner'] == r['correct'] for r in ok)}/{len(ok)}")
+                print(f"{sc + ' ' + name:<24}" + "".join(f"{c:<14}" for c in cells))
     free = [r for r in rows if r["scenario"] in ("A", "B") and r["valid"]]
     if free:
         print("\nfree speech details: " + "; ".join(f"{r['run']}: {r['outcome']} {r['winner']}, finals {r['finals']}, closed by {r['closed_by']}, "
@@ -278,7 +289,23 @@ def summarize(rows, correct):
                        ("A", "C", "protocol: free speech vs CONCORD, both on a star")):
         ra, rb = [r for r in rows if r["scenario"] == a and r["valid"]], [r for r in rows if r["scenario"] == b and r["valid"]]
         if ra and rb:
-            print(f"{a} vs {b} ({what}): right {sum(r['winner'] == correct for r in ra)}/{len(ra)} vs {sum(r['winner'] == correct for r in rb)}/{len(rb)}")
+            print(f"{a} vs {b} ({what}): right {sum(r['winner'] == r['correct'] for r in ra)}/{len(ra)} vs {sum(r['winner'] == r['correct'] for r in rb)}/{len(rb)}")
+
+
+def task_paths(text):
+    """The task files named in `--tasks`: a name from scenarios/ (with or without 'evacuation-'), a path, or 'all'."""
+    out = []
+    for name in (n.strip() for n in text.split(",") if n.strip()):
+        if name == "all":
+            out += sorted((HERE / "scenarios").glob("*.yaml"))
+            continue
+        for candidate in (Path(name), HERE / "scenarios" / f"{name}.yaml", HERE / "scenarios" / f"evacuation-{name}.yaml"):
+            if candidate.suffix == ".yaml" and candidate.is_file():
+                out.append(candidate)
+                break
+        else:
+            sys.exit(f"--tasks: no task file for {name!r} (looked in scenarios/)")
+    return out
 
 
 def main():
@@ -286,7 +313,10 @@ def main():
     p.add_argument("--scenarios", default="A,B,C,D", help="which to run: A (free speech, star, a model at the hub), B (free speech, SLIM), "
                                                     "C (CONCORD, star, a model at the hub), D (CONCORD, SLIM); CONCORD starts with a free-text step")
     p.add_argument("--thresholds", default="", help="comma-separated thresholds fixed by the harness for C and D; empty: the default of the facilitator")
-    p.add_argument("--scenario", default=str(DEFAULT_SCENARIO), help="the scenario file (default the evacuation one)")
+    p.add_argument("--scenario", default=str(DEFAULT_SCENARIO), help="the task file (default the West City one)")
+    p.add_argument("--tasks", default="", help="comma-separated tasks to run, instead of --scenario: a name from scenarios/ (west-city, east-town, "
+                                               "north-hill, with or without 'evacuation-'), a path, or 'all'. Each run is scored against the correct "
+                                               "answer of its own task")
     p.add_argument("--parallel", type=int, default=1,
                    help="how many runs at the same time (default 1). Each has its own SLIM node and ports. The model endpoint then gets "
                         "that many times more calls at once: if it slows down, the seconds of the runs, and C's idle close, are less "
@@ -298,10 +328,12 @@ def main():
     keys = [k.strip() for k in args.scenarios.split(",") if k.strip()]
     if not keys or any(k not in SCENARIOS for k in keys):
         p.error(f"--scenarios takes some of {', '.join(SCENARIOS)}, comma-separated")
-    scenario = Scenario(args.scenario)
+    task_files = task_paths(args.tasks) if args.tasks else [args.scenario]
+    tasks = [(str(f), Scenario(f)) for f in task_files]
     thresholds = [t for t in args.thresholds.split(",") if t != ""] or [None]
     base = HERE / "runs" / f"batch-{time.strftime('%Y%m%d-%H%M%S')}"
-    jobs = [(key, t, n) for n in range(args.repeats)            # the scenarios take turns, so that a drift of the model hits all of them alike
+    jobs = [(key, t, n, task) for n in range(args.repeats)      # the scenarios take turns, so that a drift of the model hits all of them alike
+            for task in range(len(tasks))
             for key in keys for t in (thresholds if SCENARIOS[key][1] == "concord" else [None])]
     parallel = max(1, args.parallel)
     if parallel > 1:
@@ -311,8 +343,10 @@ def main():
     finished, lock = [], threading.Lock()
 
     def work(job):
-        key, t, n = job
-        row = one(base, key, t, n, rest, args.scenario, scenario, parallel, args.run_timeout)
+        key, t, n, task = job
+        file, scenario = tasks[task]
+        row = one(base, key, t, n, rest, file, scenario, parallel, args.run_timeout,
+                  scenario.id.removeprefix("evacuation-") if len(tasks) > 1 else None)
         with lock:
             finished.append(row)
             (base / "summary.json").write_text(json.dumps(finished, indent=2))   # kept up to date, in case the batch is stopped
@@ -320,7 +354,7 @@ def main():
 
     with ThreadPoolExecutor(max_workers=parallel) as pool:
         rows = list(pool.map(work, jobs))                                       # in the order of the jobs, whatever finishes first
-    summarize(rows, scenario.correct)
+    summarize(rows)
     excluded = [r for r in rows if r["valid"] is False]
     if excluded:
         print("\nexcluded, failed verification: " + "; ".join(f"{r['run']} ({','.join(r['failed_checks'])})" for r in excluded)

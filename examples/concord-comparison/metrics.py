@@ -26,7 +26,7 @@ import show
 
 HERE = Path(__file__).resolve().parent
 AGENTS = ("participant-a", "participant-b", "participant-c")
-CORRECT = "West City"
+CORRECT = "West City"                    # for the batches before summary.json had the correct answer of each run
 ROLES = AGENTS + ("facilitator",)
 STOP = set("that this with have from they will what which their there about would could should these those been were your more than "
            "also into only just very some other each both then them when where while because still like make made".split())
@@ -201,7 +201,7 @@ def main():
                "tokens_cache_read": sum(v["cache_read"] for v in by.values()), "tokens_cache_write": sum(v["cache_write"] for v in by.values()),
                "tokens_out": sum(v["out"] for v in by.values()), "calls": sum(v["calls"] for v in by.values()),
                "slowest_call": max(v["slowest"] for v in by.values())}
-        row.update(right=r.get("winner") == CORRECT)
+        row.update(task=r.get("task"), right=r.get("winner") == r.get("correct", CORRECT))
         (free(run, row, client, model) if r["mode"] == "free" else concord(run, row))
         row["tokens_per_message"] = round(row["tokens"] / (row.get("posts") or row.get("messages") or 1))
         rows.append(row)
@@ -235,7 +235,7 @@ def main():
         part = [sum(r["tokens_by_role"][a]["in"] + r["tokens_by_role"][a]["out"] for a in AGENTS) for r in rs]
         fac = [r["tokens_by_role"]["facilitator"]["in"] + r["tokens_by_role"]["facilitator"]["out"] for r in rs]
         print(f"  {name:<20}participants {cell(part):<14}facilitator {cell(fac)}")
-    print("\ncost of a right answer (all the tokens and seconds of the scenario / the runs that chose " + CORRECT + ")")
+    print("\ncost of a right answer (all the tokens and seconds of the scenario / the runs that chose the right option)")
     print(f"  {'':<20}{'right':<8}{'tokens per right answer':<26}{'seconds per right answer'}")
     for s, name in names.items():
         rs = [r for r in rows if r["scenario"] == s]
