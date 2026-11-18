@@ -136,19 +136,31 @@ def test_the_bar_is_the_shape_not_how_much_the_reply_says():
     assert refused["ok"] is False and "none of the agent-card fields" in refused["error"]
 
 
-def test_today_a_default_self_driving_run_locks_an_empty_verifiable_objective():
-    """Recorded, not endorsed. The skill tells the orchestrator to always pass --required-knowledge and
-    --objective-clauses, but the script neither asks for them nor says anything when they never arrive: VERIFY takes
-    the round, every check an agent proposed is dropped for covering no clause, and `lock` reports INTENT-LOCKED over
-    an empty objective. Silent, so a run that skipped them is indistinguishable from one that had nothing to verify.
+def test_today_only_the_step_by_step_path_admits_it_could_not_test_coverage():
+    """Recorded, not endorsed. Both paths need --required-knowledge and --objective-clauses: without the first the
+    knowledge universe collapses to whatever specialists happened to report, so no gap can exist; without the second
+    no proposed check covers a clause, so all are dropped. `verify` says so, recording a `coverage_untested` defect.
+    The `handle` path runs the same merge inline and never sets it, so the path the skill recommends locks the
+    degraded contract silently — and an empty objective then reads the same as a session with nothing to verify.
     """
-    self_driven = driver.contract_of(scenarios.split_term_triggers_clarify())["verifiable_objective"]
-    assert self_driven == {"owners": {}, "uncovered": [], "checks": []}
+    self_driven = driver.contract_of(scenarios.split_term_triggers_clarify())
+    assert self_driven["verifiable_objective"] == {"owners": {}, "uncovered": [], "checks": []}
+    assert not [d for d in self_driven["flagged_items"] if "coverage_untested" in d], "the omission is not reported"
 
-    stepwise = driver.contract_of(scenarios.step_by_step_phase_commands())["verifiable_objective"]
-    assert stepwise["checks"], "the step-by-step path should keep checks that cover a clause"
-    assert stepwise["owners"], "knowledge an agent holds should be recorded against it"
-    assert stepwise["uncovered"] == ["checkout error budget policy"], "a gap held by nobody must be reported"
+    bare = driver.Run("test-bare-verify")
+    bare.initiator(["init", "--specialists", "telemetry,database", "--key-terms", scenarios.TERMS,
+                    "--action-tool", "remediate"])
+    bare.initiator(["verify", "--responses", "-"],
+                   json.dumps([json.dumps({"agent": "telemetry", "holds": ["the 14:02 deployment manifest"],
+                                           "checks": [{"criterion": "error rate below 0.01", "covers": []}]})]))
+    locked = json.loads(bare.initiator(["lock"]).stdout)["data"]
+    stated = [d for d in locked["flagged_items"] if "coverage_untested" in d]
+    assert len(stated) == 2, "the same omission, named twice, on the path that bothers to check"
+
+    supplied = driver.contract_of(scenarios.step_by_step_phase_commands())["verifiable_objective"]
+    assert supplied["checks"], "the step-by-step path should keep checks that cover a clause"
+    assert supplied["owners"], "knowledge an agent holds should be recorded against it"
+    assert supplied["uncovered"] == ["checkout error budget policy"], "a gap held by nobody must be reported"
 
 
 def test_a_term_two_agents_measure_differently_is_not_silently_merged():

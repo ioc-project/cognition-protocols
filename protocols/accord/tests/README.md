@@ -40,11 +40,13 @@ assertion when the behavior changes.
   phases returns `status: INTENT-LOCKED` with an empty roster, frame, glossary and objective. That status is what the
   skill gates every app action on, so a premature call produces a green light over nothing — and the resulting empty
   contract then passes `execution-message`'s guard, which only checks that *a* contract exists.
-- **A run that omits the objective inputs locks an empty Verifiable Objective, silently.** The skill says to always
-  pass `--required-knowledge` and `--objective-clauses`, but the script does not enforce it: VERIFY accepts a round
-  without them, every check an agent proposed is dropped for covering no clause, and `lock` reports `INTENT-LOCKED`
-  over an empty objective. Nothing in the output distinguishes that from a session that genuinely had nothing to
-  verify, so one of the contract's four artifacts can be empty without anyone being told.
+- **Only the step-by-step path admits it could not test coverage.** Both paths need `--required-knowledge` and
+  `--objective-clauses`. Without the first, `universe = required or all_holds` falls back to whatever the specialists
+  happened to report, so every item is held by definition and no knowledge gap can exist. Without the second, no
+  proposed check covers a clause and all of them are dropped. `cmd_verify` says so, recording a `coverage_untested`
+  defect in the contract. The `handle` path runs the same merge inline and never sets `coverage_warnings` — the only
+  assignment in the file is in `cmd_verify` — so the path the skill recommends locks the degraded contract silently,
+  and its empty objective reads exactly like a session that genuinely had nothing to verify.
 
 A third — `handle` accepting prose and truncated JSON as an answer — is now fixed, by two checks that catch different
 things. The **delivery check** says which message a reply answers, so a stale or invented one is caught; a missing
