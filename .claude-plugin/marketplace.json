@@ -24,6 +24,22 @@
       "tags": ["multi-agent", "consensus", "coordination", "protocol"]
     },
     {
+      "name": "concord-v0.1",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/ioc-project/ioc-cognition-protocols",
+        "path": "protocols/concord",
+        "ref": "concord-receiver-v0.1.0",
+        "sha": "f00edd7a528e414aeaf658ae9f507c01865e8b5c"
+      },
+      "displayName": "CONCORD v0.1",
+      "description": "Multi-agent consensus protocol v0.1. Converges on a single outcome that clears a satisfaction threshold for every agent in a named set. Includes both initiator (orchestrator) and receiver (participant) skills.",
+      "version": "0.1.0",
+      "author": { "name": "Cisco Systems, Inc." },
+      "license": "Apache-2.0",
+      "tags": ["multi-agent", "consensus", "coordination", "protocol"]
+    },
+    {
       "name": "accord",
       "source": {
         "source": "git-subdir",
