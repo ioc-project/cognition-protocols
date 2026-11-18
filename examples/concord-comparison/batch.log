@@ -1,0 +1,78 @@
+30 runs, 3 at a time
+==> A-t0.7-r0 (concord star)
+==> B-t0.7-r0 (concord slim)
+==> C-r0 (free slim)
+    B-t0.7-r0: SUCCESS East Town rounds=3 posts=17 tokens=207803 seconds=60 verify=ok
+==> A-t0.7-r1 (concord star)
+A-t0.7-r1: FAILED: participant-a: RuntimeError: participant-a could not answer its init-reply task after 3 turns; last refusal: submit_init_reply: your answer lacks `own_score` (Your own score for this proposal: a number from 0 to 100 on your raw scale. Required: it goes in this field, not only in the reasoning.). You sent: raw_reje
+    logs: /Users/micpapal/Documents/code/IoC/tmp/cognition-protocols/examples/concord-comparison/runs/batch-20261117-102556/A-t0.7-r1
+==> B-t0.7-r1 (concord slim)
+    C-r0: AGREED West City rounds=None posts=20 tokens=141947 seconds=119 verify=ok
+==> C-r1 (free slim)
+    B-t0.7-r1: SUCCESS West City rounds=2 posts=14 tokens=146921 seconds=51 verify=ok
+==> A-t0.7-r2 (concord star)
+    note: a model call took 55s: the endpoint was slow (an idle close may have come early)
+    A-t0.7-r0: BEST_EFFORT West City rounds=8 posts=32 tokens=959649 seconds=204 verify=ok
+==> B-t0.7-r2 (concord slim)
+    A-t0.7-r2: SUCCESS East Town rounds=3 posts=17 tokens=308011 seconds=80 verify=ok
+==> C-r2 (free slim)
+    C-r1: AGREED West City rounds=None posts=18 tokens=138081 seconds=116 verify=ok
+==> A-t0.7-r3 (concord star)
+    B-t0.7-r2: SUCCESS East Town rounds=6 posts=26 tokens=440513 seconds=96 verify=ok
+==> B-t0.7-r3 (concord slim)
+    B-t0.7-r3: SUCCESS East Town rounds=3 posts=17 tokens=201972 seconds=56 verify=ok
+==> C-r3 (free slim)
+    C-r2: AGREED West City rounds=None posts=23 tokens=182344 seconds=131 verify=ok
+==> A-t0.7-r4 (concord star)
+    A-t0.7-r3: BEST_EFFORT West City rounds=8 posts=32 tokens=967756 seconds=157 verify=ok
+==> B-t0.7-r4 (concord slim)
+    B-t0.7-r4: SUCCESS West City rounds=1 posts=11 tokens=96349 seconds=33 verify=ok
+==> C-r4 (free slim)
+    A-t0.7-r4: SUCCESS East Town rounds=4 posts=20 tokens=408472 seconds=90 verify=ok
+==> A-t0.7-r5 (concord star)
+    C-r3: AGREED West City rounds=None posts=19 tokens=134181 seconds=117 verify=ok
+==> B-t0.7-r5 (concord slim)
+    A-t0.7-r5: SUCCESS East Town rounds=2 posts=14 tokens=208928 seconds=62 verify=ok
+==> C-r5 (free slim)
+    B-t0.7-r5: SUCCESS East Town rounds=3 posts=17 tokens=205345 seconds=60 verify=ok
+==> A-t0.7-r6 (concord star)
+    C-r4: AGREED West City rounds=None posts=30 tokens=302657 seconds=145 verify=ok
+==> B-t0.7-r6 (concord slim)
+    C-r5: AGREED West City rounds=None posts=24 tokens=206178 seconds=131 verify=ok
+==> C-r6 (free slim)
+    A-t0.7-r6: BEST_EFFORT West City rounds=8 posts=32 tokens=985739 seconds=162 verify=ok
+==> A-t0.7-r7 (concord star)
+    B-t0.7-r6: BEST_EFFORT West City rounds=8 posts=32 tokens=677028 seconds=141 verify=ok
+==> B-t0.7-r7 (concord slim)
+    C-r6: AGREED West City rounds=None posts=22 tokens=179040 seconds=119 verify=ok
+==> C-r7 (free slim)
+    B-t0.7-r7: SUCCESS East Town rounds=3 posts=17 tokens=213313 seconds=64 verify=ok
+==> A-t0.7-r8 (concord star)
+    A-t0.7-r7: SUCCESS West City rounds=7 posts=29 tokens=801524 seconds=146 verify=ok
+==> B-t0.7-r8 (concord slim)
+    B-t0.7-r8: SUCCESS East Town rounds=2 posts=14 tokens=144969 seconds=50 verify=ok
+==> C-r8 (free slim)
+    C-r7: AGREED West City rounds=None posts=27 tokens=243509 seconds=140 verify=ok
+==> A-t0.7-r9 (concord star)
+    A-t0.7-r8: BEST_EFFORT West City rounds=8 posts=32 tokens=973712 seconds=172 verify=ok
+==> B-t0.7-r9 (concord slim)
+    A-t0.7-r9: SUCCESS East Town rounds=3 posts=17 tokens=302105 seconds=71 verify=ok
+==> C-r9 (free slim)
+    C-r8: AGREED West City rounds=None posts=26 tokens=209111 seconds=134 verify=ok
+    C-r9: AGREED West City rounds=None posts=16 tokens=108177 seconds=103 verify=ok
+    B-t0.7-r9: BEST_EFFORT West City rounds=8 posts=32 tokens=682430 seconds=130 verify=ok
+
+scenario            runs  valid  right  agents right  facts shared  avg tokens  avg secs  avg msgs  misrouted  dropped
+A concord star      10    9      5      15/27         32/36         657322      127       25        0          0
+B concord slim      10    10     4      12/30         35/40         301664      74        20        0          0
+C free slim         10    10     10     30/30         40/40         184522      126       22        0          0
+
+C details: C-r0: AGREED West City, finals ['West City', 'West City', 'West City'], closed by idle, hidden facts shared 4/4; C-r1: AGREED West City, finals ['West City', 'West City', 'West City'], closed by idle, hidden facts shared 4/4; C-r2: AGREED West City, finals ['West City', 'West City', 'West City'], closed by idle, hidden facts shared 4/4; C-r3: AGREED West City, finals ['West City', 'West City', 'West City'], closed by idle, hidden facts shared 4/4; C-r4: AGREED West City, finals ['West City', 'West City', 'West City'], closed by idle, hidden facts shared 4/4; C-r5: AGREED West City, finals ['West City', 'West City', 'West City'], closed by idle, hidden facts shared 4/4; C-r6: AGREED West City, finals ['West City', 'West City', 'West City'], closed by idle, hidden facts shared 4/4; C-r7: AGREED West City, finals ['West City', 'West City', 'West City'], closed by idle, hidden facts shared 4/4; C-r8: AGREED West City, finals ['West City', 'West City', 'West City'], closed by idle, hidden facts shared 4/4; C-r9: AGREED West City, finals ['West City', 'West City', 'West City'], closed by idle, hidden facts shared 4/4
+A vs B (transport: star with a model hub vs SLIM broadcast): right 5/9 vs 4/10
+B vs C (protocol: CONCORD vs free speech, both on SLIM): right 4/10 vs 10/10
+
+not counted, no result: A-t0.7-r1 (FAILED: participant-a: RuntimeError: participant-a could not answer its init-reply task after 3 turns; last )
+
+distinct starts: 30 of 30 runs
+
+records: /Users/micpapal/Documents/code/IoC/tmp/cognition-protocols/examples/concord-comparison/runs/batch-20261117-102556
