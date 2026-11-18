@@ -1,18 +1,27 @@
 === unknown-command (exit 2)
 $ frobnicate
-err| usage: accord_initiator.py [-h] [--state STATE]
-err|                            {init,roster,frame,glossary,verify,lock,execution-message,status,handle} ...
-err| accord_initiator.py: error: argument phase: invalid choice: 'frobnicate' (choose from init, roster, frame, ⏎
-err| glossary, verify, lock, execution-message, status, handle)
-err| 
+out| {
+out|   "ok": false,
+out|   "phase": "usage",
+out|   "status": "ERROR",
+out|   "error": "usage error: argument phase: invalid choice: 'frobnicate' (choose from init, roster, frame, glossary, ⏎
+out| verify, lock, execution-message, status, handle)",
+out|   "next": "Run `--help` for the command. The usual sequence is `init --task ...` once, then `handle --agent <id> ⏎
+out| --reply <text>` for each reply."
+out| }
+out| 
 
 === init no-specialists (exit 2)
 $ init
-err| usage: accord_initiator.py init [-h] --specialists SPECIALISTS
-err|                                 [--key-terms KEY_TERMS]
-err|                                 [--action-tool ACTION_TOOL] [--task TASK]
-err| accord_initiator.py init: error: the following arguments are required: --specialists
-err| 
+out| {
+out|   "ok": false,
+out|   "phase": "usage",
+out|   "status": "ERROR",
+out|   "error": "usage error: the following arguments are required: --specialists",
+out|   "next": "Run `--help` for the command. The usual sequence is `init --task ...` once, then `handle --agent <id> ⏎
+out| --reply <text>` for each reply."
+out| }
+out| 
 
 === status before-init (exit 0)
 $ status
@@ -35,8 +44,15 @@ out|
 
 === handle before-init (exit 1)
 $ handle --agent telemetry --reply {}
-err| handle: no task in state — run init --task first
-err| 
+out| {
+out|   "ok": false,
+out|   "phase": "handle",
+out|   "status": "ERROR",
+out|   "error": "handle: no task in state \u2014 run init --task first",
+out|   "next": "Run `init` first, with --task to drive the session from `handle`. Use the same --state (or the same ⏎
+out| $ACCORD_RUN_KEY) on every command in the session."
+out| }
+out| 
 
 === lock before-init (exit 0)
 $ lock
@@ -85,12 +101,14 @@ out|       "telemetry",
 out|       "database"
 out|     ],
 out|     "messages": {
-out|       "telemetry": "<accord-delivery state=\"2daef4df\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
-out| deploy; decide what to roll back\n\nSPECIALISTS: telemetry, database",
-out|       "database": "<accord-delivery state=\"2daef4df\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your ⏎
-out| `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 ⏎
-out| deploy; decide what to roll back\n\nSPECIALISTS: telemetry, database"
+out|       "telemetry": "<accord-delivery state=\"2daef4df\" ⏎
+out| check=\"a5628b06\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nSPECIALISTS: telemetry, database",
+out|       "database": "<accord-delivery state=\"2daef4df\" ⏎
+out| check=\"a5628b06\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nSPECIALISTS: telemetry, database"
 out|     },
 out|     "status": "SEND",
 out|     "hint": "Use `accord_initiator.py handle --agent <id> --reply <text>` for each incoming reply. No separate ⏎
@@ -99,62 +117,41 @@ out|   }
 out| }
 out| 
 
-=== handle unknown-agent (exit 0)
+=== handle unknown-agent (exit 1)
 $ handle --agent nobody --reply {}
 out| {
-out|   "ok": true,
+out|   "ok": false,
 out|   "phase": "handle",
-out|   "data": {
-out|     "status": "NONE",
-out|     "phase": "convene",
-out|     "awaiting": [
-out|       "telemetry",
-out|       "database"
-out|     ],
-out|     "messages": {},
-out|     "still_waiting_this_phase": [
-out|       "telemetry",
-out|       "database"
-out|     ]
-out|   }
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from nobody names no agent. CONVENE needs an agent card: `agent`, plus `roles`, ⏎
+out| `capabilities`, `access_scopes` and `holdings_summary`. Nothing was recorded.",
+out|   "next": "Fix what the message says and run the same command again. Never work around it by writing a reply or a ⏎
+out| phase artifact yourself."
 out| }
 out| 
 
-=== handle prose (exit 0)
+=== handle prose (exit 1)
 $ handle --agent telemetry --reply this is prose, not a reply
 out| {
-out|   "ok": true,
+out|   "ok": false,
 out|   "phase": "handle",
-out|   "data": {
-out|     "status": "NONE",
-out|     "phase": "convene",
-out|     "awaiting": [
-out|       "database"
-out|     ],
-out|     "messages": {},
-out|     "still_waiting_this_phase": [
-out|       "database"
-out|     ]
-out|   }
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from telemetry carried no `<accord-delivery>` check line. Nothing was recorded.",
+out|   "next": "The reply is missing the `<accord-delivery>` line it was asked to echo. Send that specialist its ⏎
+out| message again and pass the whole reply back unedited."
 out| }
 out| 
 
-=== handle broken-json (exit 0)
+=== handle broken-json (exit 1)
 $ handle --agent telemetry --reply {"agent": "telemetry", 
 out| {
-out|   "ok": true,
+out|   "ok": false,
 out|   "phase": "handle",
-out|   "data": {
-out|     "status": "NONE",
-out|     "phase": "convene",
-out|     "awaiting": [
-out|       "database"
-out|     ],
-out|     "messages": {},
-out|     "still_waiting_this_phase": [
-out|       "database"
-out|     ]
-out|   }
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from telemetry is not a JSON object. CONVENE needs an agent card: `agent`, plus ⏎
+out| `roles`, `capabilities`, `access_scopes` and `holdings_summary`. Nothing was recorded.",
+out|   "next": "Fix what the message says and run the same command again. Never work around it by writing a reply or a ⏎
+out| phase artifact yourself."
 out| }
 out| 
 
@@ -180,19 +177,37 @@ out|
 
 === roster bad-json (exit 1)
 $ roster --responses not json
-out| {"ok": false, "phase": "roster", "error": "FileNotFoundError: [Errno 2] No such file or directory: 'not json'"}
+out| {
+out|   "ok": false,
+out|   "phase": "roster",
+out|   "status": "ERROR",
+out|   "error": "FileNotFoundError: [Errno 2] No such file or directory: 'not json'",
+out|   "next": "Check the path. Each JSON argument takes a file path, '-' for stdin, or the JSON value inline."
+out| }
 out| 
 
 === frame bad-stdin (exit 1)
 $ frame --responses [] --current-frame -
  in| also not json
-err| invalid JSON in -: Expecting value: line 1 column 1 (char 0)
-err| 
+out| {
+out|   "ok": false,
+out|   "phase": "frame",
+out|   "status": "ERROR",
+out|   "error": "invalid JSON in -: Expecting value: line 1 column 1 (char 0)",
+out|   "next": "That argument is not JSON. Pass a file path, '-' for stdin, or the JSON value inline \u2014 and only ⏎
+out| one argument per command can use '-'."
+out| }
+out| 
 
 === glossary missing-file (exit 1)
 $ glossary --responses /nope/missing.json
-out| {"ok": false, "phase": "glossary", "error": "FileNotFoundError: [Errno 2] No such file or directory: ⏎
-out| '/nope/missing.json'"}
+out| {
+out|   "ok": false,
+out|   "phase": "glossary",
+out|   "status": "ERROR",
+out|   "error": "FileNotFoundError: [Errno 2] No such file or directory: '/nope/missing.json'",
+out|   "next": "Check the path. Each JSON argument takes a file path, '-' for stdin, or the JSON value inline."
+out| }
 out| 
 
 === execution-message before-lock (exit 0)

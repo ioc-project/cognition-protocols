@@ -1,0 +1,209 @@
+=== initiator init (exit 0)
+$ init --specialists telemetry,database --key-terms error_rate,rollback_target --action-tool remediate --task Checkout ⏎
+$ error rate rose after the 14:02 deploy; decide what to roll back
+out| {
+out|   "ok": true,
+out|   "phase": "init",
+out|   "data": {
+out|     "specialists": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "key_terms": [
+out|       "error_rate",
+out|       "rollback_target"
+out|     ],
+out|     "action_tool": "remediate",
+out|     "next_command": "roster",
+out|     "protocol_status": "IN_PROGRESS",
+out|     "locked_contract_exists": false,
+out|     "normal_execution_allowed": false,
+out|     "app_execution_allowed": false,
+out|     "phase": "convene",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "messages": {
+out|       "telemetry": "<accord-delivery state=\"2a0bd9f7\" ⏎
+out| check=\"a5628b06\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nSPECIALISTS: telemetry, database",
+out|       "database": "<accord-delivery state=\"2a0bd9f7\" ⏎
+out| check=\"a5628b06\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nSPECIALISTS: telemetry, database"
+out|     },
+out|     "status": "SEND",
+out|     "hint": "Use `accord_initiator.py handle --agent <id> --reply <text>` for each incoming reply. No separate ⏎
+out| phase commands needed."
+out|   }
+out| }
+out| 
+
+=== handle summary-no-check (exit 1)
+$ handle --agent telemetry --reply Telemetry reports elevated errors.
+out| {
+out|   "ok": false,
+out|   "phase": "handle",
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from telemetry carried no `<accord-delivery>` check line. Nothing was recorded.",
+out|   "next": "The reply is missing the `<accord-delivery>` line it was asked to echo. Send that specialist its ⏎
+out| message again and pass the whole reply back unedited."
+out| }
+out| 
+
+=== handle wrong-check (exit 1)
+$ handle --agent telemetry --reply <accord-delivery state="2a0bd9f7" check="deadbeef"></accord-delivery>
+
+{"agent": ⏎
+$ "telemetry", "roles": ["telemetry analyst"], "capabilities": ["query metrics and traces"], "access_scopes": ⏎
+$ ["prometheus"], "holdings_summary": "telemetry analyst knowledge"}
+out| {
+out|   "ok": false,
+out|   "phase": "handle",
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from telemetry does not match its check (expected a5628b06, got deadbeef). Nothing ⏎
+out| was recorded.",
+out|   "next": "That reply is not the one the specialist returned for the message it was sent. Do not summarize, ⏎
+out| shorten or rewrite a reply: pass it to `handle` exactly as received, including the `<accord-delivery>` line it ⏎
+out| starts with."
+out| }
+out| 
+
+=== handle wrong-check again (exit 1)
+$ handle --agent telemetry --reply <accord-delivery state="2a0bd9f7" check="deadbeef"></accord-delivery>
+
+{"agent": ⏎
+$ "telemetry", "roles": ["telemetry analyst"], "capabilities": ["query metrics and traces"], "access_scopes": ⏎
+$ ["prometheus"], "holdings_summary": "telemetry analyst knowledge"}
+out| {
+out|   "ok": false,
+out|   "phase": "handle",
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from telemetry does not match its check (expected a5628b06, got deadbeef). Nothing ⏎
+out| was recorded.",
+out|   "next": "That reply is not the one the specialist returned for the message it was sent. Do not summarize, ⏎
+out| shorten or rewrite a reply: pass it to `handle` exactly as received, including the `<accord-delivery>` line it ⏎
+out| starts with."
+out| }
+out| 
+
+=== handle correct-check (exit 0)
+$ handle --agent telemetry --reply <accord-delivery state="2a0bd9f7" check="a5628b06"></accord-delivery>
+
+{"agent": ⏎
+$ "telemetry", "roles": ["telemetry analyst"], "capabilities": ["query metrics and traces"], "access_scopes": ⏎
+$ ["prometheus"], "holdings_summary": "telemetry analyst knowledge"}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "NONE",
+out|     "phase": "convene",
+out|     "awaiting": [
+out|       "database"
+out|     ],
+out|     "messages": {},
+out|     "still_waiting_this_phase": [
+out|       "database"
+out|     ]
+out|   }
+out| }
+out| 
+
+=== handle db-no-line-1 (exit 1)
+$ handle --agent database --reply {"agent": "database", "roles": ["database specialist"], "capabilities": ["inspect ⏎
+$ query plans and locks"], "access_scopes": ["pg-stat"], "holdings_summary": "database specialist knowledge"}
+out| {
+out|   "ok": false,
+out|   "phase": "handle",
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from database carried no `<accord-delivery>` check line. Nothing was recorded.",
+out|   "next": "The reply is missing the `<accord-delivery>` line it was asked to echo. Send that specialist its ⏎
+out| message again and pass the whole reply back unedited."
+out| }
+out| 
+
+=== handle db-no-line-2 (exit 0)
+$ handle --agent database --reply {"agent": "database", "roles": ["database specialist"], "capabilities": ["inspect ⏎
+$ query plans and locks"], "access_scopes": ["pg-stat"], "holdings_summary": "database specialist knowledge"}
+out| {
+out|   "ok": true,
+out|   "phase": "handle",
+out|   "data": {
+out|     "status": "SEND",
+out|     "phase": "frame_0",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "messages": {
+out|       "telemetry": "<accord-delivery state=\"2a0bd9f7\" ⏎
+out| check=\"20b1808b\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nCURRENT_FRAME: []",
+out|       "database": "<accord-delivery state=\"2a0bd9f7\" ⏎
+out| check=\"20b1808b\"></accord-delivery>\n\nFRAME_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| FRAME_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nCURRENT_FRAME: []"
+out|     },
+out|     "still_waiting_this_phase": [],
+out|     "roster": [
+out|       {
+out|         "identity": "telemetry",
+out|         "roles": [
+out|           "telemetry analyst"
+out|         ],
+out|         "capabilities": [
+out|           "query metrics and traces"
+out|         ],
+out|         "accessScopes": [
+out|           "prometheus"
+out|         ],
+out|         "holdingsSummary": "telemetry analyst knowledge"
+out|       },
+out|       {
+out|         "identity": "database",
+out|         "roles": [
+out|           "database specialist"
+out|         ],
+out|         "capabilities": [
+out|           "inspect query plans and locks"
+out|         ],
+out|         "accessScopes": [
+out|           "pg-stat"
+out|         ],
+out|         "holdingsSummary": "database specialist knowledge"
+out|       }
+out|     ],
+out|     "flagged_items": []
+out|   }
+out| }
+out| 
+
+=== status (exit 0)
+$ status
+out| {
+out|   "ok": true,
+out|   "phase": "status",
+out|   "data": {
+out|     "specialists": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "key_terms": [
+out|       "error_rate",
+out|       "rollback_target"
+out|     ],
+out|     "action_tool": "remediate",
+out|     "roster": 2,
+out|     "frame_atoms": 0,
+out|     "frame_rounds": 0,
+out|     "glossary_terms": 0,
+out|     "checks": 0,
+out|     "locked": false
+out|   }
+out| }
+out| 
+
