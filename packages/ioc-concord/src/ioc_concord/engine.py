@@ -25,10 +25,10 @@ The state:
 import re
 
 from ioc_concord.errors import InvalidMessage, InvalidRun
-from ioc_concord.protocol import BEST_EFFORT, MILLION, SUCCESS, format_number, is_agent_id
+from ioc_concord.protocol import BEST_EFFORT, MAX_INTEGER, MILLION, SUCCESS, format_number, is_agent_id
 
-_SEED_RE = re.compile(r"^seed-(.+)$")
-_REPAIR_RE = re.compile(r"^r([1-9][0-9]*)-(.+)$")
+_SEED_RE = re.compile(r"seed-(.+)")
+_REPAIR_RE = re.compile(r"r([1-9][0-9]{0,8})-(.+)")
 
 # --------------------------------------------------------------------------
 # parameters
@@ -41,8 +41,7 @@ def _is_int(v):
 
 def check_params(agents, params):
     """Raises InvalidRun unless these are the participants and parameters of a run that can be played. `params` holds
-    satisfaction_threshold and eps in millionths, B, timeout and retries. A `timeout` of 0 is valid: it switches the timers
-    off (an extension of this library, not of the spec)."""
+    satisfaction_threshold and eps in millionths, B, timeout and retries."""
     if len(agents) < 2:
         raise InvalidRun("a negotiating set needs at least 2 agents")
     if len(set(agents)) != len(agents):
@@ -55,18 +54,14 @@ def check_params(agents, params):
         raise InvalidRun("satisfaction_threshold must be above 0 and at most 1")
     if not (_is_int(eps) and eps > 0):
         raise InvalidRun("eps must be above 0")
-    if not (_is_int(budget) and budget >= 1):
-        raise InvalidRun("budget must be an integer, at least 1")
-    if not (_is_int(params["timeout"]) and params["timeout"] >= 0):
-        raise InvalidRun("timeout must be 0 (no timers) or above 0")
+    if not (_is_int(budget) and 1 <= budget <= MAX_INTEGER):
+        raise InvalidRun(f"budget must be an integer, from 1 to {MAX_INTEGER}")
+    if not (_is_int(params["timeout"]) and 1 <= params["timeout"] <= MAX_INTEGER):
+        raise InvalidRun(f"timeout must be an integer, from 1 to {MAX_INTEGER}")
     retries = params["retries"]
-    if not (_is_int(retries) and retries >= 0):
-        raise InvalidRun("retries must be an integer, at least 0")
+    if not (_is_int(retries) and 0 <= retries <= MAX_INTEGER):
+        raise InvalidRun(f"retries must be an integer, from 0 to {MAX_INTEGER}")
 
-
-def timers_enabled(params):
-    """Whether the run has timers: a `timeout` of 0 means nobody ever asks again or gives up on a clock."""
-    return params["timeout"] > 0
 
 # --------------------------------------------------------------------------
 # candidate ids
@@ -82,12 +77,13 @@ def repair_id(n, agent):
 
 
 def parse_candidate_id(cid):
-    """(round, agent) of a candidate id: round 0 for `seed-<agent>`, N for `r<N>-<agent>`. None for any other text."""
-    m = _SEED_RE.match(cid or "")
+    """(round, agent) of a candidate id: round 0 for `seed-<agent>`, N for `r<N>-<agent>`, with N of at most 9 digits. None for any
+    other text, which includes an id with anything after the agent (a trailing line feed too) or an agent that is not an agent id."""
+    m = _SEED_RE.fullmatch(cid or "")
     if m:
-        return 0, m.group(1)
-    m = _REPAIR_RE.match(cid or "")
-    return (int(m.group(1)), m.group(2)) if m else None
+        return (0, m.group(1)) if is_agent_id(m.group(1)) else None
+    m = _REPAIR_RE.fullmatch(cid or "")
+    return (int(m.group(1)), m.group(2)) if m and is_agent_id(m.group(2)) else None
 
 # --------------------------------------------------------------------------
 # the state and what is recorded in it

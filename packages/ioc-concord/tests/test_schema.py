@@ -4,6 +4,7 @@
 #
 """The candidate schema, as imported and as bundled into each script (see conftest.py)."""
 import json
+import time
 
 import pytest
 
@@ -32,6 +33,9 @@ def test_a_supported_schema_is_returned_as_parsed(schema):
     ('{"enum": ["A"]}', '"enum" must be a list of at least 2 non-empty strings'),
     ('{"enum": ["A", " "]}', '"enum" must be a list of at least 2 non-empty strings'),
     ('{"enum": ["A", "A"]}', '"enum" holds the same option twice'),
+    ('{"enum": [" A ", "B"]}', '"enum" has an option with whitespace at either end'),
+    ('{"enum": ["A", "B\\n"]}', '"enum" has an option with whitespace at either end'),
+    ('{"enum": ["A", "\\tB"]}', '"enum" has an option with whitespace at either end'),
     ('{"description": "d", "pattern": 1}', '"pattern" must be a string'),
     ('{"description": "d", "pattern": "("}', '"pattern" is not in the supported subset (a ( is not closed)'),
     ('{"description": "d", "minLength": -1}', '"minLength" must be a non-negative integer'),
@@ -80,7 +84,7 @@ def test_render_schema_describes_what_the_agents_must_send(schema):
 
 
 def matches(schema, pattern, text):
-    return schema.compile_pattern(pattern).search(text) is not None
+    return schema.compile_pattern(pattern).search(text)
 
 
 @pytest.mark.parametrize("pattern, yes, no", [
@@ -102,7 +106,7 @@ def matches(schema, pattern, text):
     ("^\\s$", [" ", "\t"], ["\u00a0", "a"]),
     ("^a\\.b$", ["a.b"], ["axb"]),
     ("^a\\-b\\\\$", ["a-b\\"], ["a-b"]),
-    ("^.$", ["a", "\u00e9", "\U0001f600", "\u2028"], ["", "ab"]),
+    ("^.$", ["a", "\u00e9", "\U0001f600", "\u2028", "\u2029", "\x85", "\x0b", "\x0c"], ["", "ab", "\r", "\n"]),
     ("a.b", ["a\u2028b", "a b"], ["a\rb", "a\nb"]),
     ("^ok-[0-9]+$", ["ok-12"], ["ok-", "ok-1a"]),
     ("é", ["café"], ["cafe"]),
@@ -136,9 +140,45 @@ def test_a_pattern_outside_the_subset_is_refused(schema, pattern):
         schema.check_candidate({"description": "d", "pattern": pattern}, "a")
 
 
+@pytest.mark.parametrize("pattern", [
+    "^(a+)+$", "^([a-z]+ ?)*$", "(a|aa)+$", "^(a*)*$", "^(a|a)*$", "(x+x+)+y", "^((a*)*)*$",
+])
+def test_a_pattern_with_nested_quantifiers_does_not_take_exponential_time(schema, pattern):
+    start = time.perf_counter()
+    assert not schema.compile_pattern(pattern).search("a" * 3000 + "!")
+    assert time.perf_counter() - start < 2
+
+
+def test_a_pattern_that_would_need_a_huge_program_is_refused(schema):
+    for pattern in ("a{1001}", "a{4294967295}", "a{99999999999}", "(a{1000}){1000}", "a{0,1000}b{0,1000}c{0,1000}", "(" * 101 + "a" + ")" * 101):
+        text = json.dumps({"description": "d", "pattern": pattern})
+        assert 'pattern" is not in the supported subset' in refused(schema, text)
+    assert schema.compile_pattern("^a{1000}$").search("a" * 1000)
+    assert schema.compile_pattern("a{0,1000}").search("")
+
+
+@pytest.mark.parametrize("text", ["[" * 100_000, '{"a":' * 100_000, '{"description": "d", "enum": ' + "[" * 100_000])
+def test_a_schema_nested_too_deep_is_refused_not_raised(schema, text):
+    assert "nested too deep" in refused(schema, text)
+
+
 def test_empty_alternatives_and_groups_are_part_of_the_subset(schema):
     for pattern in ("a|", "|a", "()", "(a|)", "^$"):
         schema.validate_schema({"description": "d", "pattern": pattern})
+
+
+def test_an_enum_option_may_hold_whitespace_inside_and_non_ascii_whitespace_at_the_ends(schema):
+    spec = schema.validate_schema({"enum": ["Plan  A", "\u00a0B"]})
+    assert schema.check_candidate(spec, "Plan  A") is None and schema.check_candidate(spec, " \u00a0B\n") is None
+    assert schema.check_candidate(spec, "B") is not None
+
+
+def test_only_space_tab_and_line_breaks_are_whitespace_around_a_candidate(schema):
+    spec = {"description": "d", "pattern": "^ab$"}
+    for other in ("\u00a0", "\x85", "\u2003", "\u2028", "\ufeff", "\x0b", "\x0c"):
+        assert schema.check_candidate(spec, other + "ab") is not None, repr(other)
+        assert schema.check_candidate({"enum": ["ab", "cd"]}, "ab" + other) is not None, repr(other)
+    assert schema.check_candidate({"description": "d", "maxLength": 2}, "\u00a0a\u00a0") is not None
 
 
 def test_a_candidate_is_matched_without_the_whitespace_around_it(schema):

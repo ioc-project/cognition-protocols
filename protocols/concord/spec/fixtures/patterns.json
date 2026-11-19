@@ -1,0 +1,262 @@
+{
+  "valid": [
+    {
+      "pattern": "ab",
+      "match": [
+        "ab",
+        "xaby"
+      ],
+      "no_match": [
+        "a",
+        "ba"
+      ]
+    },
+    {
+      "pattern": "^ab$",
+      "match": [
+        "ab"
+      ],
+      "no_match": [
+        "xab",
+        "abx",
+        "ab\n"
+      ]
+    },
+    {
+      "pattern": "a|bc",
+      "match": [
+        "a",
+        "xbc"
+      ],
+      "no_match": [
+        "b",
+        "c"
+      ]
+    },
+    {
+      "pattern": "^(?:ab)+$",
+      "match": [
+        "ab",
+        "ababab"
+      ],
+      "no_match": [
+        "",
+        "aba"
+      ]
+    },
+    {
+      "pattern": "^(a|b)c?$",
+      "match": [
+        "a",
+        "bc"
+      ],
+      "no_match": [
+        "c",
+        "abc"
+      ]
+    },
+    {
+      "pattern": "^a{2}$",
+      "match": [
+        "aa"
+      ],
+      "no_match": [
+        "a",
+        "aaa"
+      ]
+    },
+    {
+      "pattern": "^a{2,}$",
+      "match": [
+        "aa",
+        "aaaa"
+      ],
+      "no_match": [
+        "a"
+      ]
+    },
+    {
+      "pattern": "^a{1,2}$",
+      "match": [
+        "a",
+        "aa"
+      ],
+      "no_match": [
+        "",
+        "aaa"
+      ]
+    },
+    {
+      "pattern": "^[a-c]+$",
+      "match": [
+        "abc",
+        "cab"
+      ],
+      "no_match": [
+        "d",
+        "abd"
+      ]
+    },
+    {
+      "pattern": "^[^a-c]+$",
+      "match": [
+        "xyz",
+        "-"
+      ],
+      "no_match": [
+        "a",
+        "xa"
+      ]
+    },
+    {
+      "pattern": "^[-a]+$",
+      "match": [
+        "-a-"
+      ],
+      "no_match": [
+        "b"
+      ]
+    },
+    {
+      "pattern": "^\\d+$",
+      "match": [
+        "0123"
+      ],
+      "no_match": [
+        "٣",
+        "a",
+        ""
+      ]
+    },
+    {
+      "pattern": "^\\w+$",
+      "match": [
+        "aZ_9"
+      ],
+      "no_match": [
+        "é",
+        "a b",
+        "-"
+      ]
+    },
+    {
+      "pattern": "^\\s$",
+      "match": [
+        " ",
+        "\t",
+        "\r",
+        "\n"
+      ],
+      "no_match": [
+        " ",
+        "a"
+      ]
+    },
+    {
+      "pattern": "^a\\.b$",
+      "match": [
+        "a.b"
+      ],
+      "no_match": [
+        "axb"
+      ]
+    },
+    {
+      "pattern": "^.$",
+      "match": [
+        "a",
+        "é",
+        "😀",
+        " ",
+        " ",
+        ""
+      ],
+      "no_match": [
+        "",
+        "ab",
+        "\r",
+        "\n"
+      ]
+    },
+    {
+      "pattern": "a.b",
+      "match": [
+        "a b",
+        "a b"
+      ],
+      "no_match": [
+        "a\rb",
+        "a\nb"
+      ]
+    },
+    {
+      "pattern": "a$",
+      "match": [
+        "b\na",
+        "a"
+      ],
+      "no_match": [
+        "a\n",
+        "a\nb"
+      ]
+    },
+    {
+      "pattern": "^b",
+      "match": [
+        "b"
+      ],
+      "no_match": [
+        "a\nb"
+      ]
+    },
+    {
+      "pattern": "é",
+      "match": [
+        "café"
+      ],
+      "no_match": [
+        "cafe"
+      ]
+    },
+    {
+      "pattern": "^(a+)+$",
+      "match": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "no_match": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!"
+      ]
+    }
+  ],
+  "refused": [
+    "(?=a)b",
+    "(?!a)b",
+    "(?<=a)b",
+    "(?<n>a)",
+    "(?i)a",
+    "(a)\\1",
+    "\\bab",
+    "\\p{L}",
+    "\\u0041",
+    "\\x41",
+    "\\n",
+    "\\t",
+    "\\D",
+    "[\\d]",
+    "[]",
+    "[a",
+    "[z-a]",
+    "a)",
+    "(a",
+    "*a",
+    "a**",
+    "a+?",
+    "a*?",
+    "a{2}{3}",
+    "a{",
+    "a{3,2}",
+    "^*",
+    "a]",
+    "a}"
+  ]
+}

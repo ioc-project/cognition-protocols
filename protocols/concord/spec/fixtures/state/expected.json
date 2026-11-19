@@ -1,0 +1,31 @@
+{
+  "agent": "cost",
+  "run_id": "11111111-1111-4111-8111-111111111111",
+  "next": "state/next-message.xml",
+  "now": 0,
+  "before": {
+    "status": "active",
+    "state": "wait",
+    "lacking": [
+      [
+        "security",
+        "seed-cost"
+      ],
+      [
+        "cost",
+        "seed-security"
+      ]
+    ]
+  },
+  "after": {
+    "status": "active",
+    "state": "wait",
+    "lacking": [
+      [
+        "cost",
+        "seed-security"
+      ]
+    ]
+  },
+  "sends": []
+}

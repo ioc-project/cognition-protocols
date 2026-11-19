@@ -36,9 +36,10 @@ def repair(engine, st, agent, n, raw):
 
 # --- parameters and ids ----------------------------------------------------
 
-def test_check_params_accepts_defaults_and_a_zero_timeout(engine, protocol):
+def test_check_params_accepts_defaults(engine, protocol):
     engine.check_params(["a", "b"], protocol.DEFAULT_PARAMS)
-    engine.check_params(["a", "b"], {**protocol.DEFAULT_PARAMS, "timeout": 0, "retries": 0})
+    engine.check_params(["a", "b"], {**protocol.DEFAULT_PARAMS, "timeout": 1, "retries": 0})
+    engine.check_params(["a", "b"], {**protocol.DEFAULT_PARAMS, "B": 999_999_999, "timeout": 999_999_999, "retries": 999_999_999})
     engine.check_params(["a", "b"], {**protocol.DEFAULT_PARAMS, "satisfaction_threshold": 1_000_000, "eps": 1})
 
 
@@ -59,14 +60,14 @@ def test_check_params_accepts_defaults_and_a_zero_timeout(engine, protocol):
     (["a", "b"], {"timeout": -1}, "timeout"),
     (["a", "b"], {"retries": -1}, "retries"),
     (["a", "b"], {"retries": 1.5}, "retries"),
+    (["a", "b"], {"B": 1_000_000_000}, "budget"),
+    (["a", "b"], {"timeout": 1_000_000_000}, "timeout"),
+    (["a", "b"], {"retries": 1_000_000_000}, "retries"),
 ])
 def test_check_params_refuses_what_the_spec_forbids(engine, protocol, agents, change, message):
     with pytest.raises(engine.InvalidRun, match=message):
         engine.check_params(agents, {**protocol.DEFAULT_PARAMS, **change})
 
-
-def test_a_zero_timeout_switches_the_timers_off(engine):
-    assert engine.timers_enabled({"timeout": 300}) and not engine.timers_enabled({"timeout": 0})
 
 
 def test_candidate_ids_round_trip(engine):
@@ -74,6 +75,18 @@ def test_candidate_ids_round_trip(engine):
     assert engine.parse_candidate_id("seed-cost") == (0, "cost")
     assert engine.parse_candidate_id("r12-my-agent") == (12, "my-agent")
     for bad in ("r0-a", "seed-", "x-a", "r1", "", None):
+        assert engine.parse_candidate_id(bad) is None
+
+
+def test_a_candidate_id_has_nothing_around_the_agent_id(engine):
+    for bad in ("seed-ops\n", "r1-ops\n", "seed-ops ", "seed-o ps", "seed-" + "a" * 65, "r1-ops\u00e9"):
+        assert engine.parse_candidate_id(bad) is None
+    assert engine.parse_candidate_id("seed-" + "a" * 64) == (0, "a" * 64)
+
+
+def test_a_repair_round_has_at_most_nine_digits(engine):
+    assert engine.parse_candidate_id("r999999999-ops") == (999999999, "ops")
+    for bad in ("r1000000000-ops", "r" + "9" * 5000 + "-ops"):
         assert engine.parse_candidate_id(bad) is None
 
 

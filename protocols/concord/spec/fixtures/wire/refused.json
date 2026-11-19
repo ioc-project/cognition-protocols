@@ -1,0 +1,134 @@
+[
+  {
+    "file": "wire/refused/score-id-with-a-line-feed.xml",
+    "why": "a candidate id is exactly seed-<agent> or r<N>-<agent>"
+  },
+  {
+    "file": "wire/refused/proposal-id-with-a-line-feed.xml",
+    "why": "the id of a proposal"
+  },
+  {
+    "file": "wire/refused/proposal-id-of-another-author.xml",
+    "why": "an init reply proposes seed-<from>"
+  },
+  {
+    "file": "wire/refused/repair-round-zero.xml",
+    "why": "a repair round starts at 1"
+  },
+  {
+    "file": "wire/refused/winner-that-is-not-an-id.xml",
+    "why": "the winner is a candidate id"
+  },
+  {
+    "file": "wire/refused/result-outcome-aborted.xml",
+    "why": "a result is SUCCESS or BEST_EFFORT"
+  },
+  {
+    "file": "wire/refused/timeout-zero.xml",
+    "why": "timeout is above 0"
+  },
+  {
+    "file": "wire/refused/budget-zero.xml",
+    "why": "B is at least 1"
+  },
+  {
+    "file": "wire/refused/retries-negative.xml",
+    "why": "retries is at least 0"
+  },
+  {
+    "file": "wire/refused/empty-timeout.xml",
+    "why": "an empty number is not in the form"
+  },
+  {
+    "file": "wire/refused/empty-eps.xml",
+    "why": "an empty number is not in the form"
+  },
+  {
+    "file": "wire/refused/threshold-above-one.xml",
+    "why": "tau is at most 1"
+  },
+  {
+    "file": "wire/refused/eps-zero.xml",
+    "why": "eps is above 0"
+  },
+  {
+    "file": "wire/refused/number-without-leading-digit.xml",
+    "why": "a number is [0-9]{1,3}(.[0-9]{1,6})?"
+  },
+  {
+    "file": "wire/refused/number-with-an-exponent.xml",
+    "why": "a number is [0-9]{1,3}(.[0-9]{1,6})?"
+  },
+  {
+    "file": "wire/refused/number-with-a-plus-sign.xml",
+    "why": "a number is [0-9]{1,3}(.[0-9]{1,6})?"
+  },
+  {
+    "file": "wire/refused/number-with-seven-decimals.xml",
+    "why": "at most 6 decimals"
+  },
+  {
+    "file": "wire/refused/score-above-100.xml",
+    "why": "a score is 0 to 100"
+  },
+  {
+    "file": "wire/refused/anchors-not-ordered.xml",
+    "why": "raw_ideal exceeds raw_reject"
+  },
+  {
+    "file": "wire/refused/agent-id-too-long.xml",
+    "why": "an agent id is 1 to 64 of A-Za-z0-9_-"
+  },
+  {
+    "file": "wire/refused/agent-id-with-a-space.xml",
+    "why": "an agent id is 1 to 64 of A-Za-z0-9_-"
+  },
+  {
+    "file": "wire/refused/upper-case-uuid.xml",
+    "why": "a uuid is lower case"
+  },
+  {
+    "file": "wire/refused/run-id-not-a-uuid.xml",
+    "why": "a run id is a uuid"
+  },
+  {
+    "file": "wire/refused/repeated-attribute.xml",
+    "why": "an element holds an attribute once"
+  },
+  {
+    "file": "wire/refused/a-comment.xml",
+    "why": "no comments"
+  },
+  {
+    "file": "wire/refused/a-cdata-section.xml",
+    "why": "no CDATA"
+  },
+  {
+    "file": "wire/refused/a-processing-instruction.xml",
+    "why": "no processing instructions"
+  },
+  {
+    "file": "wire/refused/enum-option-with-outer-blanks.xml",
+    "why": "an enum option is trimmed like a candidate"
+  },
+  {
+    "file": "wire/refused/pattern-with-a-lookahead.xml",
+    "why": "a pattern is the subset"
+  },
+  {
+    "file": "wire/refused/pattern-with-a-backslash-b.xml",
+    "why": "a pattern is the subset"
+  },
+  {
+    "file": "wire/refused/schema-keyword-not-supported.xml",
+    "why": "an unsupported schema keyword"
+  },
+  {
+    "file": "wire/refused/candidate-breaks-the-schema.xml",
+    "why": "a candidate satisfies the schema"
+  },
+  {
+    "file": "wire/refused/cancel-missing-agent-without-agent.xml",
+    "why": "missing-agent needs agent"
+  }
+]

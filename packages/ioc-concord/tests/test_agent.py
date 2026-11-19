@@ -587,6 +587,33 @@ def test_a_mismatch_error_is_read_by_every_agent_also_after_its_run_has_ended(ag
     assert net.agents["cost"].receive(other).events[0]["reason"] == "not about the result of the reporter"
 
 
+def test_a_mismatch_error_counts_once_per_author_however_many_it_sends(agent):
+    net = happy(agent)
+    cost = net.agents["cost"]
+    for i in range(20):
+        err = W.build_error("security", RUN, "cost", "result", "mismatch", text="differs", uid=f"e9e9e9e9-0000-4000-8000-{i:012x}")
+        got = cost.receive(err)
+    assert got.events[0]["reason"] == "already counted"
+    assert cost.report()["mismatches"] == {"sent": 0, "received": ["security"]}
+
+
+def test_a_run_keeps_the_latest_uuids_only(agent, state, monkeypatch):
+    run = {"uuids": {}}
+    monkeypatch.setattr(state, "MAX_UUIDS", 5)
+    for i in range(12):
+        state.keep_uuid(run, f"u{i}")
+    assert list(run["uuids"]) == ["u7", "u8", "u9", "u10", "u11"]
+
+
+def test_a_participant_that_sends_endless_requests_cannot_grow_the_state_without_limit(agent, state):
+    net = happy(agent)
+    cost = net.agents["cost"]
+    for i in range(state.MAX_UUIDS + 500):
+        err = W.build_error("security", RUN, "cost", "score", "missing", candidate="seed-security", uid=f"d4d4d4d4-0000-4000-8000-{i:012x}")
+        cost.receive(err)
+    assert len(cost.state["runs"][RUN]["uuids"]) == state.MAX_UUIDS
+
+
 def test_the_agent_is_free_for_a_new_run_once_its_run_has_ended(agent):
     net = happy(agent)
     cost = net.agents["cost"]

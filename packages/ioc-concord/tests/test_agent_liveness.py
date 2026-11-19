@@ -83,12 +83,6 @@ def test_with_no_retries_the_first_expiry_gives_up(agent):
     assert kinds(step) == ["cancel"] and a.status()["status"] == "aborted"
 
 
-def test_a_timeout_of_zero_means_the_timers_are_never_triggered(agent):
-    a = joined(agent, params={"timeout": 0, "retries": 1})
-    assert a.status()["timers"] == {"init-reply|security": None} and a.next_wakeup() is None
-    assert a.tick(10 ** 9).send == [] and a.status()["status"] == "active"
-
-
 def test_the_timer_of_each_author_is_its_own_and_a_batch_is_done_only_when_nothing_in_it_is_lacking(agent):
     net = Net(agent, ["cost", "security", "legal"])
     net.start(init_doc(["cost", "security", "legal"], params=PARAMS))
@@ -187,8 +181,22 @@ def test_a_score_for_a_candidate_the_agent_does_not_hold_makes_it_ask_the_author
     assert sec.status()["lacking"] == []
     net.answer_score("legal", r1_cost=50)                                       # security has no r1-cost: a gap
     assert "gap" in [e["event"] for who, e in net.events if who == "security"]
-    assert counts(net, "error") == ["security"] and counts(net, "resend") == ["cost"]
+    assert counts(net, "error") == ["security", "security"] and counts(net, "resend") == ["cost", "legal"]   # the proposal, then the score
     assert "r1-cost" in [c["id"] for c in sec.state["runs"][RUN]["engine"]["pool"]]
+    assert sec.status()["lacking"] == [("security", "r1-cost")] and sec.state["runs"][RUN]["unrated"] == []   # legal's rating is in
+
+
+def test_a_score_that_came_before_its_proposal_is_asked_for_as_soon_as_the_proposal_is_in(agent):
+    lost = lambda text, name: name == "legal" and W.peek(text)["tag"] == "concord-init-reply" and W.peek(text)["attrs"]["from"] == "cost"
+    net = lossy_three(agent, lost)
+    legal = net.agents["legal"]
+    assert [c["id"] for c in legal.state["runs"][RUN]["engine"]["pool"]] == ["seed-security", "seed-legal"]
+    all_score(net)                                                                # security's score on seed-cost reaches legal first
+    asked = [e for who, e in net.events if who == "legal" and e["event"] == "asked"]
+    assert [(e["author"], e["what"], e["candidate"]) for e in asked] == [("cost", "init-reply", None), ("security", "score", "seed-cost")]
+    assert legal.state["runs"][RUN]["unrated"] == [] and legal.status()["lacking"] == []        # nobody waited for a timer
+    assert legal.status()["state"] != "wait" and net.now == 0
+    assert counts(net, "resend") == ["cost", "security"]
 
 
 def test_a_gap_is_asked_for_once_and_the_timer_repeats_the_request(agent):
@@ -350,15 +358,23 @@ def test_a_batch_whose_first_lacking_message_has_arrived_starts_a_new_wait(agent
     assert [e for e in errors(cost.tick(20)) if e["to"] == "legal"] == []                       # legal has its new wait until 25
 
 
-def test_a_held_message_is_bounded(agent):
-    net = Net(agent, ["cost", "security"])
-    net.start(init_doc(params={"timeout": 10, "retries": 2, "B": 1}))
-    net.answer_init("cost")
-    net.answer_init("security")
-    a = net.agents["cost"]
-    a.receive(W.build_score("security", RUN, [("seed-cost", 20, "r")]))                         # cost's own score is not in: wait
-    seen = []
-    for i in range(1, 8):
-        doc = W.build_repair("security", RUN, i, f"c{i}", "r", 50, "w", uid=f"7{i}777777-7777-4777-8777-777777777777")
-        seen.append(a.receive(doc).events[0].get("reason") or a.receive(doc).events[0]["event"])
-    assert len(a.state["runs"][RUN]["held"]) == 4 and "too many messages held" in seen
+def test_a_held_message_is_one_per_item_so_one_peer_cannot_fill_the_queue(agent):
+    net = Net(agent, ["cost", "security", "legal"])
+    net.start(init_doc(["cost", "security", "legal"], params={"timeout": 10, "retries": 2, "B": 2}))
+    for n in ("cost", "security", "legal"):
+        net.answer_init(n)
+    a = net.agents["cost"]                                                # every score is still missing: the state is incomplete
+    count = iter(range(10 ** 6))
+
+    def receive(frm, n):
+        uid = f"{next(count):08d}-7777-4777-8777-777777777777"
+        return a.receive(W.build_repair(frm, RUN, n, f"c{n}", "r", 50, "w", uid=uid)).events[0]
+
+    assert receive("security", 1)["event"] == "held"
+    for _ in range(50):                                                   # the same item again, with new uuids
+        assert receive("security", 1)["reason"] == "already held"
+    assert receive("security", 2)["event"] == "held"
+    assert receive("security", 3)["reason"] == "no repair of this round is owed"      # after B rounds none can be owed
+    assert receive("alice", 1)["reason"] == "not handled"                     # the initiator is not a participant
+    assert receive("legal", 1)["event"] == "held"                         # and a legitimate one is not crowded out
+    assert sorted(a.state["runs"][RUN]["held"]) == ["repair|legal|r1-legal", "repair|security|r1-security", "repair|security|r2-security"]

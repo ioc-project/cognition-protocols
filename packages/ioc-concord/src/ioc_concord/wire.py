@@ -30,10 +30,10 @@ import xml.etree.ElementTree as ET
 
 from ioc_concord.engine import check_params, parse_candidate_id
 from ioc_concord.errors import ConcordError, InvalidMessage
-from ioc_concord.protocol import (DEFAULT_PARAMS, MILLION, PROTOCOL_VERSION, RESULT_OUTCOMES, format_number, is_agent_id,
-                                  is_uuid, parse_number, to_millionths)
-from ioc_concord.schema import check_candidate, validate_schema
-from ioc_concord.xmlutil import check_of, esc_attr, esc_text, verify_check, with_check
+from ioc_concord.protocol import (DEFAULT_PARAMS, MAX_INTEGER, MILLION, PROTOCOL_VERSION, RESULT_OUTCOMES, WS, format_number, is_agent_id,
+                                  is_uuid, parse_number, squeeze, to_millionths)
+from ioc_concord.schema import check_candidate, load_json, validate_schema
+from ioc_concord.xmlutil import check_of, esc_attr, esc_text, start_tag, verify_check, with_check
 
 # --------------------------------------------------------------------------
 # vocabulary
@@ -59,9 +59,7 @@ _INIT_PARAMS = {"satisfaction_threshold": "satisfaction_threshold", "eps": "eps"
 _INTEGER_RE = re.compile(r"[0-9]+")
 _FORBIDDEN_RE = re.compile(r"<!|<\?")
 _OPEN_RE = re.compile(r"<(concord-[a-z-]+)\b")
-_FENCE_RE = re.compile(r"```(?:xml)?\s*\n(.*?)\n```", re.DOTALL)
-_ROOT_TAG_RE = re.compile(r"<[^>]*>")
-_ATTR_RE = re.compile(r'([A-Za-z_][\w.:-]*)\s*=\s*"([^"]*)"')
+_TAG_NAME_RE = re.compile(r"concord-[a-z-]+")
 
 
 def new_uuid():
@@ -101,9 +99,9 @@ def _head(tag, from_, run_id, uid, more=()):
 
 
 def _need(value, what):
-    if not str(value if value is not None else "").strip():
+    if not str(value if value is not None else "").strip(WS):
         raise InvalidMessage(f"{what} is required and cannot be empty")
-    return str(value).strip()
+    return str(value).strip(WS)
 
 
 def _need_uuid(value, what):
@@ -138,8 +136,7 @@ def _problem(fn, *args):
 
 def build_init(from_, participants, context, x_reject, x_ideal, spec, params=None, run_id=None, uid=None):
     """<concord-init>: the initiator `from_` opens a run. `spec` is the candidate schema as a dict. `params` holds any of
-    satisfaction_threshold, eps (a number as text, int or float), B, timeout, retries (DEFAULT_PARAMS fill the rest; a `timeout`
-    of 0 switches the timers off, an extension of this library that is not part of the spec). A fresh run id is made when none is given. Raises InvalidMessage when a rule of the configuration is broken."""
+    satisfaction_threshold, eps (a number as text, int or float), B, timeout, retries (DEFAULT_PARAMS fill the rest). A fresh run id is made when none is given. Raises InvalidMessage when a rule of the configuration is broken."""
     _need_agent(from_, "the initiator id")
     unknown = sorted(set(params or {}) - set(_INIT_PARAMS))
     if unknown:
@@ -270,13 +267,13 @@ def build_error(from_, run_id, to, what, reason, candidate=None, ref=None, text=
     head = _head(ERROR, from_, _need_uuid(run_id, "run_id"), uid,
                  [("to", _need_agent(to, "to")), ("what", what), ("candidate", candidate), ("ref", ref),
                   ("reason", reason)])
-    return f"{head}>\n  {esc_text(text.strip())}\n</{ERROR}>" if text and text.strip() else head + "/>"
+    return f"{head}>\n  {esc_text(text.strip(WS))}\n</{ERROR}>" if text and text.strip(WS) else head + "/>"
 
 
 def build_resend(from_, run_id, original, reply_to=None, uid=None):
     """<concord-resend>: carry the stored message `original` again, word for word. `from_` is the author of the message
     inside. `reply_to` is the `uuid` of the error it answers, when it answers one."""
-    inner = original.strip()
+    inner = original.strip(WS)
     info = peek(inner)
     if info is None or info["tag"] not in DATA_TAGS:
         raise InvalidMessage("a resend carries a message of the run: an init, init reply, repair, score or result")
@@ -313,28 +310,60 @@ def build_cancel(from_, run_id, reason, superseded_by=None, agent=None, uid=None
 # reading, layer by layer
 # --------------------------------------------------------------------------
 
+def _fenced(s):
+    """What is inside the first markdown fence of `s` that holds a CONCORD element: from the line after an opening ``` (with or
+    without `xml`) up to the next line that starts with ```; None when there is none. Each position is read once, so the cost is
+    the length of `s` however many fences are opened and never closed."""
+    pos, dead = 0, len(s) + 1                          # from `dead` on there is no line that closes a fence
+    while True:
+        p = s.find("```", pos)
+        if p < 0:
+            return None
+        pos = p + 1
+        start = None
+        for head in ((p + 6,) if s.startswith("xml", p + 3) else ()) + (p + 3,):
+            end = head
+            while end < len(s) and s[end] in WS:
+                end += 1
+            line = s.rfind("\n", head, end)
+            if line >= 0:
+                start = line + 1
+                break
+        if start is None or start >= dead:
+            continue
+        close = s.find("\n```", start)
+        if close < 0:
+            dead = start
+            continue
+        if "<concord-" in s[start:close]:
+            return s[start:close]
+        pos = close + 4
+
+
 def locate(text):
     """The CONCORD document in `text`, taken unchanged, from its first `<` to its last `>`. The message may be handed over
     inside a markdown fence or prose; what is returned is the sender's own text, byte for byte. Raises InvalidMessage when
     there is none, or it is not complete."""
-    s = text.strip()
-    for m in _FENCE_RE.finditer(s):
-        if "<concord-" in m.group(1):
-            s = m.group(1).strip()
-            break
+    s = text.strip(WS)
+    inner = _fenced(s) if "<concord-" in s else None
+    if inner is not None:
+        s = inner.strip(WS)
     m = _OPEN_RE.search(s)
     if not m:
         raise InvalidMessage("no CONCORD message in the text")
-    tag_end = s.find(">", m.start())
-    if tag_end < 0:
-        raise InvalidMessage("the CONCORD message is cut off inside its first tag")
-    if s[tag_end - 1] == "/":
-        return s[m.start():tag_end + 1]
+    s = s[m.start():]
+    st = start_tag(s)
+    if st is None:
+        raise InvalidMessage("the CONCORD message is cut off inside its first tag" if ">" not in s else
+                             "the first tag of the CONCORD message is not well-formed")
+    tag_end = st[0].end() - 1
+    if st[0].group(3):
+        return s[:tag_end + 1]
     close = s.rfind(f"</{m.group(1)}")
     end = s.find(">", close) if close > tag_end else -1
     if end < 0:
         raise InvalidMessage(f"the <{m.group(1)}> message is not closed")
-    return s[m.start():end + 1]
+    return s[:end + 1]
 
 
 def peek(doc):
@@ -342,18 +371,18 @@ def peek(doc):
     not a CONCORD element. `attrs` holds every attribute of the start tag (`version`, `from`, `run_id`, `uuid`, `check`,
     `reply_to`, ...), unescaped. `inner` is the peek of the document inside a <concord-resend>. `text` is the text of an
     <concord-error>: an error of another version is read by its root attributes and this text alone."""
-    doc = doc.strip()
-    start = _ROOT_TAG_RE.match(doc)
-    m = _OPEN_RE.match(start.group(0)) if start else None
-    if not m:
+    doc = doc.strip(WS)
+    st = start_tag(doc)
+    if st is None or not _TAG_NAME_RE.fullmatch(st[0].group(1)):
         return None
-    out = {"tag": m.group(1), "attrs": {k: _unescape(v) for k, v in _ATTR_RE.findall(start.group(0))}, "inner": None,
-           "text": None}
-    body = doc[start.end():doc.rfind(f"</{m.group(1)}")] if not start.group(0).endswith("/>") else ""
-    if m.group(1) == RESEND:
+    start, attrs = st
+    tag = start.group(1)
+    out = {"tag": tag, "attrs": attrs, "inner": None, "text": None}
+    body = "" if start.group(3) else doc[start.end():doc.rfind(f"</{tag}")]
+    if tag == RESEND:
         out["inner"] = peek(body)
-    elif m.group(1) == ERROR:
-        out["text"] = " ".join(_unescape(re.sub(r"<[^>]*>", " ", body)).split())
+    elif tag == ERROR:
+        out["text"] = squeeze(_unescape(re.sub(r"<[^>]*>", " ", body)))
     return out
 
 
@@ -363,7 +392,7 @@ def check_ok(doc):
 
 
 def _txt(el):
-    return (el.text or "").strip() if el is not None else ""
+    return (el.text or "").strip(WS) if el is not None else ""
 
 
 def _child(parent, tag):
@@ -398,7 +427,9 @@ def _raw_number(text, what):
 
 def _integer(text, what):
     if not _INTEGER_RE.fullmatch(text):
-        raise InvalidMessage(f"{what} is not an integer: {text!r}")
+        raise InvalidMessage(f"{what} is not an integer: {text[:40]!r}")
+    if len(text.lstrip("0")) > len(str(MAX_INTEGER)):                  # before int(), which refuses a very long digit string
+        raise InvalidMessage(f"{what} is above {MAX_INTEGER}")
     return int(text)
 
 
@@ -429,14 +460,14 @@ def _parse_init(root, spec):
     box = root.find("params")
     for key, tag in _INIT_PARAMS.items():
         el = box.find(tag) if box is not None else None
-        if el is not None and _txt(el):
+        if el is not None:                              # an element that is there is read: an empty one is not a number
             params[key] = _number(_txt(el), f"<{tag}>") if key in ("satisfaction_threshold", "eps") else \
                 _integer(_txt(el), f"<{tag}>")
     _problem(check_params, participants, params)
     anchors = _child(root, "anchors")
     text = _required(_child(root, "proposal"), "candidate_schema")
     try:
-        loaded = json.loads(text)
+        loaded = load_json(text)
     except ValueError as exc:
         raise InvalidMessage(f"<candidate_schema> is not valid JSON ({exc})")
     return {"participants": participants, "params": params, "context": _required(root, "context"),
@@ -490,15 +521,18 @@ def _parse_error(root):
         raise InvalidMessage("<concord-error> needs the attribute to")
     _need_agent(f["to"], "to")
     _check_error_fields(f["what"], f["reason"], f["candidate"], f["ref"])
-    return {**f, "text": " ".join((root.text or "").split())}
+    return {**f, "text": squeeze(root.text or "")}
 
 
 def _parse_resend(doc, root):
     kids = list(root)
     if len(kids) != 1 or kids[0].tag not in DATA_TAGS:
         raise InvalidMessage("a <concord-resend> carries exactly one message of the run")
-    start = _ROOT_TAG_RE.match(doc)
-    inner = doc[start.end():doc.rfind(f"</{RESEND}")].strip()
+    st = start_tag(doc)
+    if st is None:
+        raise InvalidMessage("the start tag of a <concord-resend> is not well-formed")
+    start = st[0]
+    inner = doc[start.end():doc.rfind(f"</{RESEND}")].strip(WS)
     reply_to = root.get("reply_to")
     if reply_to is not None and not is_uuid(reply_to):
         raise InvalidMessage(f"reply_to must be a UUID, not {reply_to!r}")
@@ -530,7 +564,7 @@ def parse_message(doc, spec=None):
     Every number is an integer count of millionths (see `protocol.MILLION`): the anchors, the raw scores, and the `satisfaction_threshold`
     and `eps` of the init.
     """
-    doc = doc.strip()
+    doc = doc.strip(WS)
     if _FORBIDDEN_RE.search(doc):
         raise InvalidMessage("a message holds no comments, CDATA sections, processing instructions or declarations")
     try:
