@@ -195,13 +195,10 @@ def test_a_participant_that_never_answers_ends_the_run_after_retries_and_everybo
     assert len(resent) == 2 and all(W.parse_message(m["inner"])["kind"] == "init" for m in resent)       # retries = 2
 
 
-def test_with_no_retries_the_initiator_gives_up_at_the_first_expiry_and_with_no_timeout_never(agent):
+def test_with_no_retries_the_initiator_gives_up_at_the_first_expiry(agent):
     net = watched(agent)
     open_run(net, params={"timeout": 10, "retries": 0})
     assert kinds(net.agents["alice"].tick(10)) == ["cancel"]
-    quiet = watched(agent)
-    open_run(quiet, params={"timeout": 0, "retries": 1})
-    assert quiet.agents["alice"].next_wakeup() is None and quiet.agents["alice"].tick(10 ** 9).send == []
 
 
 # --- another version -------------------------------------------------------------------------

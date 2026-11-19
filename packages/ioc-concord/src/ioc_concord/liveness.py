@@ -12,9 +12,9 @@ the timers are, in `run["timers"]`:
     key            what the batch is: `init-reply|cost`, `score|cost|seeds`, `score|cost|r1-security`, `repair|security|1`, `result|cost`
     timer          {author, what, candidate, requests, asked, deadline}; `candidate` is the first message lacking, which a request names;
                    `requests` counts the requests sent, `asked` says whether a gap has been asked for at once, and `deadline` is when the
-                   timer expires (None when the run has no timers)
+                   timer expires
 """
-from ioc_concord.engine import lacking, parse_candidate_id, timers_enabled
+from ioc_concord.engine import lacking, parse_candidate_id
 from ioc_concord.protocol import ABORTED
 from ioc_concord.state import INITIATOR, RUN_ACTIVE
 
@@ -68,15 +68,14 @@ def owed_batches(run, me, ev):
 
 def sync_timers(run, me, now, ev):
     """Start the timer of every batch that has become owed, and drop the timer of every batch that is complete. When the message that was
-    first lacking in a batch has arrived and the next is still owed, the wait starts again. With a `timeout` of 0 a timer has no
-    deadline: nothing is ever triggered."""
+    first lacking in a batch has arrived and the next is still owed, the wait starts again."""
     owed, timers = owed_batches(run, me, ev), run["timers"]
     for key in [k for k in timers if k not in owed]:
         del timers[key]
     for key, o in owed.items():
         t = timers.get(key)
         if t is None or t["candidate"] != o["candidate"]:
-            deadline = now + run["params"]["timeout"] if timers_enabled(run["params"]) else None
+            deadline = now + run["params"]["timeout"]
             t = timers[key] = {"requests": 0, "asked": False, "deadline": deadline, "candidate": o["candidate"]}
         t.update(o)
 
@@ -84,10 +83,10 @@ def sync_timers(run, me, now, ev):
 def expired_keys(run, now):
     """The keys of the timers of `run` that have expired at `now`, the earliest first."""
     return [key for _, key in sorted((t["deadline"], key) for key, t in run["timers"].items()
-                                     if t["deadline"] is not None and t["deadline"] <= now)]
+                                     if t["deadline"] <= now)]
 
 
 def earliest_deadline(runs):
     """The earliest deadline of a timer of an active run among `runs`, or None."""
-    due = [t["deadline"] for run in runs if run["status"] == RUN_ACTIVE for t in run["timers"].values() if t["deadline"] is not None]
+    due = [t["deadline"] for run in runs if run["status"] == RUN_ACTIVE for t in run["timers"].values()]
     return min(due) if due else None

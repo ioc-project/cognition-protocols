@@ -13,16 +13,29 @@ PROTOCOL_VERSION = "0.3.0"
 # count of millionths, so that no floating-point error can change a decision (see Numbers in the spec). Text appears only on
 # the wire and in reports.
 MILLION = 1_000_000
+# The largest `B`, `timeout` or `retries` of a run: 9 digits. The spec sets no top, and an integer of any length would make `int()`
+# fail on a very long digit string, so this library refuses more than that, when it builds an init and when it reads one.
+MAX_INTEGER = 999_999_999
 
 # The parameters of a run and their defaults (see Configuration Parameters in the spec): `satisfaction_threshold` and `eps` in
-# millionths (0.6 and 0.05), `B` is the `budget` element. A `timeout` of 0 switches the timers off: nobody asks again for a
-# message and nobody gives up on a clock. That is an extension of this library, not part of the spec.
+# millionths (0.6 and 0.05), `B` is the `budget` element.
 DEFAULT_PARAMS = {"satisfaction_threshold": 600_000, "eps": 50_000, "B": 8, "timeout": 300, "retries": 3}
 
 SUCCESS, BEST_EFFORT, ABORTED = "SUCCESS", "BEST_EFFORT", "ABORTED"
 OUTCOMES = (SUCCESS, BEST_EFFORT, ABORTED)
 # What a <concord-result> can say: an aborted run sends no result.
 RESULT_OUTCOMES = (SUCCESS, BEST_EFFORT)
+
+# Whitespace is these four characters and no other: a text is trimmed of them, and `\\s` of a pattern stands for them, so that every
+# implementation reads the same text, whatever its language.
+WS = " \t\r\n"
+_BLANKS_RE = re.compile(r"[ \t\r\n]+")
+
+
+def squeeze(text):
+    """`text` with each run of whitespace turned into one space and none left at either end."""
+    return _BLANKS_RE.sub(" ", text).strip(WS)
+
 
 _AGENT_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
 _UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
