@@ -15,14 +15,17 @@
                   sent           {item key: the original text this agent sent for that item}
                   sent_by_uuid   {uuid: the same texts}, to find the one a damaged-document request names
                   received       {item key: the original text it recorded for that item}
-                  uuids          {uuid: True} for every transmission it has accepted
+                  uuids          {uuid: True} for the transmissions it has accepted, the latest MAX_UUIDS of them
                   outcome        the outcome this agent computed: SUCCESS, BEST_EFFORT, ABORTED, or None while it is not known
                   reported       the reporter's result as {"outcome", "winning_candidate_id"}, once this agent holds it
                   mismatches     {"sent": how many mismatch errors this agent sent, "last": the text of the last, "received": [authors
                                  of those it got]}
                   timers         {timer key: {author, what, candidate, requests, deadline, asked}} for the messages the agent is owed
-                  held           {uuid: the text} of the repairs and results that cannot be judged yet, judged again as the state fills
+                  held           {item key: {uuid, doc}} of the repairs and results that cannot be judged yet, one per item,
+                                 judged again as the state fills
                   expected       the ids of candidates that other messages prove to exist, whose proposal this agent lacks
+                  unrated        [[author, candidate id]] of the ratings that arrived before the proposal they rate, asked for at
+                                 once when the proposal comes, until the rating is in
                   abort          why the run aborted, as {"reason", "agent", "superseded_by", "note"}, or None; the note is for the initiator
                                  that gave up on a version refusal: {"agent", "text"}
                   cancel_sent    whether this agent has sent its cancel (it sends it once)
@@ -52,9 +55,18 @@ def item_key(kind, author, item=None):
     return "|".join(p for p in (kind, author, item) if p)
 
 
+# How many accepted uuids a run keeps. The spec keeps them all, but a participant can send as many messages as it likes, each with a new
+# uuid, so this library forgets the oldest past this number (far above what an honest run sends). A copy of a message that is that old
+# and arrives again is read once more, which the rules of the protocol make harmless.
+MAX_UUIDS = 4096
+
+
 def keep_uuid(run, uid):
-    """Remember that the transmission `uid` has been accepted."""
-    run["uuids"][uid] = True
+    """Remember that the transmission `uid` has been accepted, and forget the oldest ones past MAX_UUIDS."""
+    uuids = run["uuids"]
+    uuids[uid] = True
+    while len(uuids) > MAX_UUIDS:
+        del uuids[next(iter(uuids))]
 
 
 def keep_sent(run, key, text):
@@ -76,7 +88,7 @@ def new_run(me, init, doc):
             "sent": {}, "sent_by_uuid": {}, "received": {} if mine else {item_key("init", init["from"]): doc},
             "uuids": {init["uuid"]: True}, "outcome": None, "reported": None,
             "mismatches": {"sent": 0, "last": None, "received": []},
-            "timers": {}, "held": {}, "expected": [], "abort": None, "cancel_sent": False, "disputed": False,
+            "timers": {}, "held": {}, "expected": [], "unrated": [], "abort": None, "cancel_sent": False, "disputed": False,
             "status": RUN_ACTIVE}
     if mine:
         keep_sent(run, item_key("init", me), doc)

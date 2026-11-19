@@ -1,0 +1,368 @@
+[
+  {
+    "file": "wire/init.xml",
+    "kind": "init",
+    "from": "alice",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000001",
+    "check": "7846bab9",
+    "parsed": {
+      "kind": "init",
+      "tag": "concord-init",
+      "check": "7846bab9",
+      "version": "0.3.0",
+      "from": "alice",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000001",
+      "participants": [
+        "cost",
+        "security"
+      ],
+      "params": {
+        "satisfaction_threshold": 700000,
+        "eps": 100000,
+        "B": 3,
+        "timeout": 60,
+        "retries": 2
+      },
+      "context": "Cut errors to < 1% & keep the cost down",
+      "x_reject": "errors stay as they are",
+      "x_ideal": "no error and a low cost",
+      "schema": {
+        "description": "a short plan, in lower case",
+        "maxLength": 80,
+        "pattern": "^[a-z ]+$"
+      }
+    }
+  },
+  {
+    "file": "wire/init-reply-cost.xml",
+    "kind": "init-reply",
+    "from": "cost",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000002",
+    "check": "e9ba87d8",
+    "parsed": {
+      "kind": "init-reply",
+      "tag": "concord-init-reply",
+      "check": "e9ba87d8",
+      "version": "0.3.0",
+      "from": "cost",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000002",
+      "raw_reject": 10000000,
+      "raw_ideal": 90000000,
+      "proposal": {
+        "id": "seed-cost",
+        "round": 0,
+        "candidate": "cache the answers",
+        "rationale": "cheap & fast",
+        "raw": 82500000,
+        "reasoning": "good for cost"
+      }
+    }
+  },
+  {
+    "file": "wire/init-reply-security.xml",
+    "kind": "init-reply",
+    "from": "security",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000003",
+    "check": "a7b2cd46",
+    "parsed": {
+      "kind": "init-reply",
+      "tag": "concord-init-reply",
+      "check": "a7b2cd46",
+      "version": "0.3.0",
+      "from": "security",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000003",
+      "raw_reject": 0,
+      "raw_ideal": 100000000,
+      "proposal": {
+        "id": "seed-security",
+        "round": 0,
+        "candidate": "check every input",
+        "rationale": "the \"safe\" way",
+        "raw": 40000000,
+        "reasoning": "slow"
+      }
+    }
+  },
+  {
+    "file": "wire/score.xml",
+    "kind": "score",
+    "from": "cost",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000004",
+    "check": "f7eabee2",
+    "parsed": {
+      "kind": "score",
+      "tag": "concord-score",
+      "check": "f7eabee2",
+      "version": "0.3.0",
+      "from": "cost",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000004",
+      "scores": [
+        {
+          "id": "seed-security",
+          "raw": 41500000,
+          "reasoning": "risky & slow"
+        },
+        {
+          "id": "r1-security",
+          "raw": 60000000,
+          "reasoning": "better"
+        }
+      ],
+      "ignored": []
+    }
+  },
+  {
+    "file": "wire/repair.xml",
+    "kind": "repair",
+    "from": "security",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000005",
+    "check": "c5f9ecd9",
+    "parsed": {
+      "kind": "repair",
+      "tag": "concord-repair",
+      "check": "c5f9ecd9",
+      "version": "0.3.0",
+      "from": "security",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000005",
+      "proposal": {
+        "id": "r1-security",
+        "round": 1,
+        "candidate": "check only what is new",
+        "rationale": "less work < before",
+        "raw": 70250000,
+        "reasoning": "fair"
+      }
+    }
+  },
+  {
+    "file": "wire/result.xml",
+    "kind": "result",
+    "from": "cost",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000006",
+    "check": "06405710",
+    "parsed": {
+      "kind": "result",
+      "tag": "concord-result",
+      "check": "06405710",
+      "version": "0.3.0",
+      "from": "cost",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000006",
+      "outcome": "SUCCESS",
+      "winning_candidate_id": "r1-security"
+    }
+  },
+  {
+    "file": "wire/error-missing.xml",
+    "kind": "error",
+    "from": "cost",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000007",
+    "check": null,
+    "parsed": {
+      "kind": "error",
+      "tag": "concord-error",
+      "check": null,
+      "version": "0.3.0",
+      "from": "cost",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000007",
+      "to": "security",
+      "what": "score",
+      "candidate": "seed-cost",
+      "ref": null,
+      "reason": "missing",
+      "text": "never got it & asked"
+    }
+  },
+  {
+    "file": "wire/error-version.xml",
+    "kind": "error",
+    "from": "security",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000008",
+    "check": null,
+    "parsed": {
+      "kind": "error",
+      "tag": "concord-error",
+      "check": null,
+      "version": "0.3.0",
+      "from": "security",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000008",
+      "to": "alice",
+      "what": "init",
+      "candidate": null,
+      "ref": null,
+      "reason": "version",
+      "text": "I speak 0.2.0; this init is version 0.3.0."
+    }
+  },
+  {
+    "file": "wire/resend.xml",
+    "kind": "resend",
+    "from": "security",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000009",
+    "check": null,
+    "parsed": {
+      "kind": "resend",
+      "tag": "concord-resend",
+      "check": null,
+      "version": "0.3.0",
+      "from": "security",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000009",
+      "reply_to": "a0000000-0000-4000-8000-000000000007",
+      "inner": "<concord-init-reply version=\"0.3.0\" from=\"security\" run_id=\"11111111-1111-4111-8111-111111111111\" uuid=\"a0000000-0000-4000-8000-000000000003\" check=\"a7b2cd46\">\n  <anchors>\n    <raw_reject>0.0</raw_reject>\n    <raw_ideal>100.0</raw_ideal>\n  </anchors>\n  <proposal id=\"seed-security\">\n    <candidate>check every input</candidate>\n    <rationale>the \"safe\" way</rationale>\n    <score>\n      <raw>40.0</raw>\n      <reasoning>slow</reasoning>\n    </score>\n  </proposal>\n</concord-init-reply>"
+    }
+  },
+  {
+    "file": "wire/cancel.xml",
+    "kind": "cancel",
+    "from": "cost",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-00000000000a",
+    "check": null,
+    "parsed": {
+      "kind": "cancel",
+      "tag": "concord-cancel",
+      "check": null,
+      "version": "0.3.0",
+      "from": "cost",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-00000000000a",
+      "reason": "missing-agent",
+      "superseded_by": null,
+      "agent": "security"
+    }
+  },
+  {
+    "file": "wire/tricky/hidden-from-in-a-single-quoted-value.xml",
+    "kind": "score",
+    "from": "cost",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000004",
+    "check": "7a7da3fd",
+    "parsed": {
+      "kind": "score",
+      "tag": "concord-score",
+      "check": "7a7da3fd",
+      "version": "0.3.0",
+      "from": "cost",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000004",
+      "scores": [
+        {
+          "id": "seed-security",
+          "raw": 41500000,
+          "reasoning": "risky & slow"
+        },
+        {
+          "id": "r1-security",
+          "raw": 60000000,
+          "reasoning": "better"
+        }
+      ],
+      "ignored": []
+    }
+  },
+  {
+    "file": "wire/tricky/hidden-check-in-a-single-quoted-value.xml",
+    "kind": "score",
+    "from": "cost",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000004",
+    "check": "2481c5b5",
+    "parsed": {
+      "kind": "score",
+      "tag": "concord-score",
+      "check": "2481c5b5",
+      "version": "0.3.0",
+      "from": "cost",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000004",
+      "scores": [
+        {
+          "id": "seed-security",
+          "raw": 41500000,
+          "reasoning": "risky & slow"
+        },
+        {
+          "id": "r1-security",
+          "raw": 60000000,
+          "reasoning": "better"
+        }
+      ],
+      "ignored": []
+    }
+  },
+  {
+    "file": "wire/tricky/single-quotes-and-a-gt-in-a-value.xml",
+    "kind": "score",
+    "from": "cost",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000004",
+    "check": "bf72804e",
+    "parsed": {
+      "kind": "score",
+      "tag": "concord-score",
+      "check": "bf72804e",
+      "version": "0.3.0",
+      "from": "cost",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000004",
+      "scores": [
+        {
+          "id": "seed-security",
+          "raw": 41500000,
+          "reasoning": "risky & slow"
+        },
+        {
+          "id": "r1-security",
+          "raw": 60000000,
+          "reasoning": "better"
+        }
+      ],
+      "ignored": []
+    }
+  },
+  {
+    "file": "wire/tricky/blanks-and-unicode-spaces-in-the-text.xml",
+    "kind": "init-reply",
+    "from": "cost",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000002",
+    "check": "d65022dc",
+    "parsed": {
+      "kind": "init-reply",
+      "tag": "concord-init-reply",
+      "check": "d65022dc",
+      "version": "0.3.0",
+      "from": "cost",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000002",
+      "raw_reject": 10000000,
+      "raw_ideal": 90000000,
+      "proposal": {
+        "id": "seed-cost",
+        "round": 0,
+        "candidate": "cache the answers",
+        "rationale": "cheap   &\t\tfast",
+        "raw": 82500000,
+        "reasoning": "good for cost"
+      }
+    }
+  }
+]
