@@ -366,11 +366,12 @@ def locate(text):
     return s[:end + 1]
 
 
-def peek(doc):
+def peek(doc, nested=True):
     """The root of `doc`, read from its text without validating anything: {"tag", "attrs", "inner", "text"}, or None when it is
     not a CONCORD element. `attrs` holds every attribute of the start tag (`version`, `from`, `run_id`, `uuid`, `check`,
-    `reply_to`, ...), unescaped. `inner` is the peek of the document inside a <concord-resend>. `text` is the text of an
-    <concord-error>: an error of another version is read by its root attributes and this text alone."""
+    `reply_to`, ...), unescaped. `inner` is the peek of the document inside a <concord-resend>, one level only: a resend inside a
+    resend is not a message of the protocol, so its `inner` is None, and a text of any depth is read in a fixed number of steps. `text`
+    is the text of an <concord-error>: an error of another version is read by its root attributes and this text alone."""
     doc = doc.strip(WS)
     st = start_tag(doc)
     if st is None or not _TAG_NAME_RE.fullmatch(st[0].group(1)):
@@ -379,8 +380,8 @@ def peek(doc):
     tag = start.group(1)
     out = {"tag": tag, "attrs": attrs, "inner": None, "text": None}
     body = "" if start.group(3) else doc[start.end():doc.rfind(f"</{tag}")]
-    if tag == RESEND:
-        out["inner"] = peek(body)
+    if tag == RESEND and nested:
+        out["inner"] = peek(body, nested=False)
     elif tag == ERROR:
         out["text"] = squeeze(_unescape(re.sub(r"<[^>]*>", " ", body)))
     return out

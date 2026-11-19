@@ -393,6 +393,18 @@ def test_the_start_tag_is_read_in_time_proportional_to_its_length(wire):
         assert time.perf_counter() - start < 2, junk[:10]
 
 
+def test_peek_reads_one_level_into_a_resend_and_none_into_a_resend_of_a_resend(wire):
+    inner = score(wire)
+    once = wire.build_resend("cost", RUN, inner)
+    p = wire.peek(once)
+    assert p["inner"]["tag"] == "concord-score" and p["inner"]["inner"] is None
+    twice = f'<concord-resend version="0.3.0" from="cost" run_id="{RUN}" uuid="{RUN}">{once}</concord-resend>'
+    p = wire.peek(twice)
+    assert p["inner"]["tag"] == "concord-resend" and p["inner"]["inner"] is None
+    deep = f'<concord-resend version="0.3.0" from="cost" run_id="{RUN}" uuid="{RUN}">' * 100_000 + inner + "</concord-resend>" * 100_000
+    assert wire.peek(deep)["inner"]["tag"] == "concord-resend"
+
+
 # --- the receiver's side -----------------------------------------------------
 
 def test_a_receiver_refuses_what_is_not_well_formed_or_holds_forbidden_markup(wire):

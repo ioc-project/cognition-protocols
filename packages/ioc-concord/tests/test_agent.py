@@ -397,6 +397,15 @@ def test_a_saved_state_of_another_agent_is_refused(agent):
         agent.Agent("security", store=store)
 
 
+@pytest.mark.parametrize("text", ['{"me": "cost"}', '{"me": "cost", "runs": []}', '{"me": "cost", "runs": {"x": 1}}', "[]", "null", "5",
+                                  '{"me": "cost", "runs": {}, "active": "11111111-1111-4111-8111-111111111111"}'])
+def test_a_saved_state_of_the_wrong_shape_is_an_error_and_not_a_fresh_start_or_a_later_crash(agent, text):
+    store = MemStore(agent)
+    store.text = text
+    with pytest.raises(agent.StateError, match="not the state of an agent"):
+        agent.Agent("cost", store=store)
+
+
 def test_the_clock_is_injected_and_a_given_time_wins(agent):
     a = agent.Agent("cost", clock=lambda: 1234)
     assert a.receive(init_doc()).events[0]["at"] == 1234

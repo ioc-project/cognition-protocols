@@ -27,8 +27,8 @@ from ioc_concord.errors import InvalidMessage, MissingState, StateError
 from ioc_concord.liveness import earliest_deadline, expired_keys, owed_batches, sync_timers
 from ioc_concord.protocol import ABORTED, PROTOCOL_VERSION
 from ioc_concord.report import report_of, status_of
-from ioc_concord.state import (INITIATOR, PARTICIPANT, RUN_ABORTED, RUN_ACTIVE, RUN_ENDED, active_run, item_key, keep_sent, keep_uuid,
-                               members, new_agent_state, new_run)
+from ioc_concord.state import (INITIATOR, PARTICIPANT, RUN_ABORTED, RUN_ACTIVE, RUN_ENDED, active_run, check_agent_state, item_key, keep_sent,
+                               keep_uuid, members, new_agent_state, new_run)
 from ioc_concord.tasks import tasks_of, to_rate
 from ioc_concord.wire import (DATA_TAGS, ERROR, INIT, KIND_OF_TAG, RESEND, build_cancel, build_error, build_init, build_init_reply,
                               build_repair, build_resend, build_result, build_score, check_ok, locate, new_uuid, parse_message, peek)
@@ -76,11 +76,7 @@ class Agent:
             state = self.store.load()
         except MissingState:                    # nothing saved yet; a state that cannot be read is an error, never a fresh start
             return new_agent_state(self.me)
-        if not isinstance(state, dict):
-            raise StateError("the saved state is not the state of an agent")
-        if state.get("me") != self.me:
-            raise StateError(f"the saved state belongs to {state.get('me')!r}, not to {self.me!r}")
-        return state
+        return check_agent_state(state, self.me)
 
     def _save(self):
         if self.store is not None:
@@ -109,8 +105,17 @@ class Agent:
         if self.relay is not None:
             step.forward = self.relay.receive(text)         # first, and whatever the agent does with the message: it is mechanical
         self._handle(text, step)
-        self._save()
+        self._finish(step)
         return step
+
+    def _finish(self, step):
+        """Every call that returns a Step ends here. A centre knows a run once it has sent that run's init to the spokes, bare or inside a
+        resend: so the relay learns from every text the agent sends, whichever call sent it (`start`, a `tick` that asks again, an answer
+        to an error). Then the state is saved."""
+        if self.relay is not None:
+            for text in step.send:
+                self.relay.learn(text)
+        self._save()
 
     def _handle(self, text, step):
         try:
@@ -669,7 +674,7 @@ class Agent:
                     self._abort(run, step, "missing-agent", agent=t["author"])
                     break
                 self._request(run, key, step, from_timer=True)
-        self._save()
+        self._finish(step)
         return step
 
     def next_wakeup(self):
@@ -711,10 +716,8 @@ class Agent:
         step = self._step(now)
         step.send.append(text)
         step.note("started", participants=init["participants"], run_id=init["run_id"], role=run["role"])
-        if self.relay is not None:
-            self.relay.learn(text)              # the centre sends this init to the spokes: what comes back for the run is passed on
         self._advance(run, step)
-        self._save()
+        self._finish(step)
         return step
 
     def submit_init_reply(self, run_id, raw_reject, raw_ideal, candidate, rationale, raw, reasoning, now=None):
@@ -772,7 +775,7 @@ class Agent:
         step.send.append(text)
         step.note("sent", kind=kind, run_id=run["run_id"])
         self._advance(run, step)
-        self._save()
+        self._finish(step)
         return step
 
     # ------------------------------------------------------------------
