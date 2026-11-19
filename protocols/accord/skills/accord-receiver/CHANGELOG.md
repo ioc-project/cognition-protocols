@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/ioc-project/cognition-protocols/compare/accord-receiver-v0.1.0...accord-receiver-v0.1.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **accord:** add checksum and error standardization ([#111](https://github.com/ioc-project/cognition-protocols/issues/111)) ([b3e923b](https://github.com/ioc-project/cognition-protocols/commit/b3e923bfcd0c4f6d5f48894b3c8169ad7ce8ae60))
+
 ## 0.1.0 (2026-10-23)
 
 

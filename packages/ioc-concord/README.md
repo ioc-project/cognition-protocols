@@ -94,26 +94,51 @@ spoke except the one a message came from, and sends its own messages to every sp
 the run ids it needs, in its own store, and the spokes. A centre that takes part in no run is just a `Relay`; one that does gives it to
 its agent. It never sends anything: you do, to the spokes that `targets` names.
 
-The spokes are the links of the centre, which only your transport knows: the init lists the agents that negotiate, not the links. So you
-register them, as any hashable handle you can send through (a connection, a socket id, a name):
+The spokes are the links of the centre, which only your transport knows: the init lists the agents that negotiate, not the links. So the
+transport registers them, under any hashable handle (a connection, a socket id, a name), and keeps the link behind it. The relay only
+stores the handles and gives them back from `targets`; the transport turns each one into its link and sends:
 
 ```python
-relay = Relay(store=FileStore("relay.json"))
-relay.add_spoke(conn)                                  # when a spoke connects
-relay.remove_spoke(conn)                               # when it goes
+class Hub:                                             # the transport of the centre
+    def __init__(self, relay):
+        self.relay = relay                             # Relay(store=FileStore("relay.json"))
+        self.links = {}                                # handle -> link
 
-for out in relay.receive(text):                        # a pure relay: the text itself, unchanged, or nothing
-    for spoke in relay.targets(origin):                # every spoke except the one it came from
-        spoke.send(out)
+    def on_connect(self, name, link):                  # when a spoke connects
+        self.links[name] = link
+        self.relay.add_spoke(name)
 
-hub = Agent("hub", store=FileStore("hub.json"), relay=relay)   # a centre that also takes part
-step = hub.receive(text)
-for out in step.forward:                               # pass on, as above, whatever the agent does with the message
-    for spoke in relay.targets(origin):
-        spoke.send(out)
-for out in step.send:                                  # the agent's own messages go to every spoke
-    for spoke in relay.targets():
-        spoke.send(out)
+    def on_disconnect(self, name):                     # when it goes
+        self.links.pop(name, None)
+        self.relay.remove_spoke(name)
+
+    async def _to(self, names, text):
+        for name in names:
+            await self.links[name].write(text)
+
+    async def send(self, text):                        # an own message: to every spoke
+        await self._to(self.relay.targets(), text)
+
+    async def forward(self, text, origin):             # as it came: to every spoke but the one it came from
+        await self._to(self.relay.targets(origin), text)
+```
+
+The agent does not know the relay or the links. A centre that only passes messages on is a `Relay` and this transport:
+
+```python
+for out in relay.receive(text):                        # the text itself, unchanged, or nothing
+    await hub.forward(out, origin)
+```
+
+and a centre that also takes part gives the relay to its agent and drives the transport with what the agent says:
+
+```python
+agent = Agent("hub", store=FileStore("hub.json"), relay=relay)
+step = agent.receive(text)
+for out in step.forward:                               # pass on, whatever the agent does with the message
+    await hub.forward(out, origin)
+for out in step.send:                                  # the agent's own messages
+    await hub.send(out)
 ```
 
 An agent without a `relay` never fills `step.forward`. The relay knows a run once it has passed on its init, bare or inside a resend, and
