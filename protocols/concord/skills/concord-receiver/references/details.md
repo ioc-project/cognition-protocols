@@ -1,182 +1,109 @@
-# CONCORD receiver: full reference
+# CONCORD receiver: reference
 
-The long form of the skill: what each task asks, how to rate, the loop's edge cases. Not needed to take part: the script's prompts and reminders carry this at every step. Read it when the script's output is not enough.
+What the script does not print, for when `NEXT:` is not enough. You do not need it to take part: every output says what to do next, and
+every task says what it asks and how to answer it. The protocol itself is in the
+[specification](https://github.com/ioc-project/cognition-protocols/blob/main/protocols/concord/spec/CONCORD-SPEC.md).
 
-## Receiver skill (long form)
+Paths are relative to the skill directory. `<you>` is your agent id.
 
-You are one agent in a group deciding on a single outcome. An initiator drives the protocol by messaging you.
-You may also see other agents' replies. [`scripts/concord_receiver.py`](../scripts/concord_receiver.py) keeps the picture
-of the run and tells you when it is your move.
+## Commands
 
-**Your job:** rate candidates honestly against *your own role's criteria*, and — when you are the least-satisfied
-agent — propose a better alternative.
+Flags before the command: `--me <you>` (required) and `--state-dir DIR` (where the state is kept; default the current directory).
+`scripts/concord_receiver.py --help` lists the commands.
 
-**Your criteria** are the ones your role already gives you (your system prompt, your assigned responsibility, e.g.
-"security", "cost", "latency"). CONCORD does not supply them and does not ask you to change them.
-
-Every `concord_receiver.py` invocation below is written relative to this skill's own directory, not necessarily your
-current working directory: resolve the path against where you found this file.
-
----
-
-## The loop: pass it to the script, do what it says
-
-Every CONCORD message you receive, and every reply of another agent that you get to see, goes to
-`concord_receiver.py`. The script keeps the picture of the run in a state file of your own (every anchor, proposal
-and rating with its reasoning, run through the same decision engine as the initiator's) and decides what
-follows. Every call ends in exactly one of three states, on the first line of its output:
-
-| First line | Meaning | You |
+| Command | Reads | Does |
 |---|---|---|
-| `STATUS: NONE` | nothing is due from you | send nothing (never write an acknowledgement yourself: when one is due, `handle` returns it as `SEND`). Wait for the next message. |
-| `STATUS: ASK` | the script needs your judgement | the rest of the output is your prompt: decide, then answer with `answer` |
-| `STATUS: SEND` | a reply is ready | send the rest of the output exactly as it is, nothing else |
+| `receive` | a message, on standard input | records it, and prints what to send and the task that is due, if any |
+| `answer` | your answer, as one JSON object | checks it, builds the message, and prints it to send |
+| `task` | | prints what is due now (the task and the timer) without changing anything: use it when you do not know what is next |
+| `tick` | | asks again for what is late, or gives up on a silent agent |
+| `wait [--poll S]` | | blocks until the next timer is due, then does a `tick` and returns its output |
+| `status` | | the view of the engine, for debugging: round, who is the bottleneck, what is lacking, the timers |
+| `report` | | how the run stands or ended |
+
+## Reading an output
 
 ```
-1. python3 <skill dir>/scripts/concord_receiver.py --me <you> handle <<'EOF'
-   <the message or reply, XML exactly as received>
-   EOF
-2. STATUS: ASK -> read the task, decide from YOUR role's criteria, then:
-   python3 <skill dir>/scripts/concord_receiver.py --me <you> answer <<'EOF'
-   { …the JSON shape the prompt shows… }
-   EOF
-   which prints STATUS: SEND and the reply. Send it, exactly as printed.
+STATUS: SEND | ANSWER | WAIT | DONE | ERROR
+--- <section>
+...
+NEXT: what to do now
 ```
 
-`--me <you>` is your own agent id, the one in the initiator's `--agents` list (for example `cost`).
+`SEND`: something to send now. `ANSWER`: a task is due and nothing is to be sent yet. `WAIT`: nothing is due. `DONE`: the run is over for
+you. `ERROR`: the call failed and changed nothing; the output says what to do (exit code 2).
 
-- Do step 1 on **every** message and reply you get, first, whatever it says. Never answer from memory. Several
-  messages at once are fine; a reply names its author, and for one that does not, put a line `--- from: NAME`
-  before it. This applies even in the middle of other work: a CONCORD message often arrives right after an ordinary
-  task for the same initiator, and it can look like a follow-up question about that work. It is not. Do not
-  answer it with an assessment, a status table, a recommendation or an acknowledgement.
-- **Never write the reply XML yourself**, and never put text before or after what the script prints. The script
-  writes every document, with the right tags and escapes; a hand-written reply is rejected.
-- The task comes from the picture, not only from a request: after the seeds are in you are asked to rate them, when
-  a repair candidate appears you are asked to rate it, and when the ratings are complete and **you** are the least
-  satisfied agent you are asked for the repair (`REPAIR ROUND, YOU ALONE`), together with the rating of your own
-  new candidate, in one answer. If it is not you, the status is NONE and you stay silent: two agents never repair
-  at once.
-- Your judgement goes into the JSON only: the anchor numbers, the proposal text, ratings and their reasoning. If
-  your answer is not usable the status is ASK again, with what was wrong.
-- Messages may carry other agents' replies, relayed by the initiator: pass them to `handle` like anything else.
-  In that mode each delivery is numbered, and **you always answer a delivery**: if you have something to say, the
-  status is ASK (then SEND) and that reply is the answer; if you have nothing to say, `handle` returns `STATUS: SEND`
-  with a small acknowledgement. Send it exactly as printed, like any other `SEND`: it is how the initiator knows the
-  delivery arrived. (Without numbered deliveries there is nothing to acknowledge, and `NONE` means send nothing.)
-- Give the script each delivery **whole**. When it carries other agents' replies it also carries a `check`, a fingerprint
-  of those replies: if what you gave the script differs (a reply shortened, summarised or reworded), it prints
-  `STATUS: ERROR` and records nothing. Give it the delivery again, exactly as received. If that fails a second time the
-  script prints a `concord-error` for you to send to the initiator instead, and the delivery comes again.
-- Be detailed and informative, but stay within 1000 characters for each part of your answer (the candidate, the
-  rationale, and the reasoning for each candidate you rate).
-- When you have sent what the script printed, or the script says nothing is due, write nothing more: not even a
-  confirmation of what you sent or decided. Your environment may pass anything you write to the other participants.
-- If you are asked again for something you already answered (the same anchor, seed, rating or repair), the status is
-  `SEND` with that same reply: it did not arrive, so send it again as it is.
-- If you are handed a batch that includes your own earlier replies, pass it whole.
-- Your state is kept per run, in `state-<state id>.<you>.json`: the id is read from the messages (`<state_id>`) and
-  your replies carry it, so a new run never picks up an old run's state. Only if you take part in several runs at
-  once, add `--state-id <id>` to `answer` and `due`.
-- `concord_receiver.py --me <you> due` prints the current status without recording anything.
+| Section | Holds |
+|---|---|
+| `BRIEF` | how a run goes, the first time you meet it |
+| `SEND to: a, b` | one message to send, exactly as printed and without this line, to the agents named. One section for each message. In a star, hand it to the centre alone: the centre passes it on |
+| `READ` | the messages of the others, as they arrived: read them before you answer |
+| `TASK` | what you owe now, then `ANSWER FORMAT`: the fields of your answer |
+| `END` | how the run ended |
+| `NOTE` | `not used: <reason>`: the message did nothing (see below) |
+| `WAKE` | when to come back (`tick`), with how long from now |
 
----
+## Your answer
 
-## What you learn from other agents' replies
+One JSON object, with exactly the fields the task asks for. They are the same in every run:
 
-Everything you get to see informs you, whoever it was for: other agents' anchors, proposals, and above all the
-reasoning in their ratings. A specific fact or argument in it (a cost, a constraint you had not known) may change your
-own rating or your repair, and you should be able to say what changed. Facts other agents report from their own
-information are evidence you must use, not certainty: build them into your reasoning, take the holder's account of
-what they mean, and do not set one aside only because you cannot check it. A specific report counts for more than a
-vague one; when a report contradicts your own facts or another report, say so and state which you rely on and why. Use
-only evidence: do not speculate, do not assume that a problem will be fixed or that something nobody reported is true,
-and do not present general knowledge as a fact of this case. Apply each fact
-to every option it bears on, not only the one it was raised against. A candidate's name or added wording is never a
-reason to change a rating. Facts of your own briefing hold: before you rate a candidate they bear on, state in your
-reasoning what they imply for it, in their own words, then give the number. Such a fact changes only when another
-agent reports evidence that directly contradicts it; another agent's reading, theory or explanation of your fact is
-not new evidence. When two reports seem to conflict, do not invent a cause or a story that reconciles them: say that
-they conflict and rate on what each supports. A fact that rules a candidate out keeps its rating low, and a fact that
-supports it keeps it high, until a reported fact says otherwise; a risk or an effect that nobody reported is not a
-reason. Before you answer, check that every number matches its reasoning. If you have already rated the same candidate under another id, the task shows that rating:
-keep it unless a named fact changed your view. Whenever you re-propose an option already in the run, or rate one
-differently from before, begin the reasoning of that rating with the earlier candidate id and rating, then the specific
-fact that changed your view and who shared it ("Same as r0-x, which I rated 40. I now rate it 80 because agent y
-reported that ..."): the others read that reasoning, and without it they cannot judge the change. The number another agent
-gave is never a reason: keep your scale and rate against your own criteria. Anchor first, from your own criteria,
-before you read any candidate, and propose your own seed before you read anyone else's. Both hold, because the
-phases are ordered: the script only asks for a rating after every seed is in.
+| Task | Fields |
+|---|---|
+| first answer | `raw_reject`, `raw_ideal`, `candidate`, `rationale`, `raw`, `reasoning` |
+| rating | `scores`: a list with one entry for each candidate the task lists, each `{"id", "raw", "reasoning"}` |
+| repair | `candidate`, `rationale`, `raw`, `reasoning` |
 
----
+- Scores (`raw_reject`, `raw_ideal`, `raw`) are numbers from 0 to 100 on your own scale, never a 0-1 score; `raw_ideal` is above `raw_reject`.
+- `candidate` is in the format the task gives, or one of the options it lists; `rationale` and `reasoning` are concrete reasons, not a
+  verdict ("too expensive" is not one).
+- An answer that breaks a rule is refused: the output says what is wrong, shows what you sent next to what is expected, and says what
+  to do. Nothing is recorded; fix it and answer again. The same refusal three times in a row stops you: report that you could not
+  answer, and why. A run you leave unanswered ends for the others on their timers.
+- An answer to a task that is not due, or already given, is refused and not counted.
 
-## Report what you actually believe
+## The timers
 
-The protocol's guarantee — every agent above `satisfaction_threshold` when it succeeds — rests on honest scores.
-Inflating to seem agreeable, or deflating for leverage, breaks it silently. Never change `satisfaction_threshold`
-and never soften your own criteria to make a candidate look acceptable. If you cannot be satisfied, say so: that is
-a valid, useful outcome.
+Every message the run is waiting for has a timer of `timeout` seconds. When it expires the script asks the author again; after
+`retries` requests the author is taken to be missing and the run is aborted for everyone with a cancel. The values are the initiator's,
+printed in the task. Nothing runs on its own: `wait` blocks until the next timer is due and returns what the tick produced (start it in
+the background, and again each time it returns), or call `tick` at the `WAKE` time. When no timer runs, `wait` returns at once with no
+`WAKE`: do not start it again until a call prints one. A task you answer slowly counts against the others' timers: answer it promptly.
 
-**You report raw ratings — never normalised ones.** Rate everything on **your own raw 0..100 scale**, the one that is
-natural to your criteria. Do **not** convert it to a `[0,1]` satisfaction score: the initiator does that, from
-the two anchor ratings you give, which is what makes your `0.6` mean the same degree of role-satisfaction as every
-other agent's `0.6`:
+## The status at the end
 
-```
-s = clamp( (raw - raw_reject) / (raw_ideal - raw_reject), 0.0, 1.0 )
-```
+`confirmed`: the reporter's result matches your outcome. `disputed`: a mismatch was found or received, or a cancel reached you after your
+run had ended: do not rely on the result. `aborted`: the run was cancelled, or an agent stayed silent. `pending`: not over yet. After the
+end you keep your outcome; if messages of the run still arrive, pass them to `receive` and send only what it prints.
 
-Your one obligation is that your raw scale stays **consistent for the whole run**: the same quality of outcome must
-get the same number in round 7 as it did at anchoring time. The task prompt repeats your anchor numbers; place each
-new candidate between them. Consistent is not the same as frozen: if a later candidate's rationale directly
-addresses a concern you raised earlier — a real change, not a restatement of something you already rejected — your
-rating should move, and you should be able to say in one sentence what changed your mind. Refusing to budge from an
-earlier number once a counter-argument has been made is not honesty to your criteria, it is inertia.
+## What a note means
 
-Normalised scores in `[0,1]` appear in the incumbent's ratings that a repair task shows you. Those are for you to
-read. Never echo one back as your own rating.
+`not used: <reason>` says why a message changed nothing. It is not an error.
 
----
+| Reason | Meaning |
+|---|---|
+| `not a CONCORD message` | no CONCORD element in the text |
+| `own message`, `duplicate`, `already recorded` | you heard yourself, or received it before |
+| `unknown run`, `sender is not in the run` | a message of another run, or from an agent that is not in this one |
+| `version` | another protocol version |
+| `check` | damaged on the way: it is asked for again |
+| `invalid` | it breaks a rule of the protocol: not recorded, not answered |
+| `busy` | you are in another run: the init is refused with an error |
+| `run over` | a data message after the end |
+| others (`not handled`, `not a participant`, `no answer expected`, ...) | not for you at this point of the run |
 
-## What each task asks of you
+## Errors you may see
 
-**Anchor.** You get an outcome the shared context calls unacceptable (`x_reject`) and one it calls fully satisfying
-(`x_ideal`). Rate both, as satisfaction of your role if each happened, on your raw 0..100 scale. `x_reject` should
-get a LOW number, `x_ideal` a HIGH one strictly above it. Rate the two outcomes, not today's state: the common
-mistake is answering "how true is this now?", which inverts the scale and is refused. Anchors are rated once and
-stay fixed for the whole run. They are satisfaction ratings, not metrics: do not put an error rate or a latency in
-these fields.
+- `there is no run for <you>`: no message has opened it yet. Pass the opening message to `receive`.
+- `refused: ...` under `answer`: see "Your answer".
+- `... got an empty standard input`: pass the message exactly as received.
+- `... is not an agent id`: `--me` is the id the initiator gave you, 1 to 64 letters, digits, `_` or `-`.
 
-**Seed.** Propose the single candidate you believe best satisfies your role's criteria, in the candidate format
-given. Do not hedge, do not offer alternatives, do not pre-compromise for other roles: this is the round where your
-role's viewpoint is represented undiluted. The rationale must carry the concrete facts and evidence from your
-role's criteria that support it, the trade-offs you considered, and why it will hold up under scrutiny: other
-agents use it to detect incorrect logic.
+## State, restarts
 
-**Score.** Rate each candidate listed, including one you proposed yourself, on your raw scale, and give the concrete
-reasons for each number: the specific properties that drove it, the evidence from your criteria, and any false claim,
-factual error or flawed step you see in the candidate's reasoning. "Too expensive" is not reasoning; "adds ~$400 a
-month in hosting, over the budget" is. Never refuse to score: a candidate you consider terrible gets a low number
-with honest reasons.
+The state of the agent is `concord-state-<you>.json` in `--state-dir`, and `concord-script-<you>.json` holds what only the script keeps (the
+run you were briefed on, the refusal count). Each call takes a lock, so two calls never run together. Nothing is lost if the process
+stops: run `task` to see what is due, or `report`, and start `wait` again. Do not delete the files while the run is active.
 
-**Repair** (only when the script says it is you). You are the least satisfied agent on the incumbent, and you are the
-only one proposing this round. Read the incumbent's ratings and their reasoning, not just the numbers. Propose ONE
-candidate that: (1) clears your own bar: something you would rate close to your `x_ideal`, not marginally above
-what you just rejected; (2) does not knowingly push any other agent below the threshold: infer from their reasoning
-what they are protecting and keep it; (3) is either not yet in the run, or is one already scored that you now rate
-differently because of a specific fact another agent shared (say which fact and from whom; this is the right move when
-you find you rated it too low), and not a cosmetic variant of a candidate already scored (same substance, other
-wording), which is not new and changes nothing. When the run has a closed list of options, the candidate must be
-exactly one of them and extra detail goes in the rationale;
-(4) conforms to the candidate format; (5) answers the strongest reasoning against your position, in your rationale:
-agree with part of it, refute it, or explain why it does not apply. Rate your own new candidate honestly in the same
-answer. If you believe no such candidate exists (every way of satisfying you drops someone else below their floor),
-still give your best attempt and state the conflict plainly in the rationale: which agent, over what property. Do not
-lower the threshold, do not weaken your criteria, and do not propose something you are not satisfied by.
+## If you cannot run the script
 
-**The end.** There is no message announcing the outcome. When your own picture holds every rating, `handle` says the
-run is over, with the outcome (`SUCCESS`, or `BEST_EFFORT` when the repair budget is spent or an agent was marked
-missing: the initiator passes that on to you) and the winning candidate. Nothing is due from you then: do not
-re-open the decision, do not re-propose, and do not send an acknowledgement. If `SUCCESS`, proceed with the winning
-candidate. If `BEST_EFFORT`, say so when you report to whoever triggered the run, naming the agents below their floor.
-(A `<concord-commit>` from an older initiator is still understood and settles the outcome.)
+Say so to whoever asked, and stop. Do not write a CONCORD message, a rating or a repair yourself.
