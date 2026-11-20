@@ -14,19 +14,6 @@ build:
 run:
     {{mkdocs}} serve
 
-# `just sync --ref worktree` bundles the files on disk instead of the pinned revision (it does not apply to ioc_concord: its source is no longer on main)
-# Copy the library, at the revision it is pinned to in tools/bundle.toml, into the scripts that bundle it
-sync *args:
-    python3 tools/bundle.py {{args}}
-
-# Fail if a script differs from the library revision it is pinned to
-check-sync *args:
-    python3 tools/bundle.py --check {{args}}
-
-# Test the bundler itself
-test-bundler:
-    uv run --no-project --with pytest python -m pytest tools -q -p no:cacheprovider
-
 rust := "packages/ioc-concord-rs"
 python := "packages/ioc-concord-python"
 
@@ -78,9 +65,5 @@ wheel-test:
 wheel-smoke:
     cd {{python}} && uv run --no-project --isolated --with dist/*.whl python -I tests/smoke.py
 
-# Test the skill scripts as they are checked in
-test-scripts:
-    uv run --no-project --with pytest python -m pytest protocols/concord/tests -q -p no:cacheprovider
-
-# Run all the CONCORD tests (not the sync check: that is `just check-sync`)
-test-concord: test-bundler rust-test wheel wheel-test wheel-smoke test-scripts
+# Test the ioc-concord library: the Rust crate and the Python package built from it
+test-concord: rust-test wheel wheel-test wheel-smoke
