@@ -23,6 +23,7 @@
 //! * `relay`: the centre of a star: which messages it passes on to the spokes
 //! * `guidance`: what the agent's model reads: the wording of the run and of each task, the messages of the others, the end, a refusal
 //! * `event`: the events an agent reports, typed
+//! * `cli`: the `ioc-concord` command as a function (feature `cli`)
 //! * `agent`: the node: receive messages in the order of checks, ask again, give up, build what it sends
 //! * `ffi`: the API for other languages (feature `uniffi`)
 //!
@@ -76,6 +77,8 @@
 //! ```
 
 pub mod agent;
+#[cfg(feature = "cli")]
+pub mod cli;
 pub mod engine;
 pub mod errors;
 pub mod event;
