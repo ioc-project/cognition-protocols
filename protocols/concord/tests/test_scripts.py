@@ -26,6 +26,22 @@ import driver  # noqa: E402
 import scenarios  # noqa: E402
 from driver import INITIATOR, RECEIVER, REASONS  # noqa: E402
 
+TRANSCRIPTS = Path(__file__).resolve().parent / "transcripts"
+
+
+@pytest.mark.parametrize("name", sorted(scenarios.SCENARIOS))
+def test_transcript(name):
+    got = driver.dump(scenarios.SCENARIOS[name]())
+    assert "Traceback" not in got, "a script crashed with a traceback"
+    path = TRANSCRIPTS / f"{name}.txt"
+    if os.environ.get("UPDATE_TRANSCRIPTS"):
+        TRANSCRIPTS.mkdir(exist_ok=True)
+        path.write_text(got)
+        return
+    assert path.exists(), f"no transcript for {name}: run with UPDATE_TRANSCRIPTS=1"
+    assert got == path.read_text(), f"{name}: output differs from the recorded transcript"
+
+
 def last(run, call):
     """The output of the last call of the log called `call`."""
     return next(e["stdout"] for e in reversed(run.log) if e["call"] == call)
