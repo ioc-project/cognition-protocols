@@ -610,3 +610,25 @@ pub fn refusal_text(text: String, repeats: u32) -> String {
 pub fn settled(error: ConcordError) -> bool {
     guidance::settled(&error.into())
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// the command
+// ---------------------------------------------------------------------------------------------------------------------------
+
+/// What `cli_run` printed, and its exit code.
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct CliOutput {
+    pub stdout: String,
+    pub stderr: String,
+    pub code: i32,
+}
+
+/// Run `ioc-concord <args>` (`args[0]` is `initiator` or `receiver`; see `crate::cli`) with the working folder, the environment and the
+/// standard input of the process. The caller prints what comes back and exits with the code.
+#[cfg(feature = "cli")]
+#[uniffi::export]
+pub fn cli_run(args: Vec<String>) -> CliOutput {
+    let output = crate::cli::run(&args, &mut crate::cli::Context::from_env());
+    CliOutput { stdout: output.stdout, stderr: output.stderr, code: output.code }
+}

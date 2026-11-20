@@ -431,7 +431,7 @@ first one reports the outcome and wins ties, so list yourself first.",
     ),
     (
         "satisfaction_threshold",
-        "The standard the outcome genuinely has to meet, a number above 0 and at most 1, not a level you are \
+        "The standard the outcome has to meet, a number above 0 and at most 1, not a level you are \
 sure is reachable (0.6 is a starting point). If it sits below what the agents already reach on \
 their own proposals, the run ends with no negotiation at all. It never changes during the run.",
     ),

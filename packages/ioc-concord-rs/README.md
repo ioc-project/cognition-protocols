@@ -183,6 +183,14 @@ library is built with, which generates the bindings:
 `--language` takes `python`, `swift` and `kotlin`. For Go, C#, Java and JavaScript (Node) use the generator of that language, which must
 be built for the same version of UniFFI. The Python package [`ioc-concord`](../ioc-concord-python) builds its wheels this way.
 
+## The `ioc-concord` command
+
+The feature `cli` adds the module `cli`: the command the CONCORD skills run, as a function. `cli::run(args, context)` takes the arguments
+(`initiator ...` or `receiver ...`, as on the command line), the working folder, the environment and the input, and gives back what the
+command prints and its exit code. It does everything: the arguments (`clap`), the decisions (the `Agent`), the wording (in the module that
+prints it, and `guidance`) and the state it keeps (the agent's, with `state::Session`). A program that calls it only passes the arguments in and prints
+the output: the bindings export it as `cli_run`, and the Python package's `ioc-concord` is those few lines.
+
 ## Modules
 
 | Module | Contents |
@@ -201,6 +209,7 @@ be built for the same version of UniFFI. The Python package [`ioc-concord`](../i
 | `guidance` | what the model reads: the wording of the run and of each task, the messages of the others, the end, a refusal |
 | `relay` | the centre of a star: which messages it passes on to the spokes |
 | `agent` | the node |
+| `cli` | the `ioc-concord` command (feature `cli`), with the wording of what it prints |
 | `ffi` | the API for other languages (feature `uniffi`) |
 
 ## Differences from the Python library it replaces
