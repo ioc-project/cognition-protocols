@@ -19,13 +19,13 @@ jobs:
     name: Validate PR
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      - uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         id: app-token
         with:
           app-id: ${{ vars.IOC_AUTOMATION_BOT_APP_ID }}
           private-key: ${{ secrets.IOC_AUTOMATION_BOT_PRIVATE_KEY }}
 
-      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+      - uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
         id: lint_pr_title
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
