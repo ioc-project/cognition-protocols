@@ -143,8 +143,18 @@ for out in step.send:                                  # the agent's own message
 
 An agent without a `relay` never fills `step.forward`. The relay knows a run once it has passed on its init, bare or inside a resend, and
 it reads only the name and the `run_id` of a message: it passes on a message of another version, a damaged one, or one the agent drops,
-and it keeps the run after the run has ended. Call `relay.forget(run_id)` when the state of a run is dropped. The run ids are saved; the
-spokes are not, because they are live links: after a restart they connect again, and you register them again.
+and it keeps the run after the run has ended. Call `relay.forget(run_id)` when the state of a run is dropped. The run ids are saved,
+each with the time it was learned; the spokes are not, because they are live links: after a restart they connect again, and you register
+them again.
+
+Any spoke can make the centre know a run, with a `<concord-init>` that carries a `run_id` and nothing else, since the relay reads no more
+than that. So the run ids have a limit: `Relay(max_runs=1000)` keeps at most that many (`None` for no limit), and past it the oldest is
+dropped. A centre that is also an agent calls `forget` when its agent drops the state of a run. A centre that is only a relay has no such
+state, so it must expire the run ids itself, now and then, with an age longer than any run lasts:
+
+```python
+relay.expire(max_age=24 * 3600)                        # drops the runs learned more than a day ago, and returns their ids
+```
 
 ### State
 

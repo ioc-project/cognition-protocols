@@ -67,6 +67,52 @@ def test_an_invalid_init_gets_an_invalid_error_with_the_reason_and_is_not_joined
     assert "duplicate" in error_of(step)["text"]
 
 
+@pytest.mark.parametrize("tag, old", [("budget", "8"), ("timeout", "300"), ("retries", "3")])
+@pytest.mark.parametrize("digits", ["9" * 5000, "1" + "0" * 9, "9" * 4301])
+def test_an_init_with_an_integer_parameter_of_any_length_gets_an_invalid_error_and_raises_nothing(agent, tag, old, digits):
+    a = agent.Agent("cost")
+    doc = init_doc(params={"B": 8, "timeout": 300, "retries": 3})
+    step = a.receive(forge(doc, f"<{tag}>{old}<", f"<{tag}>{digits}<"))
+    e = error_of(step)
+    assert (e["what"], e["reason"]) == ("init", "invalid") and tag in e["text"]
+    assert a.status() is None
+
+
+@pytest.mark.parametrize("deep", ["[" * 100_000, '{"a":' * 100_000])
+def test_an_init_with_a_schema_nested_too_deep_gets_an_invalid_error_and_raises_nothing(agent, deep):
+    a = agent.Agent("cost")
+    doc = init_doc(spec={"description": "dddd"})
+    step = a.receive(forge(doc, '{"description": "dddd"}', deep))
+    e = error_of(step)
+    assert (e["what"], e["reason"]) == ("init", "invalid") and "candidate_schema" in e["text"]
+    assert a.status() is None
+
+
+@pytest.mark.parametrize("count", ["4294967295", "99999999999", "9" * 5000])
+def test_an_init_with_a_huge_count_in_a_pattern_gets_an_invalid_error_and_raises_nothing(agent, count):
+    spec = {"description": "d", "pattern": "^a{1,2}$"}
+    a = agent.Agent("cost")
+    step = a.receive(forge(init_doc(spec=spec), "a{1,2}", "a{" + count + "}"))
+    e = error_of(step)
+    assert (e["what"], e["reason"]) == ("init", "invalid") and "pattern" in e["text"]
+    assert a.status() is None
+
+
+def test_an_init_with_a_start_tag_that_is_not_well_formed_is_not_read_at_all(agent):
+    doc = init_doc()
+    for bad in (' from="alice" from="legal"', " from=\"alice\" x='from=\"legal\" ", ' from="alice" x=1'):
+        a = agent.Agent("cost")
+        step = a.receive(doc.replace(' from="alice"', bad, 1))
+        assert step.send == [] and a.status() is None
+
+
+def test_an_attribute_hidden_in_another_one_changes_nothing_for_the_agent(agent):
+    doc = init_doc()
+    a = agent.Agent("cost")
+    a.receive(forge(doc, ' from="alice"', ' from="alice" x=\' from="legal"\''))
+    assert a.status()["status"] == "active" and a.state["runs"][RUN]["initiator"] == "alice"
+
+
 def test_an_init_that_is_not_for_the_agent_or_is_damaged_gets_no_answer(agent):
     a = agent.Agent("other")
     assert a.receive(init_doc()).send == []
@@ -157,6 +203,21 @@ def test_a_repair_and_the_result_are_resent_and_so_is_the_message_with_the_uuid_
     uid = W.peek(stored)["attrs"]["uuid"]
     err = W.build_error("cost", RUN, "security", "score", "check", ref=uid, uid="a3a3a3a3-0000-4000-8000-000000000003")
     assert W.parse_message(sec.receive(err).send[0])["inner"] == stored
+
+
+def test_a_request_for_the_score_of_the_agents_own_candidate_is_answered_by_the_message_that_proposed_it(agent):
+    net = happy(agent, cost_on_security=20, security_on_cost=30)
+    net.broadcast(net.agents["security"].submit_repair(RUN, "better", "because", 70, "ok"), "security")
+    sent, new_uuid = net.agents["security"].state["runs"][RUN]["sent"], uuids("f0f0f0f0")
+    for cid, key in (("seed-security", "init-reply|security"), ("r1-security", "repair|security|r1-security")):
+        err = W.build_error("cost", RUN, "security", "score", "missing", candidate=cid, uid=new_uuid())
+        (text,) = net.agents["security"].receive(err).send
+        m = W.parse_message(text)
+        assert (m["kind"], m["reply_to"], m["inner"]) == ("resend", W.peek(err)["attrs"]["uuid"], sent[key])
+        assert W.peek(m["inner"])["tag"] == ("concord-init-reply" if cid.startswith("seed") else "concord-repair")
+    err = W.build_error("cost", RUN, "security", "score", "missing", candidate="r2-security", uid=new_uuid())
+    step = net.agents["security"].receive(err)
+    assert step.send == [] and step.events[0]["event"] == "nothing to send"          # it never proposed that one
 
 
 def test_an_error_is_not_answered_when_it_is_for_someone_else_or_nothing_is_stored(agent):

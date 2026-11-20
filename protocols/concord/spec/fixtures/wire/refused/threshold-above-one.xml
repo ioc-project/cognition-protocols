@@ -1,0 +1,21 @@
+<concord-init version="0.3.0" from="alice" run_id="11111111-1111-4111-8111-111111111111" uuid="a0000000-0000-4000-8000-000000000001" check="2c41e735">
+  <participants>
+    <agent>cost</agent>
+    <agent>security</agent>
+  </participants>
+  <params>
+    <satisfaction_threshold>1.5</satisfaction_threshold>
+    <eps>0.1</eps>
+    <budget>3</budget>
+    <timeout>60</timeout>
+    <retries>2</retries>
+  </params>
+  <context>Cut errors to &lt; 1% &amp; keep the cost down</context>
+  <anchors>
+    <x_reject>errors stay as they are</x_reject>
+    <x_ideal>no error and a low cost</x_ideal>
+  </anchors>
+  <proposal>
+    <candidate_schema>{"description": "a short plan, in lower case", "maxLength": 80, "pattern": "^[a-z ]+$"}</candidate_schema>
+  </proposal>
+</concord-init>

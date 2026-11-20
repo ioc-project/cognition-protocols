@@ -26,7 +26,15 @@ the run only from that message. It passes on a message of any other run only if 
 or what the message says. So it also passes on a message of a version it does not speak, and a name it has never heard of. It keeps
 the run ids for as long as it keeps the state of the run, ended runs included, so that errors and re-sends after the end still reach
 the spokes: `forget` is how the caller says a run's state is dropped.
+
+Any spoke can make the centre know a run: all it takes is a `<concord-init>` with a `run_id`, since the relay does not read more. So
+the run ids need a limit, and an owner. Each is saved with the time it was learned. `max_runs` (1000 by default, None for no limit)
+bounds how many are kept: past it the oldest is dropped, so a flood can never grow the state, and it ages out the runs it learned first.
+`expire` drops the runs learned more than so many seconds ago. A centre that is also an agent calls `forget` when the agent drops the state
+of a run; a centre that is only a relay has no such state, so it must call `expire` itself, now and then, with an age longer than any run
+lasts.
 """
+import time
 from collections import namedtuple
 
 from ioc_concord.errors import InvalidMessage, MissingState, StateError
@@ -38,13 +46,29 @@ from ioc_concord.wire import INIT, RESEND, locate, peek
 _Read = namedtuple("_Read", "tag inner run_id")
 
 
+def check_relay_state(state):
+    """`state` itself, if it is the saved state of a relay: {"runs": {run id: the time it was learned}}. Raises StateError otherwise,
+    since a state that is not one must not be taken for an empty one, and a run id that is not one would never be matched."""
+    runs = state.get("runs") if isinstance(state, dict) else None
+    if not isinstance(runs, dict):
+        raise StateError("the saved relay state holds no runs")
+    for run_id, learned in runs.items():
+        if not is_uuid(run_id) or isinstance(learned, bool) or not isinstance(learned, (int, float)):
+            raise StateError(f"the saved relay state holds {run_id!r}: {learned!r}, which is not a run id and the time it was learned")
+    return state
+
+
 class Relay:
     """The relay of a centre. `store` keeps the run ids between calls (None keeps them in memory only). The state is a plain dict,
-    `relay.state`, {"runs": {run id: True}}, saved when a run is learned or forgotten: the ids are a set, kept as a dict so that the
-    state is JSON."""
+    `relay.state`, {"runs": {run id: the time it was learned}}, oldest first, saved when a run is learned, forgotten or expired.
+    `clock` gives the time in seconds. At most `max_runs` runs are kept (see the module docstring)."""
 
-    def __init__(self, store=None, spokes=()):
+    def __init__(self, store=None, spokes=(), clock=time.time, max_runs=1000):
+        if max_runs is not None and max_runs < 1:
+            raise ValueError("max_runs must be at least 1, or None")
         self.store = store
+        self.clock = clock
+        self.max_runs = max_runs
         self.state = self._load()
         self._spokes = dict.fromkeys(spokes)               # in the order they were added; not part of the state
 
@@ -55,9 +79,7 @@ class Relay:
             state = self.store.load()
         except MissingState:                    # nothing saved yet; a state that cannot be read is an error: the runs would be forgotten
             return {"runs": {}}
-        if not isinstance(state, dict) or not isinstance(state.get("runs"), dict):
-            raise StateError("the saved relay state holds no runs")
-        return state
+        return check_relay_state(state)
 
     def _save(self):
         if self.store is not None:
@@ -77,7 +99,10 @@ class Relay:
         """Remember the run of a message that has been read, if it is that run's init. Returns whether it is."""
         opens = read is not None and (read.tag == INIT or (read.tag == RESEND and read.inner == INIT))
         if opens and read.run_id not in self.state["runs"]:
-            self.state["runs"][read.run_id] = True
+            runs = self.state["runs"]
+            runs[read.run_id] = self.clock()
+            while self.max_runs is not None and len(runs) > self.max_runs:
+                del runs[next(iter(runs))]                      # the oldest
             self._save()
         return opens
 
@@ -100,6 +125,17 @@ class Relay:
         """Drop a run: the centre no longer passes on its messages. Call it when the state of the run is dropped, not when it ends."""
         if self.state["runs"].pop(run_id, None) is not None:
             self._save()
+
+    def expire(self, max_age):
+        """Drop the runs learned more than `max_age` seconds ago, and return their ids. For a centre that is only a relay, which has no
+        agent state to tell it that a run is over: call it now and then, with an age longer than any run lasts."""
+        now = self.clock()
+        gone = [run_id for run_id, learned in self.state["runs"].items() if now - learned > max_age]
+        for run_id in gone:
+            del self.state["runs"][run_id]
+        if gone:
+            self._save()
+        return gone
 
     @property
     def spokes(self):
