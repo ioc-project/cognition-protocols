@@ -1,0 +1,170 @@
+=== initiator ini receive (exit 0)
+$ --me ini receive
+ in| x
+out| STATUS: WAIT
+out| --- NOTE
+out| not used: not a CONCORD message
+out| NEXT: Pass every message of this run you receive, exactly as received, one per call, to `concord_initiator.py ⏎
+out| --me ini receive`.
+out| 
+
+=== initiator ini tick (exit 2)
+$ --me ini tick
+ in| x
+out| STATUS: ERROR
+out| there is no run for ini in concord-state-ini.json
+out| NEXT: A run starts with the message that opens it: pass that message to `concord_initiator.py --me ini receive`.
+out| 
+
+=== initiator ini wait (exit 2)
+$ --me ini wait
+ in| x
+out| STATUS: ERROR
+out| there is no run for ini in concord-state-ini.json
+out| NEXT: A run starts with the message that opens it: pass that message to `concord_initiator.py --me ini receive`.
+out| 
+
+=== initiator ini report (exit 2)
+$ --me ini report
+ in| x
+out| STATUS: ERROR
+out| there is no run for ini in concord-state-ini.json
+out| NEXT: A run starts with the message that opens it: pass that message to `concord_initiator.py --me ini receive`.
+out| 
+
+=== initiator ini forward (exit 2)
+$ --me ini forward
+ in| x
+out| STATUS: ERROR
+out| forward is for the centre of a star and needs --relay (the names of the spokes)
+out| NEXT: Give --relay before the command, on this call and on every call of the run.
+out| 
+
+=== initiator ini start (exit 2)
+$ --me ini start --participants a,b --context Pick one option --x-reject nothing --x-ideal all
+out| STATUS: ERROR
+out| give exactly one of --option (a closed list of options), --format (the open format, in words) and --schema (a ⏎
+out| JSON Schema); you gave none
+out| NEXT: If you were handed the options, use --option once for each; otherwise describe in words what one option ⏎
+out| looks like with --format. Run `start --help` for what each means.
+out| 
+
+=== initiator ini start (exit 2)
+$ --me ini start --participants a,b --context Pick one option --x-reject nothing --x-ideal all --option X --option Y ⏎
+$ --option Z --format words
+out| STATUS: ERROR
+out| give exactly one of --option (a closed list of options), --format (the open format, in words) and --schema (a ⏎
+out| JSON Schema); you gave --option, --format
+out| NEXT: If you were handed the options, use --option once for each; otherwise describe in words what one option ⏎
+out| looks like with --format. Run `start --help` for what each means.
+out| 
+
+=== initiator ini start (exit 2)
+$ --me ini start --participants a,b --context Pick one option --x-reject nothing --x-ideal all --schema {not json
+out| STATUS: ERROR
+out| --schema is not valid JSON (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))
+out| NEXT: Fix the JSON, or use --option or --format. Nothing was started.
+out| 
+
+=== initiator ini start (exit 2)
+$ --me ini start --participants a,b --context Pick one option --x-reject nothing --x-ideal all --option X --option Y ⏎
+$ --option Z --satisfaction-threshold 2
+out| STATUS: ERROR
+out| the run is not valid: satisfaction_threshold must be above 0 and at most 1
+out| NEXT: Fix the argument it names and run `start` again. Nothing was started.
+out| 
+
+=== initiator ini start (exit 2)
+$ --me ini start --participants a --context c --x-reject r --x-ideal i --option X --option Y --option Z
+out| STATUS: ERROR
+out| the run is not valid: a negotiating set needs at least 2 agents
+out| NEXT: Fix the argument it names and run `start` again. Nothing was started.
+out| 
+
+=== initiator ini start (exit 2)
+$ --me ini start --participants a,b --context Pick one option --x-reject nothing --x-ideal all --format words ⏎
+$ --timeout slow
+out| STATUS: ERROR
+out| argument --timeout: invalid int value: 'slow'
+out| NEXT: Run `concord_initiator.py start --help`.
+out| 
+
+=== initiator ini receive (exit 2)
+$ --me ini receive
+ in|    
+out| STATUS: ERROR
+out| receive got an empty standard input
+out| NEXT: Pass the text exactly as you received it.
+out| 
+
+=== initiator ini start (exit 0)
+$ --me ini start --participants a,b --context Pick one option --x-reject nothing --x-ideal all --format a one-line ⏎
+$ proposal
+out| STATUS: SEND
+out| --- SEND to: a, b
+out| <concord-init version="0.3.0" from="ini" run_id="<UUID-1>" uuid="<UUID-2>" check="<CHECK>">
+out|   <participants>
+out|     <agent>a</agent>
+out|     <agent>b</agent>
+out|   </participants>
+out|   <params>
+out|     <satisfaction_threshold>0.6</satisfaction_threshold>
+out|     <eps>0.05</eps>
+out|     <budget>8</budget>
+out|     <timeout>300</timeout>
+out|     <retries>3</retries>
+out|   </params>
+out|   <context>Pick one option</context>
+out|   <anchors>
+out|     <x_reject>nothing</x_reject>
+out|     <x_ideal>all</x_ideal>
+out|   </anchors>
+out|   <proposal>
+out|     <candidate_schema>{"description": "a one-line proposal", "type": "string"}</candidate_schema>
+out|   </proposal>
+out| </concord-init>
+out| --- WAKE
+out| <WAKE>
+out| NEXT: Broadcast each SEND block to the agents on its `to:` line, exactly as printed and without that line. Never ⏎
+out| write or change a message. Pass every message of this run you receive, exactly as received, one per call, to ⏎
+out| `concord_initiator.py --me ini receive`. A timer runs: start `concord_initiator.py --me ini wait` in the ⏎
+out| background (it returns when something is to be sent) and start it again each time it returns, or call ⏎
+out| `concord_initiator.py --me ini tick` at the time under WAKE.
+out| 
+
+=== initiator ini start (exit 2)
+$ --me ini start --participants a,b --context Pick one option --x-reject nothing --x-ideal all --format a one-line ⏎
+$ proposal
+out| STATUS: ERROR
+out| ini is in a run already
+out| NEXT: `concord_initiator.py --me ini report` says how it stands. Start another run only when it is over; to run ⏎
+out| two at once use another --me or --state-dir.
+out| 
+
+=== initiator ini receive (exit 0)
+$ --me ini receive
+ in| hello, this is not a CONCORD message
+out| STATUS: WAIT
+out| --- WAKE
+out| <WAKE>
+out| --- NOTE
+out| not used: not a CONCORD message
+out| NEXT: Pass every message of this run you receive, exactly as received, one per call, to `concord_initiator.py ⏎
+out| --me ini receive`. A timer runs: start `concord_initiator.py --me ini wait` in the background (it returns when ⏎
+out| something is to be sent) and start it again each time it returns, or call `concord_initiator.py --me ini tick` at ⏎
+out| the time under WAKE.
+out| 
+
+=== initiator ini report (exit 0)
+$ --me ini report
+out| STATUS: WAIT
+out| --- END
+out| The run is not over: the result of the reporter has not arrived.
+out| --- WAKE
+out| <WAKE>
+out| NEXT: Pass every message of this run you receive, exactly as received, one per call, to `concord_initiator.py ⏎
+out| --me ini receive`. A timer runs: start `concord_initiator.py --me ini wait` in the background (it returns when ⏎
+out| something is to be sent) and start it again each time it returns, or call `concord_initiator.py --me ini tick` at ⏎
+out| the time under WAKE.
+out| 
+
