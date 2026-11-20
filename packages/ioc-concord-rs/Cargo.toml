@@ -4,12 +4,12 @@
 [package]
 name = "ioc-concord"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 rust-version = "1.89"
 description = "CONCORD protocol library."
-license = "Apache-2.0"
+license.workspace = true
 readme = "README.md"
-repository = "https://github.com/ioc-project/cognition-protocols"
+repository.workspace = true
 keywords = ["concord", "multi-agent", "negotiation", "protocol"]
 categories = ["algorithms"]
 
@@ -42,9 +42,3 @@ sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
 uniffi = { version = "0.31", optional = true }
 clap = { version = "4", default-features = false, features = ["std", "derive", "help", "usage", "error-context"], optional = true }
-
-# The library ships inside wheels: size over speed.
-[profile.release]
-opt-level = "z"
-lto = "fat"
-codegen-units = 1
