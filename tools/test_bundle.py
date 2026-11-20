@@ -285,9 +285,9 @@ def two(tmp_path, monkeypatch):
     (tmp_path / "pkg/src/lib/a.py").write_text("def f():\n    return 'f'\n\ndef unused():\n    return 'u'\n")
     (tmp_path / "cli/src/cli/c.py").write_text("from lib.a import f\n\ndef run():\n    return f() + '!'\n")
 
-    def sync(uses='uses = ["lib"]', check=False, cli_modules=("c",)):
+    def sync(uses='uses = ["lib"]', check=False, cli_modules=("c",), lib_uses="", lib_file="script.py"):
         (tmp_path / "bundle.toml").write_text(
-            "[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nfile = 'script.py'\nmodules = ['a']\n\n"
+            f"[[library]]\nname = 'lib'\npath = 'pkg'\n{lib_uses}\n[[library.target]]\nfile = '{lib_file}'\nmodules = ['a']\n\n"
             f"[[library]]\nname = 'cli'\npath = 'cli'\n{uses}\n[[library.target]]\nfile = 'script.py'\nmodules = {list(cli_modules)!r}\n")
         return bundle.main(["--config", str(tmp_path / "bundle.toml")] + (["--check"] if check else []))
 
@@ -334,7 +334,52 @@ def test_a_user_library_must_import_names_of_a_module(two, capsys):
 
 
 def test_a_name_in_both_libraries_is_refused(two, capsys):
+    # `unused` is left out of the block of lib (nothing reaches it), and it still counts: a name is unique across what each library defines
     (two.root / "cli/src/cli/c.py").write_text("from lib.a import f\n\ndef f2():\n    return 1\n\ndef unused():\n    return 2\n\n"
                                               "def run():\n    return f() + unused()\n")
     assert two() == 2
     assert "unused" in capsys.readouterr().err
+
+
+# --- what is checked before anything is written -----------------------------------------------------------------------------------
+
+def test_a_script_without_the_block_of_the_user_library_is_told_what_to_add(two, capsys):
+    (two.root / "script.py").write_text(TWO.replace("# >>> BUNDLED cli\n# <<< END BUNDLED cli\n", ""))
+    assert two() == 2
+    err = capsys.readouterr().err
+    assert "no markers" in err and "# >>> BUNDLED cli" in err
+
+
+@pytest.mark.parametrize("uses, why", [
+    ('uses = "lib"', "`uses` must be a list of library names"),
+    ('uses = ["lib", 3]', "`uses` must be a list of library names"),
+    ('uses = ["nope"]', "cli uses nope, which is not a library of this config"),
+    ('uses = ["cli"]', "cli lists itself in `uses`"),
+])
+def test_a_uses_that_is_not_a_list_of_other_libraries_is_refused_and_nothing_is_written(two, capsys, uses, why):
+    assert two(uses=uses) == 2
+    assert why in capsys.readouterr().err
+    assert (two.root / "script.py").read_text() == TWO
+
+
+def test_libraries_that_use_each_other_are_refused(two, capsys):
+    assert two(lib_uses='uses = ["cli"]') == 2
+    assert "libraries that use each other: lib -> cli -> lib" in capsys.readouterr().err
+
+
+def test_a_script_that_bundles_a_library_but_not_the_one_it_uses_is_refused_before_any_script_is_written(two, capsys):
+    (two.root / "other.py").write_text("# >>> BUNDLED lib\n# <<< END BUNDLED lib\n")       # lib goes into other.py, cli into script.py
+    assert two(lib_file="other.py") == 2
+    assert "script.py: cli is bundled here and uses lib, which is not: add a target for lib in this file" in capsys.readouterr().err
+    assert (two.root / "script.py").read_text() == TWO
+    assert (two.root / "other.py").read_text() == "# >>> BUNDLED lib\n# <<< END BUNDLED lib\n"
+
+
+def test_the_block_of_the_used_library_must_come_first_in_the_script(two, capsys):
+    swapped = "# >>> BUNDLED cli\n# <<< END BUNDLED cli\n\n# >>> BUNDLED lib\n# <<< END BUNDLED lib\n\nprint(run())\n"
+    (two.root / "script.py").write_text(swapped)
+    assert two() == 2
+    assert "the block of lib must come before the block of cli, which uses it" in capsys.readouterr().err
+    assert (two.root / "script.py").read_text() == swapped
+    (two.root / "script.py").write_text(TWO)                                  # in order, it is bundled
+    assert two() == 0
