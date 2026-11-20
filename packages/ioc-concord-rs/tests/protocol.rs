@@ -3,8 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //! The protocol constants: the version, the forms of ids and numbers, the defaults.
-// Python's `is_agent_id`, `is_uuid` and `parse_number` are also tried with None, 5 and 0.5, and `to_millionths` with True and None: a
-// Rust function that takes a `&str` or a `Num` cannot be given those, so those cases are left out.
+// A value of another type than `&str` or `Num` cannot be passed to these functions, so the tests do not try one.
 
 use ioc_concord::engine::Params;
 use ioc_concord::protocol::*;
@@ -117,8 +116,6 @@ fn a_number_given_as_text_int_or_float_is_read_in_millionths() {
     }
 }
 
-// Python writes 1e-06 as "1e-06" (an exponent: not a number); Rust writes it as "0.000001" and reads 1. Blame: `Num::to_millionths`
-// (`Num::Float(f) => parse_number(&f.to_string())`); fix: refuse a float whose shortest repr in Python would use an exponent (below 1e-4).
 #[test]
 fn a_float_whose_repr_has_an_exponent_is_not_a_number() {
     assert_eq!(Num::from(1e-06).to_millionths(), None);

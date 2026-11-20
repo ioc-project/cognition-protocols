@@ -5,7 +5,7 @@
 //! The order of checks, and what follows from each message: the part of the node that works on one run at a time, apart from the
 //! agent that owns the state, the store and the clock.
 
-use crate::engine::{add_anchor, add_proposal, add_ratings, evaluate, parse_candidate_id, timers_enabled, EvalState, Evaluation, Rating};
+use crate::engine::{add_anchor, add_proposal, add_ratings, evaluate, parse_candidate_id, EvalState, Evaluation, Rating};
 use crate::errors::{ConcordError, Result};
 use crate::event::{EventKind, HeldReason, IgnoredReason, Source};
 use crate::liveness::{owed_batches, sync_timers};
@@ -198,7 +198,7 @@ impl Node<'_> {
 
     /// An init of another version: the agent does not join, and tells the author which version it speaks.
     pub(super) fn refuse_version(&mut self, info: &Peek, step: &mut Step) {
-        let got = info.attr("version").unwrap_or("None");
+        let theirs = info.attr("version").map_or_else(|| "this init has no version".to_string(), |v| format!("this init is version {v}"));
         self.error(
             step,
             info.attr("from"),
@@ -207,7 +207,7 @@ impl Node<'_> {
             "version",
             None,
             None,
-            &format!("I speak version {PROTOCOL_VERSION}; this init is version {got}."),
+            &format!("I speak version {PROTOCOL_VERSION}; {theirs}."),
         );
     }
 
@@ -826,12 +826,9 @@ impl Node<'_> {
             return Ok(false);
         }
         let timeout = run.params.timeout as f64;
-        let enabled = timers_enabled(&run.params);
         let t = run.timers.get_mut(key).expect("the timer is there");
         t.requests += 1;
-        if enabled {
-            t.deadline = Some(step.now + timeout);
-        }
+        t.deadline = step.now + timeout;
         step.note(EventKind::Asked {
             author: t.author.clone(),
             what: t.what.clone(),
@@ -849,10 +846,9 @@ impl Node<'_> {
         let author = info.attr("from");
         let kind = Kind::from_tag(&info.tag).map(Kind::as_str);
         self.sync_timers(run, step, None);
-        let mut keys: Vec<(bool, f64, String)> =
-            run.timers.iter().map(|(k, t)| (t.deadline.is_none(), t.deadline.unwrap_or(0.0), k.clone())).collect();
-        keys.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.total_cmp(&b.1)).then_with(|| a.2.cmp(&b.2)));
-        for (_, _, key) in keys {
+        let mut keys: Vec<(f64, String)> = run.timers.iter().map(|(k, t)| (t.deadline, k.clone())).collect();
+        keys.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+        for (_, key) in keys {
             let t = &run.timers[&key];
             if Some(t.author.as_str()) == author
                 && Some(t.what.as_str()) == kind

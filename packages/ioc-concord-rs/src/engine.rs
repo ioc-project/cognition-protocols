@@ -17,7 +17,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::{ConcordError, Result};
 use crate::protocol::{
-    format_number, is_agent_id, py_repr, Outcome, DEFAULT_BUDGET, DEFAULT_EPS, DEFAULT_RETRIES, DEFAULT_THRESHOLD, DEFAULT_TIMEOUT, MILLION,
+    format_number, is_agent_id, quote, Outcome, DEFAULT_BUDGET, DEFAULT_EPS, DEFAULT_RETRIES, DEFAULT_THRESHOLD, DEFAULT_TIMEOUT,
+    MAX_INTEGER, MILLION,
 };
 
 // --------------------------------------------------------------------------
@@ -49,7 +50,7 @@ impl Default for Params {
 }
 
 /// The parameters the engine itself reads. They are kept apart from `Params` because the saved state of the engine holds just these
-/// three, as the Python library saves it.
+/// three, so the saved state of the engine holds just these.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EngineParams {
     pub satisfaction_threshold: i64,
@@ -58,8 +59,7 @@ pub struct EngineParams {
     pub budget: i64,
 }
 
-/// Fails with `InvalidRun` unless these are the participants and parameters of a run that can be played. A `timeout` of 0 is valid:
-/// it switches the timers off (an extension of this library, not of the spec).
+/// Fails with `InvalidRun` unless these are the participants and parameters of a run that can be played.
 ///
 /// # Errors
 ///
@@ -73,7 +73,7 @@ pub fn check_params(agents: &[String], params: &Params) -> Result<()> {
         return Err(ConcordError::invalid_run("duplicate agent names"));
     }
     if let Some(bad) = agents.iter().find(|a| !is_agent_id(a)) {
-        return Err(ConcordError::invalid_run(format!("an agent id is 1 to 64 letters, digits, _ or -, not {}", py_repr(bad))));
+        return Err(ConcordError::invalid_run(format!("an agent id is 1 to 64 letters, digits, _ or -, not {}", quote(bad))));
     }
     if !(0 < params.satisfaction_threshold && params.satisfaction_threshold <= MILLION) {
         return Err(ConcordError::invalid_run("satisfaction_threshold must be above 0 and at most 1"));
@@ -81,21 +81,16 @@ pub fn check_params(agents: &[String], params: &Params) -> Result<()> {
     if params.eps <= 0 {
         return Err(ConcordError::invalid_run("eps must be above 0"));
     }
-    if params.budget < 1 {
-        return Err(ConcordError::invalid_run("budget must be an integer, at least 1"));
+    if !(1..=MAX_INTEGER).contains(&params.budget) {
+        return Err(ConcordError::invalid_run(format!("budget must be an integer, from 1 to {MAX_INTEGER}")));
     }
-    if params.timeout < 0 {
-        return Err(ConcordError::invalid_run("timeout must be 0 (no timers) or above 0"));
+    if !(1..=MAX_INTEGER).contains(&params.timeout) {
+        return Err(ConcordError::invalid_run(format!("timeout must be an integer, from 1 to {MAX_INTEGER}")));
     }
-    if params.retries < 0 {
-        return Err(ConcordError::invalid_run("retries must be an integer, at least 0"));
+    if !(0..=MAX_INTEGER).contains(&params.retries) {
+        return Err(ConcordError::invalid_run(format!("retries must be an integer, from 0 to {MAX_INTEGER}")));
     }
     Ok(())
-}
-
-/// Whether the run has timers: a `timeout` of 0 means nobody ever asks again or gives up on a clock.
-pub fn timers_enabled(params: &Params) -> bool {
-    params.timeout > 0
 }
 
 // --------------------------------------------------------------------------
@@ -110,15 +105,20 @@ pub fn repair_id(n: u32, agent: &str) -> String {
     format!("r{n}-{agent}")
 }
 
-/// (round, agent) of a candidate id: round 0 for `seed-<agent>`, N for `r<N>-<agent>`. None for any other text.
+/// The most digits of the round of a repair id (`r<N>-<agent>`). A limit of this library, not of the spec.
+const MAX_ROUND_DIGITS: usize = 9;
+
+/// (round, agent) of a candidate id: round 0 for `seed-<agent>`, N for `r<N>-<agent>`, with N of at most 9 digits. None for any other
+/// text, which includes an id with anything after the agent (a trailing line feed too) or an agent that is not an agent id.
 pub fn parse_candidate_id(cid: &str) -> Option<(u32, &str)> {
-    let ok = |agent: &str| !agent.is_empty() && !agent.contains('\n');
     if let Some(agent) = cid.strip_prefix("seed-") {
-        return ok(agent).then_some((0, agent));
+        return is_agent_id(agent).then_some((0, agent));
     }
     let rest = cid.strip_prefix('r')?;
     let (digits, agent) = rest.split_once('-')?;
-    if digits.is_empty() || digits.starts_with('0') || !digits.bytes().all(|b| b.is_ascii_digit()) || !ok(agent) {
+    let is_round =
+        !digits.is_empty() && digits.len() <= MAX_ROUND_DIGITS && !digits.starts_with('0') && digits.bytes().all(|b| b.is_ascii_digit());
+    if !is_round || !is_agent_id(agent) {
         return None;
     }
     Some((digits.parse().ok()?, agent))
@@ -250,7 +250,7 @@ pub fn add_proposal(
 ) -> Result<bool> {
     let round = match parse_candidate_id(cid) {
         Some((round, who)) if who == agent && st.agents.iter().any(|a| a == agent) => round,
-        _ => return Err(ConcordError::invalid_message(format!("the proposal id {} is not seed-{agent} or r<N>-{agent}", py_repr(cid)))),
+        _ => return Err(ConcordError::invalid_message(format!("the proposal id {} is not seed-{agent} or r<N>-{agent}", quote(cid)))),
     };
     raw_value(raw, "raw")?;
     if st.pool.iter().any(|c| c.id == cid) {

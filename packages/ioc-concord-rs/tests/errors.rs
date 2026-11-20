@@ -3,8 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //! The errors: each one has a code, and a missing state is a state error of its own kind.
-// Python test_every_error_is_a_concord_error_with_a_code: the base `ConcordError("x").code == "concord_error"` and `code="custom"`
-// have no Rust equivalent: `ConcordError` is an enum with no generic variant, and `isinstance` is the type system.
+// `ConcordError` is an enum with no generic variant, so there is no base error with a custom code to test.
 
 use ioc_concord::ConcordError;
 

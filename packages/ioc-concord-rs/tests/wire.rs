@@ -5,9 +5,8 @@
 //! The messages: building each one (the author's checks), reading each one (the receiver's checks), the integrity check, locating and
 //! peeking.
 //!
-//! Not ported: `test_a_result_carries_its_outcome_and_winner_and_an_aborted_run_has_none` and the first line of
-//! `test_result_error_resend_cancel_are_refused_when_inconsistent` build a result with the outcome `"WON"`, a string that `Outcome`
-//! cannot hold; `Outcome::Aborted` stands for the one that the type allows. A winning candidate of `None` is the empty text.
+//! An outcome that `Outcome` cannot hold (a string such as `"WON"`) cannot be written: `Outcome::Aborted` stands for the one that the type
+//! allows, and a winning candidate of `None` is the empty text.
 
 mod common;
 
@@ -287,9 +286,10 @@ fn init_reads_back_with_every_parameter() {
 }
 
 #[test]
-fn init_defaults_fill_what_is_left_out_and_a_zero_timeout_is_valid() {
+fn init_defaults_fill_what_is_left_out_and_a_zero_timeout_is_not_valid() {
     assert_eq!(init_body(parse(&init())).params, default_params());
-    assert_eq!(init_body(parse(&with_params(InitParams::default().timeout(0)).build().unwrap())).params.timeout, 0);
+    refuses(with_params(InitParams::default().timeout(0)).build(), "timeout");
+    refuses_parse(&init().replace("<timeout>300</timeout>", "<timeout>0</timeout>"), "timeout must be an integer, from 1 to");
     let bare = init().replace("<params>", "<x>").replace("</params>", "</x>");
     assert_eq!(init_body(parse(&bare)).params, default_params());
 }
@@ -389,6 +389,31 @@ fn the_text_of_a_message_survives_escaping_and_quotes() {
     assert!(check_ok(&odd));
 }
 
+#[test]
+fn only_space_tab_and_line_breaks_are_trimmed_from_the_text_of_a_message() {
+    let cand = "\u{a0}\u{85}local cache\u{2003}";
+    let m = InitReply { candidate: " \t\u{a0}\u{85}local cache\u{2003}\n ", ..InitReply::default() }.build().unwrap();
+    assert_eq!(proposal_of(parse(&m)).candidate, cand);
+    let err = build_error("alice", RUN, "cost", "init", "invalid", None, None, "\u{a0}too   many\n\tspaces\u{a0}", None).unwrap();
+    match parse(&err).body {
+        Body::Error(e) => assert_eq!(e.text, "\u{a0}too many spaces\u{a0}"),
+        other => panic!("not an error: {other:?}"),
+    }
+}
+
+#[test]
+fn a_message_that_does_not_start_with_an_angle_bracket_is_refused_and_never_panics() {
+    let wrapped = build_resend("cost", RUN, &score(), None, None).unwrap();
+    let bom_resend =
+        format!("<concord-resend version=\"0.3.0\" from=\"bob\" run_id=\"{RUN}\" uuid=\"{RUN}\"><concord-result/></concord-resend>");
+    for doc in [score(), init_reply(), wrapped, bom_resend] {
+        for prefix in ["\u{feff}", "\u{a0}", "\u{2028}", "\u{85}", "x"] {
+            refuses_parse(&format!("{prefix}{doc}"), "does not start with <");
+        }
+        parse(&format!(" \t\r\n{doc}\n\n")); // the four blanks are trimmed, as before
+    }
+}
+
 // --- the author's responsibility --------------------------------------------
 
 #[test]
@@ -399,7 +424,7 @@ fn init_is_refused_when_it_breaks_a_rule_of_the_configuration() {
     refuses(with_params(InitParams::default().budget(0)).build(), "budget");
     refuses(with_params(InitParams::default().retries(-1)).build(), "retries");
     refuses(with_params(InitParams::default().timeout(-5)).build(), "timeout");
-    // Python: params={"nope": 1} is refused with "unknown parameters: nope"; InitParams has no such field, so it cannot be written.
+    // `InitParams` has no field for an unknown parameter, so one cannot be written.
     refuses(Init { context: " ", ..Init::default() }.build(), "context is required");
     refuses(Init { x_ideal: "", ..Init::default() }.build(), "x_ideal is required");
     refuses(Init { spec: json!({"description": "d", "color": 1}), ..Init::default() }.build(), "keywords that are not enforced");
@@ -473,6 +498,41 @@ fn result_error_resend_cancel_are_refused_when_inconsistent() {
     refuses(cancel("superseded", Some(OTHER), Some("b")), "agent goes with");
     refuses(cancel("superseded", Some("OTHER-RUNID"), None), "superseded_by must be a UUID");
     refuses(cancel("missing-agent", None, Some("b c")), "agent must be an agent id");
+}
+
+#[test]
+fn a_cancel_with_an_empty_agent_or_superseded_by_is_refused_whatever_the_reason() {
+    let version = build_cancel("alice", RUN, "version", None, None, None).unwrap();
+    let superseded = build_cancel("alice", RUN, "superseded", Some(OTHER), None, None).unwrap();
+    let missing = build_cancel("cost", RUN, "missing-agent", None, Some("security"), None).unwrap();
+    let with = |doc: &str, extra: &str| doc.replace("/>", &format!(" {extra}/>"));
+    let docs = [
+        (with(&version, "agent=\"\""), "agent goes with"),
+        (with(&version, "superseded_by=\"\""), "superseded_by goes with"),
+        (with(&superseded, "agent=\"\""), "agent goes with"),
+        (superseded.replace(&format!("superseded_by=\"{OTHER}\""), "superseded_by=\"\""), "superseded_by must be a UUID"),
+        (missing.replace("agent=\"security\"", "agent=\"\""), "agent must be an agent id"),
+        (with(&missing, "superseded_by=\"\""), "superseded_by goes with"),
+    ];
+    for (doc, why) in docs {
+        refuses_parse(&doc, why);
+    }
+    for doc in [version, superseded, missing] {
+        parse(&doc); // and the ones without the empty attribute are read as before
+    }
+}
+
+#[test]
+fn a_value_that_is_wrong_is_quoted_in_the_refusal_and_a_missing_one_is_said_to_be_missing() {
+    let d = Err_::default;
+    refuses(Err_ { reason: "lost", ..d() }.build(), "not 'lost'");
+    refuses(Err_ { reason: "it's", ..d() }.build(), "not \"it's\"");
+    refuses(Err_ { reason: "a\nb\\c", ..d() }.build(), r"not 'a\\nb\\\\c'");
+    let busy = build_error("alice", RUN, "cost", "init", "busy", None, None, "", None).unwrap();
+    refuses_parse(&busy.replace(" reason=\"busy\"", ""), r"reason must be one of .*, not \(missing\)");
+    refuses_parse(&busy.replace(" what=\"init\"", ""), r"what must be one of .*, not \(missing\)");
+    let no_sender = init_reply().replace(" from=\"cost\"", "");
+    refuses(build_resend("security", RUN, &no_sender, None, None), r"not one from \(missing\)");
 }
 
 #[test]
@@ -578,6 +638,73 @@ fn peek_reads_the_root_of_anything_and_nothing_of_the_rest() {
     );
 }
 
+#[test]
+fn peek_reads_one_level_into_a_resend_and_none_into_a_resend_of_a_resend() {
+    let once = build_resend("cost", RUN, &score(), None, None).unwrap();
+    let p = peek(&once).unwrap();
+    let inner = p.inner.as_ref().unwrap();
+    assert_eq!(inner.tag, "concord-score");
+    assert!(inner.inner.is_none());
+    let wrap = format!("<concord-resend version=\"0.3.0\" from=\"cost\" run_id=\"{RUN}\" uuid=\"{OTHER}\">");
+    let twice = format!("{wrap}{once}</concord-resend>");
+    let p = peek(&twice).unwrap();
+    assert_eq!(p.inner.as_ref().unwrap().tag, "concord-resend");
+    assert!(p.inner.as_ref().unwrap().inner.is_none());
+}
+
+#[test]
+fn a_resend_nested_to_any_depth_is_peeked_in_a_fixed_number_of_steps() {
+    let wrap = format!("<concord-resend version=\"0.3.0\" from=\"cost\" run_id=\"{RUN}\" uuid=\"{OTHER}\">");
+    for depth in [2, 2_000, 200_000] {
+        let text = format!("{}{}{}", wrap.repeat(depth), score(), "</concord-resend>".repeat(depth));
+        let p = peek(&text).unwrap();
+        assert_eq!(p.tag, "concord-resend");
+        assert_eq!(p.inner.as_ref().unwrap().tag, "concord-resend");
+    }
+}
+
+/// The score message with `n` elements nested one in the other inside its root, so that it nests `n + 1` levels. `open` is the start tag.
+fn score_nested(n: usize, open: &str) -> String {
+    score().replace("</concord-score>", &format!("{}{}</concord-score>", open.repeat(n), "</a>".repeat(n)))
+}
+
+#[test]
+fn a_message_that_nests_deeper_than_the_limit_is_refused_before_the_parser_sees_it() {
+    parse_message(&score_nested(15, "<a>"), None).unwrap(); // 16 levels: the limit
+    for n in [16, 20_000, 1_000_000] {
+        refuses_parse(&score_nested(n, "<a>"), "deeper than 16 levels");
+    }
+}
+
+#[test]
+fn a_gt_or_a_slash_inside_a_quoted_value_does_not_end_a_tag_for_the_depth() {
+    parse_message(&score_nested(15, "<a x=\"/>\">"), None).unwrap();
+    parse_message(&score_nested(15, "<a x='>'>"), None).unwrap();
+    refuses_parse(&score_nested(16, "<a x=\"/>\">"), "deeper than 16 levels");
+    refuses_parse(&score_nested(16, "<a x='>'>"), "deeper than 16 levels");
+}
+
+#[test]
+fn an_element_that_closes_itself_and_the_ends_of_elements_do_not_count_as_depth() {
+    let flat = score().replace("</concord-score>", &"<a/><b></b>".repeat(100_000).to_string());
+    parse_message(&format!("{flat}</concord-score>"), None).unwrap();
+}
+
+#[test]
+fn an_integer_parameter_above_999999999_is_refused_and_leading_zeros_do_not_count() {
+    let doc = init();
+    for tag in ["budget", "timeout", "retries"] {
+        let re = Regex::new(&format!("<{tag}>[0-9]+</{tag}>")).unwrap();
+        assert!(re.is_match(&doc), "{tag} is in the init");
+        let at = |v: &str| re.replace(&doc, format!("<{tag}>{v}</{tag}>")).into_owned();
+        assert!(parse_message(&at("999999999"), None).is_ok(), "{tag}");
+        assert!(parse_message(&at("0000000000000000000000008"), None).is_ok(), "{tag}");
+        for bad in ["1000000000", "99999999999999999999", &"9".repeat(5000)] {
+            refuses_parse(&at(bad), &format!("<{tag}> is above 999999999"));
+        }
+    }
+}
+
 // --- the receiver's side -----------------------------------------------------
 
 #[test]
@@ -615,6 +742,9 @@ fn a_receiver_refuses_invalid_scores_and_anchors_it_reads() {
     refuses_parse(&score().replace("41.0", "141.0"), "0 to 100");
     refuses_parse(&score().replace("41.0", "lots"), "is not a number");
     refuses_parse(&score().replace("seed-security", "nope"), "not a candidate id");
+    refuses_parse(&score().replace("seed-security", "seed-security&#10;"), "not a candidate id");
+    refuses_parse(&score().replace("r1-security", "r99999999999-alice"), "not a candidate id");
+    refuses_parse(&init_reply().replace("id=\"seed-cost\"", "id=\"seed-cost&#10;\""), "the proposal id");
     refuses_parse(&init_reply().replace("<raw_ideal>95.0", "<raw_ideal>5.0"), "must exceed");
     refuses_parse(&init_reply().replace("<raw_reject>8.0", "<raw_reject>-8.0"), "is not a number");
     refuses_parse(&init_reply().replace("<reasoning>good</reasoning>", "<reasoning> </reasoning>"), "<reasoning> in <score> is empty");

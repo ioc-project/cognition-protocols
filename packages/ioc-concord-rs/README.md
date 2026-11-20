@@ -1,10 +1,7 @@
 # ioc-concord (Rust)
 
-The CONCORD protocol as a Rust library: the node that every participant of a run runs, and the pieces it is made of. It is a port of
-the Python library in [`packages/ioc-concord`](../ioc-concord), and speaks the same wire version, `0.3.0`
-(`ioc_concord::protocol::PROTOCOL_VERSION`); the protocol is in
-[`protocols/concord/spec/CONCORD-SPEC.md`](../../protocols/concord/spec/CONCORD-SPEC.md). The two libraries interoperate: a run can
-have Python and Rust agents, and the state each saves is the same JSON.
+The CONCORD protocol as a Rust library. The protocol is described in
+[`protocols/concord/spec/CONCORD-SPEC.md`](../../protocols/concord/spec/CONCORD-SPEC.md).
 
 The library does no I/O. It has no transport, no model and no threads, it never prints or exits, and it keeps no global state. You give
 it the messages that arrive and the time that passes; it hands back the messages to send and what happened. Every fallible call
@@ -174,28 +171,3 @@ and 1.
 | `guidance` | what the model reads: the wording of the run and of each task, the messages of the others, the end, a refusal |
 | `relay` | the centre of a star: which messages it passes on to the spokes |
 | `agent` | the node |
-
-## Differences from the Python library
-
-The behaviour is the same, and the saved state is the same JSON. What the language changes:
-
-* The state, the messages as read, the tasks, the evaluation and the reports are typed structs and enums, not dicts.
-* Errors are one enum, `ConcordError`, with `code()`, instead of a class hierarchy.
-* Parameters of an init are `InitParams`, with the defaults filled in, instead of a dict.
-* An agent is made with `Agent::builder(me)`; its relay is owned by it (`agent.relay()`), and spokes are names (`String`s).
-* A `pattern` of a schema is translated to the syntax of the `regex` crate, which, like the Python translation, only ever receives the
-  subset of the spec.
-
-## Formatting
-
-The code is formatted with `cargo fmt`, which reads `rustfmt.toml`: lines run to 140 columns and short expressions stay on one line
-(`use_small_heuristics = "Max"`). That is not the default of `rustfmt`, so run `cargo fmt` from this folder, not a global setting. CI checks
-`cargo fmt --check` and `cargo clippy --all-targets -- -D warnings`.
-
-## Tests
-
-    cargo test             # from packages/ioc-concord-rs
-
-The node is also run on a simulated network in virtual time, with delayed, duplicated and lost messages, restarts from the saved state,
-silent agents, other versions and two runs at once. The Python tests of `packages/ioc-concord/tests` are ported one to one, except those
-that only make sense in Python (they say so in a comment).

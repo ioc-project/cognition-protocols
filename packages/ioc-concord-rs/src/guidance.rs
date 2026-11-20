@@ -463,7 +463,7 @@ pub static INITIATOR_GUIDANCE: LazyLock<String> = LazyLock::new(|| {
 
 pub const MIN_REASON: usize = 20;
 
-/// What Python's `float(x)` would make of a JSON value, or None.
+/// The number in a JSON value that a model may give as a number, a text that reads as one, or `true` or `false`; None for anything else.
 fn as_float(x: Option<&Value>) -> Option<f64> {
     match x? {
         Value::Number(n) => n.as_f64(),
@@ -473,7 +473,7 @@ fn as_float(x: Option<&Value>) -> Option<f64> {
     }
 }
 
-/// What Python's `str(x)` would make of a JSON value, with `x or ""` applied first.
+/// The text of a JSON value, or the empty text when it is unset (`null`, `false`, `0`) or missing; any other value as its JSON.
 fn text_or_empty(x: Option<&Value>) -> String {
     match x {
         None | Some(Value::Null) | Some(Value::Bool(false)) => String::new(),

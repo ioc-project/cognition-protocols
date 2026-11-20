@@ -25,7 +25,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
-use crate::engine::{add_anchor, add_proposal, add_ratings, evaluate, timers_enabled, EvalState, Rating};
+use crate::engine::{add_anchor, add_proposal, add_ratings, evaluate, EvalState, Rating};
 use crate::errors::{ConcordError, Result};
 use crate::event::EventKind;
 use crate::guidance::render_task;
@@ -184,8 +184,8 @@ impl AgentBuilder {
                     if state.me != self.me {
                         return Err(ConcordError::state(format!(
                             "the saved state belongs to {}, not to {}",
-                            crate::protocol::py_repr(&state.me),
-                            crate::protocol::py_repr(&self.me)
+                            crate::protocol::quote(&state.me),
+                            crate::protocol::quote(&self.me)
                         )));
                     }
                     state
@@ -272,7 +272,7 @@ impl Agent {
 
     fn check_participant<'a>(state: &'a AgentState, run_id: &str, what: &str) -> Result<&'a Run> {
         let Some(run) = state.runs.get(run_id) else {
-            return Err(ConcordError::state(format!("{what}: the agent knows no run {}", crate::protocol::py_repr(run_id))));
+            return Err(ConcordError::state(format!("{what}: the agent knows no run {}", crate::protocol::quote(run_id))));
         };
         if run.status != RunStatus::Active {
             return Err(ConcordError::state(format!("{what}: the run {run_id} has {}", run.status.as_str())));
@@ -292,8 +292,12 @@ impl Agent {
     /// # Errors
     ///
     /// The error of the store when it cannot save the state, or of the relay when it cannot save a run.
+    ///
+    /// When it fails the state of the agent is as it was, in memory and in its store. The relay has a store of its own and may already know a
+    /// run that the call learned, which only means that the centre passes on the messages of that run: calling again does what it should.
     pub fn receive(&mut self, text: &str, now: Option<f64>) -> Result<Step> {
-        // a call that fails changes nothing: the state is what it was before, in memory as in the store
+        // a call that fails leaves the state of the agent as it was, in memory and in its store; a relay keeps its own store and may already know
+        // a run that the call learned, which changes nothing but what it passes on
         let backup = self.state.clone();
         let result = (|| -> Result<Step> {
             let mut step = Step::new(self.now(now)?);
@@ -317,21 +321,23 @@ impl Agent {
     }
 
     /// Time has passed: for every timer that has expired, ask again, or, when `retries` requests have not been answered, give up on
-    /// the author: the run ends `ABORTED` with the reason "missing-agent" and the cancel goes out. A run with a `timeout` of 0 has no
-    /// timers.
+    /// the author: the run ends `ABORTED` with the reason "missing-agent" and the cancel goes out.
     ///
     /// # Errors
     ///
     /// The error of the store when it cannot save the state.
+    ///
+    /// When it fails the state of the agent is as it was, in memory and in its store.
     pub fn tick(&mut self, now: Option<f64>) -> Result<Step> {
-        // a call that fails changes nothing: the state is what it was before, in memory as in the store
+        // a call that fails leaves the state of the agent as it was, in memory and in its store; a relay keeps its own store and may already know
+        // a run that the call learned, which changes nothing but what it passes on
         let backup = self.state.clone();
         let result = (|| -> Result<Step> {
             let mut step = Step::new(self.now(now)?);
             {
                 let mut node = Node { me: &self.me, new_uuid: &mut *self.uuid_fn };
                 for run in self.state.runs.values_mut() {
-                    if run.status != RunStatus::Active || !timers_enabled(&run.params) {
+                    if run.status != RunStatus::Active {
                         continue;
                     }
                     node.sync_timers(run, &step, None);
@@ -399,6 +405,9 @@ impl Agent {
     /// # Errors
     ///
     /// `ConcordError::State` when the agent is in a run already, and `ConcordError::InvalidMessage` when the run is not valid.
+    ///
+    /// When it fails the state of the agent is as it was, in memory and in its store. The relay has a store of its own and may already know the
+    /// run, which only means that the centre passes on the messages of that run: calling again does what it should.
     #[allow(clippy::too_many_arguments)]
     pub fn start<S: AsRef<str>>(
         &mut self,
@@ -411,7 +420,8 @@ impl Agent {
         run_id: Option<&str>,
         now: Option<f64>,
     ) -> Result<Step> {
-        // a call that fails changes nothing: the state is what it was before, in memory as in the store
+        // a call that fails leaves the state of the agent as it was, in memory and in its store; a relay keeps its own store and may already know
+        // a run that the call learned, which changes nothing but what it passes on
         let backup = self.state.clone();
         let result = (|| -> Result<Step> {
             if self.state.active_run().is_some() {
@@ -462,7 +472,8 @@ impl Agent {
         reasoning: &str,
         now: Option<f64>,
     ) -> Result<Step> {
-        // a call that fails changes nothing: the state is what it was before, in memory as in the store
+        // a call that fails leaves the state of the agent as it was, in memory and in its store; a relay keeps its own store and may already know
+        // a run that the call learned, which changes nothing but what it passes on
         let backup = self.state.clone();
         let result = (|| -> Result<Step> {
             let step = Step::new(self.now(now)?);
@@ -509,7 +520,8 @@ impl Agent {
     /// `ConcordError::State` when the run is not one the agent takes part in or no score is owed, and `ConcordError::InvalidMessage` when
     /// the list is not the one owed or something is invalid.
     pub fn submit_score(&mut self, run_id: &str, scores: &[ScoreIn], now: Option<f64>) -> Result<Step> {
-        // a call that fails changes nothing: the state is what it was before, in memory as in the store
+        // a call that fails leaves the state of the agent as it was, in memory and in its store; a relay keeps its own store and may already know
+        // a run that the call learned, which changes nothing but what it passes on
         let backup = self.state.clone();
         let result = (|| -> Result<Step> {
             let step = Step::new(self.now(now)?);
@@ -567,7 +579,8 @@ impl Agent {
         reasoning: &str,
         now: Option<f64>,
     ) -> Result<Step> {
-        // a call that fails changes nothing: the state is what it was before, in memory as in the store
+        // a call that fails leaves the state of the agent as it was, in memory and in its store; a relay keeps its own store and may already know
+        // a run that the call learned, which changes nothing but what it passes on
         let backup = self.state.clone();
         let result = (|| -> Result<Step> {
             let step = Step::new(self.now(now)?);

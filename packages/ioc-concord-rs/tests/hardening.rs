@@ -23,9 +23,9 @@ fn spec() -> serde_json::Value {
 }
 
 #[test]
-fn a_budget_as_large_as_an_integer_does_not_overflow_when_a_repair_is_held() {
+fn the_largest_budget_does_not_overflow_when_a_repair_is_held() {
     let init = build_init("alice", &["a", "b"], "c", "r", "i", &spec(), Some(&InitParams::default().budget(1)), Some(RUN), None).unwrap();
-    let huge = init.replace("<budget>1</budget>", "<budget>9223372036854775807</budget>");
+    let huge = init.replace("<budget>1</budget>", "<budget>999999999</budget>");
     let huge = with_check(&huge.replace(&format!(" check=\"{}\"", check_of(&huge).unwrap()), "")).unwrap();
     let mut a = Agent::new("a").unwrap();
     assert!(a.receive(&huge, None).unwrap().has("joined"));
@@ -73,13 +73,42 @@ fn a_value_that_names_a_placeholder_is_written_as_it_is() {
 }
 
 #[test]
-fn a_pattern_that_python_compiles_is_compiled() {
-    assert!(compile_pattern("(a{1000}){1000}").is_ok());
+fn a_pattern_that_would_compile_to_more_than_the_size_limit_is_refused() {
+    for pattern in ["(a{1000}){1000}", ".{60000}", "a{100000000}", "[a-z]{100000}", "(?:.{1000}){2}"] {
+        let why = compile_pattern(pattern).unwrap_err().to_string();
+        assert!(why.contains("not in the supported subset"), "{pattern}: {why}");
+    }
+    for pattern in [".{1000}", "(?:[a-z]{100}){130}", "^[a-z ]{1,80}$", "(a|b){1,500}"] {
+        assert!(compile_pattern(pattern).is_ok(), "{pattern}");
+    }
     assert!(compile_pattern("(?=a)").is_err());
 }
 
 #[test]
-fn the_saved_state_keeps_the_order_of_the_python_state() {
+fn groups_nest_up_to_100_levels_in_a_pattern_and_deeper_is_refused_with_that_reason() {
+    for (open, close) in [("(", ")"), ("(?:", ")"), ("(?:", ")*")] {
+        let nested = |n: usize| format!("{}a{}", open.repeat(n), close.repeat(n));
+        assert!(compile_pattern(&nested(100)).is_ok(), "{open} 100 levels");
+        for n in [101, 300, 5_000] {
+            let why = compile_pattern(&nested(n)).unwrap_err().to_string();
+            assert!(why.contains("groups nest deeper than 100 levels"), "{open} {n}: {why}");
+        }
+    }
+}
+
+#[test]
+fn matching_a_large_pattern_that_is_accepted_stays_fast_and_a_larger_one_is_refused_at_once() {
+    let started = std::time::Instant::now();
+    let re = compile_pattern("(?:[a-z]{30}){100}").unwrap();
+    let _ = re.is_match(&("a".repeat(20_000) + "!"));
+    assert!(started.elapsed() < std::time::Duration::from_secs(5), "{:?}", started.elapsed()); // a test build is far slower than a release one
+    let started = std::time::Instant::now();
+    assert!(compile_pattern(".{60000}").is_err());
+    assert!(started.elapsed() < std::time::Duration::from_secs(1));
+}
+
+#[test]
+fn the_saved_state_keeps_the_order_of_its_keys() {
     let mut a = Agent::builder("a").store(MemoryStore::new()).build().unwrap();
     let _ = a.start(&["a", "b"], "c", "r", "i", &spec(), None, Some(RUN), None).unwrap();
     let mut store = MemoryStore::new();

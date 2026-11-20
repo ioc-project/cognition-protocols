@@ -12,7 +12,7 @@
 
 use indexmap::IndexMap;
 
-use crate::engine::{lacking, parse_candidate_id, timers_enabled, EvalState, Evaluation};
+use crate::engine::{lacking, parse_candidate_id, EvalState, Evaluation};
 use crate::protocol::Outcome;
 use crate::state::{Role, Run, RunStatus, Timer};
 
@@ -95,17 +95,15 @@ pub fn owed_batches(run: &Run, me: &str, ev: Option<&Evaluation>) -> IndexMap<St
 }
 
 /// Start the timer of every batch that has become owed, and drop the timer of every batch that is complete. When the message that was
-/// first lacking in a batch has arrived and the next is still owed, the wait starts again. With a `timeout` of 0 a timer has no
-/// deadline: nothing is ever triggered.
+/// first lacking in a batch has arrived and the next is still owed, the wait starts again.
 pub fn sync_timers(run: &mut Run, me: &str, now: f64, ev: Option<&Evaluation>) {
     let owed = owed_batches(run, me, ev);
     run.timers.retain(|key, _| owed.contains_key(key));
-    let enabled = timers_enabled(&run.params);
     let timeout = run.params.timeout as f64;
     for (key, o) in owed {
         let fresh = run.timers.get(&key).is_none_or(|t| t.candidate != o.candidate);
         if fresh {
-            let deadline = enabled.then_some(now + timeout);
+            let deadline = now + timeout;
             run.timers.insert(
                 key.clone(),
                 Timer { author: String::new(), what: String::new(), candidate: o.candidate.clone(), requests: 0, asked: false, deadline },
@@ -120,8 +118,7 @@ pub fn sync_timers(run: &mut Run, me: &str, now: f64, ev: Option<&Evaluation>) {
 
 /// The keys of the timers of `run` that have expired at `now`, the earliest first.
 pub fn expired_keys(run: &Run, now: f64) -> Vec<String> {
-    let mut due: Vec<(f64, &String)> =
-        run.timers.iter().filter_map(|(key, t)| t.deadline.filter(|d| *d <= now).map(|d| (d, key))).collect();
+    let mut due: Vec<(f64, &String)> = run.timers.iter().filter(|(_, t)| t.deadline <= now).map(|(key, t)| (t.deadline, key)).collect();
     due.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(b.1)));
     due.into_iter().map(|(_, key)| key.clone()).collect()
 }
@@ -130,6 +127,6 @@ pub fn expired_keys(run: &Run, now: f64) -> Vec<String> {
 pub fn earliest_deadline<'a>(runs: impl IntoIterator<Item = &'a Run>) -> Option<f64> {
     runs.into_iter()
         .filter(|run| run.status == RunStatus::Active)
-        .flat_map(|run| run.timers.values().filter_map(|t| t.deadline))
+        .flat_map(|run| run.timers.values().map(|t| t.deadline))
         .min_by(f64::total_cmp)
 }

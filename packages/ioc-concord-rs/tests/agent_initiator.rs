@@ -52,7 +52,7 @@ fn watched(names: &[&str]) -> Net {
     Net::new(&all)
 }
 
-fn timers(a: &Agent) -> BTreeMap<String, Option<f64>> {
+fn timers(a: &Agent) -> BTreeMap<String, f64> {
     a.status(None).unwrap().timers.into_iter().collect()
 }
 
@@ -84,7 +84,7 @@ fn start_builds_the_init_and_the_initiator_that_is_not_a_participant_only_watche
     );
     let s = a.status(None).unwrap();
     assert_eq!((s.role, s.status, s.outcome, s.state), (Role::Initiator, RunStatus::Active, None, EvalState::Wait));
-    let expected = BTreeMap::from([("init-reply|cost".to_string(), Some(17.0)), ("init-reply|security".to_string(), Some(17.0))]);
+    let expected = BTreeMap::from([("init-reply|cost".to_string(), 17.0), ("init-reply|security".to_string(), 17.0)]);
     assert!(a.due().is_empty() && timers(&a) == expected && a.next_wakeup() == Some(17.0));
     assert_eq!(a.report(None).unwrap().status, ReportStatus::Pending);
 }
@@ -318,14 +318,10 @@ fn a_participant_that_never_answers_ends_the_run_after_retries_and_everybody_is_
 }
 
 #[test]
-fn with_no_retries_the_initiator_gives_up_at_the_first_expiry_and_with_no_timeout_never() {
+fn with_no_retries_the_initiator_gives_up_at_the_first_expiry() {
     let mut net = watched(&NAMES);
     let _ = open_run_with(&mut net, "alice", &NAMES, R1, &InitParams::default().timeout(10).retries(0));
     assert_eq!(kinds(&net.agents["alice"].tick(Some(10.0)).unwrap()), vec![Kind::Cancel]);
-    let mut quiet = watched(&NAMES);
-    let _ = open_run_with(&mut quiet, "alice", &NAMES, R1, &InitParams::default().timeout(0).retries(1));
-    assert!(quiet.agents["alice"].next_wakeup().is_none());
-    assert!(quiet.agents["alice"].tick(Some(1e9)).unwrap().send.is_empty());
 }
 
 // --- another version -------------------------------------------------------------------------

@@ -16,17 +16,35 @@ pub const PROTOCOL_VERSION: &str = "0.3.0";
 /// and in reports.
 pub const MILLION: i64 = 1_000_000;
 
+/// Whitespace is these four characters and no other: a text is trimmed of them, and `\s` of a pattern stands for them, so that every
+/// implementation reads the same text, whatever its language. (`str::trim` strips every Unicode space, which is more.)
+pub const WS: [char; 4] = [' ', '\t', '\r', '\n'];
+
+/// `s` without the whitespace (see `WS`) at either end.
+#[must_use]
+pub fn trim_ws(s: &str) -> &str {
+    s.trim_matches(&WS[..])
+}
+
+/// `s` with each run of whitespace (see `WS`) made one space, and none left at either end.
+#[must_use]
+pub fn squeeze(s: &str) -> String {
+    s.split(&WS[..]).filter(|part| !part.is_empty()).collect::<Vec<_>>().join(" ")
+}
+
 /// The default `satisfaction_threshold` (0.6), in millionths.
 pub const DEFAULT_THRESHOLD: i64 = 600_000;
 /// The default `eps` (0.05), in millionths.
 pub const DEFAULT_EPS: i64 = 50_000;
 /// The default budget of repair rounds.
 pub const DEFAULT_BUDGET: i64 = 8;
-/// The default `timeout`, in seconds. A `timeout` of 0 switches the timers off: nobody asks again for a message and nobody gives
-/// up on a clock. That is an extension of this library, not part of the spec.
+/// The default `timeout`, in seconds.
 pub const DEFAULT_TIMEOUT: i64 = 300;
 /// The default number of requests before an agent aborts.
 pub const DEFAULT_RETRIES: i64 = 3;
+/// The largest `budget`, `timeout` or `retries` of a run. The spec sets no top; this library refuses more than 9 digits, so that every value
+/// is one that someone can use, and says so clearly. A limit of this library, not of the spec.
+pub const MAX_INTEGER: i64 = 999_999_999;
 
 /// How a run ends. `Aborted` is the end of a run that cannot complete; a `<concord-result>` never says it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -115,7 +133,7 @@ impl Num {
             Num::Text(t) => parse_number(t),
             Num::Int(i) if *i >= 0 => parse_number(&i.to_string()),
             Num::Int(_) => None,
-            // Python writes such a float with an exponent (`1e-06`, `1e+16`), which is not a number of the spec.
+            // A float below 1e-4 or from 1e16 is written with an exponent (`1e-06`, `1e+16`) by its shortest text: not a number of the spec.
             Num::Float(f) if *f != 0.0 && (f.abs() < 1e-4 || f.abs() >= 1e16) => None,
             Num::Float(f) => parse_number(&f.to_string()),
         }
@@ -176,23 +194,24 @@ pub fn format_number(millionths: i64) -> String {
     format!("{whole}.{}", if frac.is_empty() { "0" } else { frac })
 }
 
-/// `text` quoted the way Python writes the repr of a string, which is how the messages of the library show a value that is wrong.
-pub fn py_repr(text: &str) -> String {
-    let quote = if text.contains('\'') && !text.contains('"') { '"' } else { '\'' };
-    let mut out = String::from(quote);
+/// `text` between quotes, for an error message that shows exactly what was wrong: single quotes, or double quotes when the text holds a
+/// single quote and no double quote. A backslash, a line feed, a carriage return, a tab and the quote itself are escaped.
+pub(crate) fn quote(text: &str) -> String {
+    let mark = if text.contains('\'') && !text.contains('"') { '"' } else { '\'' };
+    let mut out = String::from(mark);
     for c in text.chars() {
         match c {
             '\\' => out.push_str("\\\\"),
             '\n' => out.push_str("\\n"),
             '\r' => out.push_str("\\r"),
             '\t' => out.push_str("\\t"),
-            c if c == quote => {
+            c if c == mark => {
                 out.push('\\');
                 out.push(c);
             }
             c => out.push(c),
         }
     }
-    out.push(quote);
+    out.push(mark);
     out
 }

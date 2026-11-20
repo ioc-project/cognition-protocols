@@ -57,7 +57,7 @@ fn errors(step: &Step) -> Vec<Error> {
         .collect()
 }
 
-fn timers(a: &Agent) -> Vec<(String, Option<f64>)> {
+fn timers(a: &Agent) -> Vec<(String, f64)> {
     let mut t: Vec<_> = a.status(None).unwrap().timers.into_iter().collect();
     t.sort_by(|x, y| x.0.cmp(&y.0));
     t
@@ -67,8 +67,8 @@ fn timer_keys(a: &Agent) -> Vec<String> {
     timers(a).into_iter().map(|(k, _)| k).collect()
 }
 
-fn tm(items: &[(&str, f64)]) -> Vec<(String, Option<f64>)> {
-    items.iter().map(|(k, v)| (k.to_string(), Some(*v))).collect()
+fn tm(items: &[(&str, f64)]) -> Vec<(String, f64)> {
+    items.iter().map(|(k, v)| (k.to_string(), *v)).collect()
 }
 
 fn joined_with(now: f64, p: InitParams, names: &[&str], me: &str) -> Agent {
@@ -257,15 +257,6 @@ fn with_no_retries_the_first_expiry_gives_up() {
     let step = a.tick(Some(10.0)).unwrap();
     assert_eq!(kinds(&step), [Kind::Cancel]);
     assert_eq!(a.status(None).unwrap().status, RunStatus::Aborted);
-}
-
-#[test]
-fn a_timeout_of_zero_means_the_timers_are_never_triggered() {
-    let mut a = joined_with(0.0, InitParams::default().timeout(0).retries(1), &["cost", "security"], "cost");
-    assert_eq!(a.status(None).unwrap().timers, IndexMap::from([("init-reply|security".to_string(), None)]));
-    assert_eq!(a.next_wakeup(), None);
-    assert!(a.tick(Some(1e9)).unwrap().send.is_empty());
-    assert_eq!(a.status(None).unwrap().status, RunStatus::Active);
 }
 
 #[test]
@@ -611,12 +602,12 @@ fn a_batch_whose_first_lacking_message_has_arrived_starts_a_new_wait() {
     let cost = net.a("cost");
     let timer = |a: &Agent| a.status(None).unwrap().timers["score|legal|seeds"];
     let _ = cost.tick(Some(0.0)).unwrap();
-    assert_eq!(timer(cost), Some(10.0));
+    assert_eq!(timer(cost), 10.0);
     let e: Vec<Error> = errors(&cost.tick(Some(10.0)).unwrap()).into_iter().filter(|e| e.to == "legal").collect();
     assert_eq!(e.len(), 1);
-    assert_eq!((timer(cost), e[0].candidate.as_deref()), (Some(20.0), Some("seed-cost")));
+    assert_eq!((timer(cost), e[0].candidate.as_deref()), (20.0, Some("seed-cost")));
     let _ = cost.receive(&score("legal", &[("seed-cost", 70)]), Some(15.0)).unwrap(); // only part of the batch arrives
-    assert_eq!(timer(cost), Some(25.0)); // the next one is a new wait
+    assert_eq!(timer(cost), 25.0); // the next one is a new wait
     assert_eq!(cost.state.runs[RUN].timers["score|legal|seeds"].requests, 0);
     assert!(errors(&cost.tick(Some(20.0)).unwrap()).into_iter().all(|e| e.to != "legal"));
     // legal has its new wait until 25

@@ -16,13 +16,21 @@ use regex::Regex;
 use serde_json::{ser::Formatter, Map, Value};
 
 use crate::errors::{ConcordError, Result};
+use crate::protocol::trim_ws;
 
 pub const SCHEMA_KEYS: [&str; 7] = ["type", "enum", "pattern", "minLength", "maxLength", "description", "title"];
 
-/// How large a compiled pattern may be, in bytes. The default of the `regex` crate (10 MiB) refuses patterns, such as `(a{1000}){1000}`,
-/// that the Python library compiles, so an init made there could be refused here. The pattern comes from the init of a peer, so the
-/// limit is also what a peer can make every participant allocate: it is no larger than that pattern needs.
-const REGEX_SIZE_LIMIT: usize = 64 << 20;
+/// How large a compiled pattern may be, in bytes. The pattern comes from the init of a peer, and matching it costs more than its size
+/// grows: `.{60000}` needs 62 MB and takes 11 s on a candidate of 200,000 characters, `.{1000}` needs 1 MB and takes 4 ms, and the slowest
+/// pattern below the limit takes about 0.4 s. So the limit is what a peer can make every participant allocate and spend on each check.
+/// A pattern above it is refused as outside the supported subset. A limit of this library, not of the spec.
+const REGEX_SIZE_LIMIT: usize = 1 << 20;
+
+/// How deep groups may nest in a pattern. A limit of this library, not of the spec. The `regex` crate counts a repeated group twice, so
+/// 100 levels need 200 of its own nesting limit, which `compile_pattern` sets to `REGEX_NEST_LIMIT` so that the crate's limit is never
+/// what refuses a pattern that passed this one.
+const MAX_GROUP_DEPTH: usize = 100;
+const REGEX_NEST_LIMIT: u32 = 256;
 
 /// What `\.` and `.` stand for in the spec, written out so that Unicode-aware classes never apply.
 const DOT: &str = "[^\\r\\n]";
@@ -164,6 +172,9 @@ fn translate(pattern: &[char]) -> Parsed<String> {
                 prev = Prev::Atom;
             }
             '(' => {
+                if depth >= MAX_GROUP_DEPTH {
+                    return Err(format!("groups nest deeper than {MAX_GROUP_DEPTH} levels"));
+                }
                 if pattern.get(i + 1) == Some(&'?') {
                     if pattern.get(i + 2) != Some(&':') {
                         return Err("(? is outside the subset except (?:".to_string());
@@ -240,54 +251,13 @@ fn translate(pattern: &[char]) -> Parsed<String> {
 ///
 /// `ConcordError::Schema` with the reason when the pattern is outside the subset of the spec, or its compiled form is too large.
 pub fn compile_pattern(pattern: &str) -> Result<Regex> {
-    if let Some(found) = cache().find(pattern) {
-        return Ok(found);
-    }
     let chars: Vec<char> = pattern.chars().collect();
     let text = translate(&chars).map_err(|why| not_supported(&why))?;
-    let build = |limit| regex::RegexBuilder::new(&text).size_limit(limit).build();
-    let (compiled, small) = match build(CACHED_SIZE_LIMIT) {
-        Ok(compiled) => (compiled, true),
-        Err(_) => (build(REGEX_SIZE_LIMIT).map_err(|e| not_supported(&e.to_string()))?, false),
-    };
-    cache().keep(pattern, &compiled, small);
-    Ok(compiled)
-}
-
-/// The compiled patterns that are kept: a candidate is checked against the pattern of its run on every proposal, and a pattern is compiled
-/// once, not once for each check. The patterns come from the inits of peers, so what is kept is bounded: up to `CACHED_PATTERNS` patterns
-/// that each compile to at most `CACHED_SIZE_LIMIT` bytes, and the last one that needed more (up to `REGEX_SIZE_LIMIT`).
-#[derive(Default)]
-struct PatternCache {
-    small: std::collections::HashMap<String, Regex>,
-    big: Option<(String, Regex)>,
-}
-
-const CACHED_PATTERNS: usize = 64;
-
-/// How large a compiled pattern may be to be kept with the small ones, in bytes.
-const CACHED_SIZE_LIMIT: usize = 1 << 20;
-
-impl PatternCache {
-    fn find(&self, pattern: &str) -> Option<Regex> {
-        self.small.get(pattern).or_else(|| self.big.as_ref().filter(|(p, _)| p == pattern).map(|(_, r)| r)).cloned()
-    }
-
-    fn keep(&mut self, pattern: &str, compiled: &Regex, small: bool) {
-        if !small {
-            self.big = Some((pattern.to_string(), compiled.clone()));
-            return;
-        }
-        if self.small.len() >= CACHED_PATTERNS {
-            self.small.clear(); // the patterns of the runs in progress are few: start again rather than keep a policy
-        }
-        self.small.insert(pattern.to_string(), compiled.clone());
-    }
-}
-
-fn cache() -> std::sync::MutexGuard<'static, PatternCache> {
-    static CACHE: std::sync::LazyLock<std::sync::Mutex<PatternCache>> = std::sync::LazyLock::new(Default::default);
-    CACHE.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    regex::RegexBuilder::new(&text)
+        .size_limit(REGEX_SIZE_LIMIT)
+        .nest_limit(REGEX_NEST_LIMIT)
+        .build()
+        .map_err(|e| not_supported(&e.to_string()))
 }
 
 fn not_supported(why: &str) -> ConcordError {
@@ -300,7 +270,7 @@ fn not_supported(why: &str) -> ConcordError {
 ///
 /// `ConcordError::Schema` when `text` is not JSON, or not a supported schema.
 pub fn parse_schema(text: &str, label: &str) -> Result<Value> {
-    match serde_json::from_str::<Value>(text.trim()) {
+    match serde_json::from_str::<Value>(trim_ws(text)) {
         Ok(spec) => validate_schema(&spec, label).map(|()| spec),
         Err(exc) => Err(ConcordError::schema(format!(
             "{label} must be a JSON Schema object, but it is not valid JSON ({exc}). For an open format use \
@@ -309,7 +279,7 @@ pub fn parse_schema(text: &str, label: &str) -> Result<Value> {
     }
 }
 
-/// Python's idea of truth for a JSON value: what `if value:` would say.
+/// Whether a JSON value is set: not `null`, `false`, `0`, or an empty text, array or object. A schema key with an unset value is read as absent.
 fn truthy(v: &Value) -> bool {
     match v {
         Value::Null => false,
@@ -354,15 +324,20 @@ pub fn validate_schema(spec: &Value, label: &str) -> Result<()> {
         return Err(ConcordError::schema(format!("{label} \"type\" can only be \"string\": a candidate is text")));
     }
     let has_enum = map.get("enum").is_some_and(truthy);
-    let has_description = map.get("description").is_some_and(|d| truthy(d) && !text_of(d).trim().is_empty());
+    let has_description = map.get("description").is_some_and(|d| truthy(d) && !trim_ws(&text_of(d)).is_empty());
     if !(has_enum || has_description) {
         return Err(ConcordError::schema(format!("{label} needs a \"description\" (what one option is, in plain words) or an \"enum\"")));
     }
     if let Some(e) = map.get("enum") {
-        let options = e.as_array().filter(|a| a.len() >= 2 && a.iter().all(|x| x.as_str().is_some_and(|s| !s.trim().is_empty())));
+        let options = e.as_array().filter(|a| a.len() >= 2 && a.iter().all(|x| x.as_str().is_some_and(|s| !trim_ws(s).is_empty())));
         let Some(options) = options else {
             return Err(ConcordError::schema(format!("{label} \"enum\" must be a list of at least 2 non-empty strings")));
         };
+        if options.iter().filter_map(Value::as_str).any(|o| o != trim_ws(o)) {
+            return Err(ConcordError::schema(format!(
+                "{label} \"enum\" has an option with whitespace at either end: a candidate is trimmed before it is compared, so the option could never match"
+            )));
+        }
         let distinct: BTreeSet<&str> = options.iter().filter_map(Value::as_str).collect();
         if distinct.len() != options.len() {
             return Err(ConcordError::schema(format!("{label} \"enum\" holds the same option twice")));
@@ -402,7 +377,7 @@ pub fn check_candidate(spec: &Value, text: &str) -> Result<Option<String>> {
     let Value::Object(map) = spec else {
         return Err(ConcordError::schema("the schema is not a JSON object: nothing can be checked against it"));
     };
-    let t = text.trim();
+    let t = trim_ws(text);
     if map.contains_key("enum") {
         let options = options_of(map);
         if !options.contains(&t) {
@@ -452,10 +427,10 @@ pub fn render_schema(spec: &Value) -> String {
     map.get("title").filter(|t| truthy(t)).map(text_of).unwrap_or_else(|| "text".to_string())
 }
 
-/// Writes JSON the way Python's `json.dumps` does by default: `, ` between items and `: ` between a key and its value.
-struct PythonFormatter;
+/// Writes JSON with `, ` between items and `: ` between a key and its value, the layout of the examples of the spec.
+struct SpacedFormatter;
 
-impl Formatter for PythonFormatter {
+impl Formatter for SpacedFormatter {
     fn begin_array_value<W: ?Sized + std::io::Write>(&mut self, w: &mut W, first: bool) -> std::io::Result<()> {
         if first {
             Ok(())
@@ -481,7 +456,7 @@ impl Formatter for PythonFormatter {
 pub fn schema_text(spec: &Value) -> String {
     use serde::Serialize;
     let mut out = Vec::new();
-    let mut ser = serde_json::Serializer::with_formatter(&mut out, PythonFormatter);
+    let mut ser = serde_json::Serializer::with_formatter(&mut out, SpacedFormatter);
     // `Value` keeps its keys as they were written, so they are sorted here, as `sort_keys=True` does.
     sorted(spec).serialize(&mut ser).expect("a JSON value can be written");
     String::from_utf8(out).expect("JSON is UTF-8")

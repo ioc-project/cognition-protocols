@@ -3,10 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //! The file store: a state is saved all-or-nothing and loads back; a missing one is told from one that cannot be read.
-// Python test_the_indent_is_the_callers_choice: `FileStore` has no `indent` option in Rust (it always writes two spaces), so only the
-// default is tested. Python test_a_state_that_cannot_be_saved_leaves_the_old_one_untouched: a `serde_json::Value` is always writable,
-// so there is no state that cannot be serialised. Python test_a_failed_rename_cleans_up_its_temporary_file monkeypatches `os.replace`;
-// here the rename fails for real, because the target is a directory.
+// `FileStore` has no `indent` option (it always writes two spaces), so only the default is tested. A `serde_json::Value` is always
+// writable, so no state fails to serialise. A failed rename is tested for real: the target is a directory.
 
 use std::path::{Path, PathBuf};
 

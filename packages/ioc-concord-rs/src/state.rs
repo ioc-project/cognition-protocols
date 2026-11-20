@@ -65,8 +65,8 @@ pub struct Timer {
     pub requests: u32,
     /// Whether a gap has been asked for at once.
     pub asked: bool,
-    /// When the timer expires; None when the run has no timers.
-    pub deadline: Option<f64>,
+    /// When the timer expires.
+    pub deadline: f64,
     /// The first message lacking, which a request names.
     pub candidate: Option<String>,
     pub author: String,
@@ -180,10 +180,7 @@ impl AgentState {
     /// `ConcordError::State` when `me` is not an agent id.
     pub fn new(me: &str) -> Result<Self> {
         if !is_agent_id(me) {
-            return Err(ConcordError::state(format!(
-                "an agent id is 1 to 64 letters, digits, _ or -, not {}",
-                crate::protocol::py_repr(me)
-            )));
+            return Err(ConcordError::state(format!("an agent id is 1 to 64 letters, digits, _ or -, not {}", crate::protocol::quote(me))));
         }
         Ok(AgentState { me: me.to_string(), runs: IndexMap::new(), active: None })
     }

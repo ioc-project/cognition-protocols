@@ -5,7 +5,7 @@
 name = "ioc-concord"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.99.0"
+rust-version = "1.89"
 description = "CONCORD protocol library."
 license = "Apache-2.0"
 readme = "README.md"

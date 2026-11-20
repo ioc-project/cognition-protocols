@@ -75,6 +75,17 @@ fn an_init_of_another_version_gets_a_version_error_that_names_both_versions() {
 }
 
 #[test]
+fn the_version_error_says_which_version_the_init_has_or_that_it_has_none() {
+    let step = rcv(&mut agent("cost"), &v2(&init_doc()));
+    assert!(error_of(&step).1.text.contains("I speak version 0.3.0; this init is version 0.2.0."));
+    let without = init_doc().replace(" version=\"0.3.0\"", "");
+    let (_, e) = error_of(&rcv(&mut agent("cost"), &without));
+    assert_eq!((e.what.as_str(), e.reason.as_str()), ("init", "version"));
+    assert!(e.text.contains("I speak version 0.3.0; this init has no version."));
+    assert!(!e.text.contains("None"));
+}
+
+#[test]
 fn an_init_of_another_version_inside_a_resend_is_refused_the_same_way() {
     let mut a = agent("cost");
     let wrapper = resend_doc("alice", &v2(&init_doc()), None);
@@ -105,6 +116,30 @@ fn an_invalid_init_gets_an_invalid_error_with_the_reason_and_is_not_joined() {
     assert!(a.status(None).is_none());
     let step = rcv(&mut a, &forge(&init_doc(), "<agent>security</agent>", "<agent>cost</agent>"));
     assert!(error_of(&step).1.text.contains("duplicate"));
+}
+
+#[test]
+fn an_init_nested_to_any_depth_gets_an_invalid_error_and_does_not_crash_the_agent() {
+    let mut a = agent("cost");
+    for n in [20, 20_000] {
+        let deep = forge(&init_doc(), "</concord-init>", &format!("{}{}</concord-init>", "<a>".repeat(n), "</a>".repeat(n)));
+        let step = rcv(&mut a, &deep);
+        let (_, e) = error_of(&step);
+        assert_eq!((e.what.as_str(), e.reason.as_str()), ("init", "invalid"));
+        assert!(e.text.contains("deeper than 16 levels"));
+        assert!(a.status(None).is_none());
+    }
+}
+
+#[test]
+fn a_resend_nested_to_any_depth_is_ignored_by_the_agent_and_does_not_crash_it() {
+    let wrap = format!("<concord-resend version=\"0.3.0\" from=\"alice\" run_id=\"{RUN}\" uuid=\"{OTHER}\">");
+    for depth in [2, 50_000] {
+        let text = format!("{}{}{}", wrap.repeat(depth), init_doc(), "</concord-resend>".repeat(depth));
+        let mut a = agent("cost");
+        let step = rcv(&mut a, &text);
+        assert!(step.send.is_empty() && a.status(None).is_none());
+    }
 }
 
 #[test]
@@ -381,6 +416,19 @@ fn a_cancel_ends_the_run_aborted_and_the_agent_passes_it_on_once() {
     let rep = a.report(None).unwrap();
     assert_eq!((rep.outcome, rep.winner.clone(), rep.scores.is_empty()), (Some(Outcome::Aborted), None, true));
     assert_eq!(rep.reason, Some(Abort { reason: "missing-agent".into(), agent: Some("legal".into()), superseded_by: None, note: None }));
+}
+
+#[test]
+fn a_cancel_with_an_empty_agent_is_ignored_as_invalid_and_does_not_end_the_run() {
+    let mut a = agent("cost");
+    let _ = rcv(&mut a, &init_doc());
+    let step = rcv(&mut a, &version_cancel(CA1).replace("/>", " agent=\"\"/>"));
+    assert_eq!(reason(&step), Some("invalid"));
+    assert!(step.send.is_empty());
+    assert_eq!(a.status(None).unwrap().status, RunStatus::Active);
+    let step = rcv(&mut a, &cancel().replace("agent=\"legal\"", "agent=\"\""));
+    assert_eq!(reason(&step), Some("invalid"));
+    assert_eq!(a.status(None).unwrap().status, RunStatus::Active);
 }
 
 #[test]

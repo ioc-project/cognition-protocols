@@ -3,6 +3,7 @@ name: concord-rust-tests
 # The Rust port of the ioc-concord library (packages/ioc-concord-rs). Two jobs that run side by side:
 #   concord-rust-library  formatting, clippy without warnings, the documentation without warnings, and the tests
 #   concord-rust-msrv     the crate builds, and its tests pass, on the oldest Rust it declares (`rust-version` in its Cargo.toml)
+# Both build with `--locked`: what `Cargo.lock` says is what is built, and a change to `Cargo.toml` that is not in the lock fails.
 
 on:
   pull_request:
@@ -35,15 +36,15 @@ jobs:
         run: cargo fmt --check
 
       - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
 
       - name: Documentation
         env:
           RUSTDOCFLAGS: -D warnings
-        run: cargo doc --no-deps
+        run: cargo doc --locked --no-deps
 
       - name: Tests
-        run: cargo test
+        run: cargo test --locked
 
   concord-rust-msrv:
     name: concord-rust-msrv
@@ -60,5 +61,5 @@ jobs:
         run: |
           msrv=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
           rustup toolchain install "$msrv" --profile minimal
-          cargo "+$msrv" check --all-targets
-          cargo "+$msrv" test
+          cargo "+$msrv" check --locked --all-targets
+          cargo "+$msrv" test --locked

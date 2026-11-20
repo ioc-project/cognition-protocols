@@ -33,8 +33,8 @@ use serde_json::Value;
 use crate::engine::{check_params, parse_candidate_id, Params};
 use crate::errors::{ConcordError, Result};
 use crate::protocol::{
-    format_number, is_agent_id, is_uuid, parse_number, py_repr, Num, Outcome, DEFAULT_BUDGET, DEFAULT_EPS, DEFAULT_RETRIES,
-    DEFAULT_THRESHOLD, DEFAULT_TIMEOUT, MILLION, PROTOCOL_VERSION, RESULT_OUTCOMES,
+    format_number, is_agent_id, is_uuid, parse_number, quote, squeeze, trim_ws, Num, Outcome, DEFAULT_BUDGET, DEFAULT_EPS, DEFAULT_RETRIES,
+    DEFAULT_THRESHOLD, DEFAULT_TIMEOUT, MAX_INTEGER, MILLION, PROTOCOL_VERSION, RESULT_OUTCOMES,
 };
 use crate::schema::{check_candidate, schema_text, validate_schema};
 use crate::xmlutil::{check_of, esc_attr, esc_text, verify_check, with_check};
@@ -124,12 +124,10 @@ pub fn kind_of_tag(tag: &str) -> Option<&'static str> {
 
 static OPEN_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<(concord-[a-z-]+)\b").unwrap());
 static OPEN_AT_START_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^<(concord-[a-z-]+)\b").unwrap());
-static FENCE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?s)```(?:xml)?\s*\n(.*?)\n```").unwrap());
+static FENCE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?s)```(?:xml)?[ \t\r\n]*\n(.*?)\n```").unwrap());
 static ROOT_TAG_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^<[^>]*>").unwrap());
-static ATTR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"([A-Za-z_][\w.:-]*)\s*=\s*"([^"]*)""#).unwrap());
+static ATTR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"([A-Za-z_][\w.:-]*)[ \t\r\n]*=[ \t\r\n]*"([^"]*)""#).unwrap());
 static ANY_TAG_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<[^>]*>").unwrap());
-
-const WS: [char; 4] = [' ', '\t', '\r', '\n'];
 
 /// A new UUID, as text: the id of a run or of one transmission.
 pub fn new_uuid() -> String {
@@ -142,6 +140,45 @@ fn unescape(s: &str) -> String {
 
 fn invalid<T>(message: impl Into<String>) -> Result<T> {
     Err(ConcordError::invalid_message(message))
+}
+
+/// How deep the elements of a message may nest. A limit of this library, not of the spec: a message of the protocol nests 5 levels at
+/// most (a resend around an init reply, its proposal, its score and its `raw`), and the XML parser recurses once per level, so a text
+/// of any depth would overflow the stack of whoever receives it.
+const MAX_DEPTH: usize = 16;
+
+/// Refuses a `doc` whose elements nest deeper than `MAX_DEPTH`, before the parser sees it. One pass, in a fixed amount of memory: the end
+/// of a tag is the first `>` that is not inside a quoted value. A tag that never ends is left to the parser to report.
+fn check_depth(doc: &str) -> Result<()> {
+    let bytes = doc.as_bytes();
+    let (mut depth, mut at) = (0usize, 0usize);
+    while let Some(offset) = bytes[at..].iter().position(|&b| b == b'<') {
+        let start = at + offset;
+        let (mut quote, mut end) = (0u8, None);
+        for (i, &b) in bytes.iter().enumerate().skip(start + 1) {
+            if quote != 0 {
+                if b == quote {
+                    quote = 0;
+                }
+            } else if b == b'"' || b == b'\'' {
+                quote = b;
+            } else if b == b'>' {
+                end = Some(i);
+                break;
+            }
+        }
+        let Some(end) = end else { return Ok(()) };
+        if bytes[start + 1..].first() == Some(&b'/') {
+            depth = depth.saturating_sub(1);
+        } else if bytes[end - 1] != b'/' {
+            depth += 1;
+            if depth > MAX_DEPTH {
+                return invalid(format!("the message nests its elements deeper than {MAX_DEPTH} levels"));
+            }
+        }
+        at = end + 1;
+    }
+    Ok(())
 }
 
 // --------------------------------------------------------------------------
@@ -158,7 +195,7 @@ fn score_value(value: &Num, what: &str) -> Result<i64> {
 
 fn show(value: &Num) -> String {
     match value {
-        Num::Text(t) => py_repr(t),
+        Num::Text(t) => quote(t),
         other => other.to_string(),
     }
 }
@@ -167,7 +204,7 @@ fn need_agent(value: &str, what: &str) -> Result<()> {
     if is_agent_id(value) {
         Ok(())
     } else {
-        invalid(format!("{what} must be an agent id (1 to 64 letters, digits, _ or -), not {}", py_repr(value)))
+        invalid(format!("{what} must be an agent id (1 to 64 letters, digits, _ or -), not {}", quote(value)))
     }
 }
 
@@ -175,13 +212,13 @@ fn need_uuid(value: &str, what: &str) -> Result<()> {
     if is_uuid(value) {
         Ok(())
     } else {
-        invalid(format!("{what} must be a UUID, not {}", py_repr(value)))
+        invalid(format!("{what} must be a UUID, not {}", quote(value)))
     }
 }
 
 /// `value` without the whitespace around it, which is required to hold something.
 fn need(value: &str, what: &str) -> Result<String> {
-    let v = value.trim();
+    let v = trim_ws(value);
     if v.is_empty() {
         return invalid(format!("{what} is required and cannot be empty"));
     }
@@ -216,8 +253,7 @@ fn problem<T>(result: Result<T>) -> Result<T> {
 }
 
 /// The parameters of an init that the initiator sets: anything left out takes its default. `satisfaction_threshold` and `eps` are
-/// numbers as text, int or float; `budget` is the `B` of the spec. A `timeout` of 0 switches the timers off, an extension of this
-/// library that is not part of the spec.
+/// numbers as text, int or float; `budget` is the `B` of the spec.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct InitParams {
     pub satisfaction_threshold: Option<Num>,
@@ -342,7 +378,7 @@ fn proposal_lines(
 ) -> Result<Vec<String>> {
     match parse_candidate_id(pid) {
         Some((_, who)) if who == from => {}
-        _ => return invalid(format!("the proposal id {} is not seed-{from} or r<N>-{from}", py_repr(pid))),
+        _ => return invalid(format!("the proposal id {} is not seed-{from} or r<N>-{from}", quote(pid))),
     }
     let candidate = need(candidate, "the candidate")?;
     if let Some(spec) = spec {
@@ -465,7 +501,7 @@ pub fn build_score(from: &str, run_id: &str, scores: &[ScoreIn], uid: Option<&st
     let mut seen = std::collections::HashSet::new();
     for s in scores {
         let Some((_, who)) = parse_candidate_id(&s.id) else {
-            return invalid(format!("{} is not a candidate id", py_repr(&s.id)));
+            return invalid(format!("{} is not a candidate id", quote(&s.id)));
         };
         if who == from {
             return invalid(format!("{from} rates {}, which it proposed: its score is in the proposal", s.id));
@@ -494,10 +530,10 @@ pub fn build_score(from: &str, run_id: &str, scores: &[ScoreIn], uid: Option<&st
 /// valid.
 pub fn build_result(from: &str, run_id: &str, outcome: Outcome, winning_candidate_id: &str, uid: Option<&str>) -> Result<String> {
     if !RESULT_OUTCOMES.contains(&outcome) {
-        return invalid(format!("outcome must be one of SUCCESS, BEST_EFFORT, not {}", py_repr(outcome.as_str())));
+        return invalid(format!("outcome must be one of SUCCESS, BEST_EFFORT, not {}", quote(outcome.as_str())));
     }
     if parse_candidate_id(winning_candidate_id).is_none() {
-        return invalid(format!("a {outcome} result needs the id of the winning candidate, not {}", py_repr(winning_candidate_id)));
+        return invalid(format!("a {outcome} result needs the id of the winning candidate, not {}", quote(winning_candidate_id)));
     }
     need_uuid(run_id, "run_id")?;
     let lines = [
@@ -509,17 +545,18 @@ pub fn build_result(from: &str, run_id: &str, outcome: Outcome, winning_candidat
     with_check(&lines.join("\n"))
 }
 
-fn repr_opt(v: Option<&str>) -> String {
-    v.map_or_else(|| "None".to_string(), py_repr)
+/// `v` quoted, or `(missing)` when there is none.
+fn quote_or_missing(v: Option<&str>) -> String {
+    v.map_or_else(|| "(missing)".to_string(), quote)
 }
 
 fn check_error_fields(what: Option<&str>, reason: Option<&str>, candidate: Option<&str>, reference: Option<&str>) -> Result<()> {
     let reason_ok = reason.filter(|r| ERROR_REASONS.contains(r));
     let Some(reason) = reason_ok else {
-        return invalid(format!("reason must be one of {}, not {}", ERROR_REASONS.join(", "), repr_opt(reason)));
+        return invalid(format!("reason must be one of {}, not {}", ERROR_REASONS.join(", "), quote_or_missing(reason)));
     };
     let Some(what) = what.filter(|w| ERROR_WHAT.contains(w)) else {
-        return invalid(format!("what must be one of {}, not {}", ERROR_WHAT.join(", "), repr_opt(what)));
+        return invalid(format!("what must be one of {}, not {}", ERROR_WHAT.join(", "), quote_or_missing(what)));
     };
     if what == "init" && !["busy", "invalid", "version"].contains(&reason) {
         return invalid("what=\"init\" goes only with reason=\"busy\", \"invalid\" or \"version\"");
@@ -537,7 +574,7 @@ fn check_error_fields(what: Option<&str>, reason: Option<&str>, candidate: Optio
     }
     if let Some(r) = reference {
         if !is_uuid(r) {
-            return invalid(format!("ref must be a UUID, not {}", py_repr(r)));
+            return invalid(format!("ref must be a UUID, not {}", quote(r)));
         }
         if reason != "check" {
             return invalid("ref goes only with reason=\"check\"");
@@ -576,7 +613,7 @@ pub fn build_error(
     need_agent(to, "to")?;
     let more = [("to", Some(to)), ("what", Some(what)), ("candidate", candidate), ("ref", reference), ("reason", Some(reason))];
     let head = head(ERROR, from, run_id, uid, &more)?;
-    let text = text.trim();
+    let text = trim_ws(text);
     Ok(if text.is_empty() { format!("{head}/>") } else { format!("{head}>\n  {}\n</{ERROR}>", esc_text(text)) })
 }
 
@@ -587,7 +624,7 @@ pub fn build_error(
 ///
 /// `ConcordError::InvalidMessage` when `original` is not a message of the run, was not written by `from`, or an id is not valid.
 pub fn build_resend(from: &str, run_id: &str, original: &str, reply_to: Option<&str>, uid: Option<&str>) -> Result<String> {
-    let inner = original.trim_matches(&WS[..]);
+    let inner = trim_ws(original);
     let info = peek(inner).filter(|i| DATA_TAGS.contains(&i.tag.as_str()));
     let Some(info) = info else {
         return invalid("a resend carries a message of the run: an init, init reply, repair, score or result");
@@ -595,7 +632,7 @@ pub fn build_resend(from: &str, run_id: &str, original: &str, reply_to: Option<&
     if info.attrs.get("from").map(String::as_str) != Some(from) {
         return invalid(format!(
             "{from} can only send again its own messages, not one from {}",
-            repr_opt(info.attrs.get("from").map(String::as_str))
+            quote_or_missing(info.attrs.get("from").map(String::as_str))
         ));
     }
     if let Some(r) = reply_to {
@@ -608,23 +645,23 @@ pub fn build_resend(from: &str, run_id: &str, original: &str, reply_to: Option<&
 
 fn check_cancel_fields(reason: &str, superseded_by: Option<&str>, agent: Option<&str>) -> Result<()> {
     if !CANCEL_REASONS.contains(&reason) {
-        return invalid(format!("reason must be one of {}, not {}", CANCEL_REASONS.join(", "), py_repr(reason)));
+        return invalid(format!("reason must be one of {}, not {}", CANCEL_REASONS.join(", "), quote(reason)));
     }
-    let present = |v: Option<&str>| v.is_some_and(|s| !s.is_empty());
-    if (reason == "superseded") != present(superseded_by) {
+    // an attribute that is there counts, whatever its value: an empty one is not a UUID or an agent id, and is refused below
+    if (reason == "superseded") != superseded_by.is_some() {
         return invalid("superseded_by goes with reason=\"superseded\", and only with it");
     }
-    if (reason == "missing-agent") != present(agent) {
+    if (reason == "missing-agent") != agent.is_some() {
         return invalid("agent goes with reason=\"missing-agent\", and only with it");
     }
-    if let Some(s) = superseded_by.filter(|s| !s.is_empty()) {
+    if let Some(s) = superseded_by {
         if !is_uuid(s) {
-            return invalid(format!("superseded_by must be a UUID, not {}", py_repr(s)));
+            return invalid(format!("superseded_by must be a UUID, not {}", quote(s)));
         }
     }
-    if let Some(a) = agent.filter(|a| !a.is_empty()) {
+    if let Some(a) = agent {
         if !is_agent_id(a) {
-            return invalid(format!("agent must be an agent id, not {}", py_repr(a)));
+            return invalid(format!("agent must be an agent id, not {}", quote(a)));
         }
     }
     Ok(())
@@ -663,9 +700,9 @@ pub fn build_cancel(
 ///
 /// `ConcordError::InvalidMessage` when `text` holds no CONCORD message, or the message is cut off.
 pub fn locate(text: &str) -> Result<&str> {
-    let mut s = text.trim();
+    let mut s = trim_ws(text);
     if let Some(fenced) = FENCE_RE.captures_iter(s).filter_map(|c| c.get(1)).find(|g| g.as_str().contains("<concord-")) {
-        s = fenced.as_str().trim();
+        s = trim_ws(fenced.as_str());
     }
     let Some(m) = OPEN_RE.captures(s) else {
         return invalid("no CONCORD message in the text");
@@ -692,7 +729,7 @@ pub struct Peek {
     pub tag: String,
     /// Every attribute of the start tag (`version`, `from`, `run_id`, `uuid`, `check`, `reply_to`, ...), unescaped.
     pub attrs: HashMap<String, String>,
-    /// The peek of the document inside a `<concord-resend>`.
+    /// The peek of the document inside a `<concord-resend>`, one level only: its own `inner` is None.
     pub inner: Option<Box<Peek>>,
     /// The text of an `<concord-error>`: an error of another version is read by its root attributes and this text alone.
     pub text: Option<String>,
@@ -704,9 +741,15 @@ impl Peek {
     }
 }
 
-/// The root of `doc`, read from its text without validating anything, or None when it is not a CONCORD element.
+/// The root of `doc`, read from its text without validating anything, or None when it is not a CONCORD element. The document inside a
+/// `<concord-resend>` is read one level deep: a resend inside a resend is not a message of the protocol, so its `inner` is None, and a
+/// text of any depth is read in a fixed number of steps.
 pub fn peek(doc: &str) -> Option<Peek> {
-    let doc = doc.trim();
+    peek_level(doc, true)
+}
+
+fn peek_level(doc: &str, nested: bool) -> Option<Peek> {
+    let doc = trim_ws(doc);
     let start = ROOT_TAG_RE.find(doc)?;
     let name = OPEN_AT_START_RE.captures(start.as_str())?.get(1)?.as_str();
     let attrs = ATTR_RE.captures_iter(start.as_str()).map(|c| (c[1].to_string(), unescape(&c[2]))).collect();
@@ -719,10 +762,10 @@ pub fn peek(doc: &str) -> Option<Peek> {
     };
     let mut out = Peek { tag: name.to_string(), attrs, inner: None, text: None };
     match name {
-        RESEND => out.inner = peek(body).map(Box::new),
+        RESEND if nested => out.inner = peek_level(body, false).map(Box::new),
         ERROR => {
             let plain = ANY_TAG_RE.replace_all(body, " ");
-            out.text = Some(unescape(&plain).split_whitespace().collect::<Vec<_>>().join(" "));
+            out.text = Some(squeeze(&unescape(&plain)));
         }
         _ => {}
     }
@@ -868,7 +911,7 @@ fn name_of<'a>(el: Element<'a, '_>) -> &'a str {
 
 /// The text of an element before its first child element, without the whitespace around it.
 fn txt(el: Element) -> String {
-    own_text(el).trim().to_string()
+    trim_ws(own_text(el)).to_string()
 }
 
 fn own_text<'a>(el: Element<'a, '_>) -> &'a str {
@@ -900,7 +943,7 @@ fn number(text: &str, what: &str) -> Result<i64> {
     parse_number(text).ok_or_else(|| {
         ConcordError::invalid_message(format!(
             "{what} is not a number in the form of the spec (digits, an optional point, at most 6 decimal places): {}",
-            py_repr(text)
+            quote(text)
         ))
     })
 }
@@ -908,16 +951,20 @@ fn number(text: &str, what: &str) -> Result<i64> {
 fn raw_number(text: &str, what: &str) -> Result<i64> {
     let m = number(text, what)?;
     if m > 100 * MILLION {
-        return invalid(format!("{what} must be a number from 0 to 100, not {}", py_repr(text)));
+        return invalid(format!("{what} must be a number from 0 to 100, not {}", quote(text)));
     }
     Ok(m)
 }
 
 fn integer(text: &str, what: &str) -> Result<i64> {
     if text.is_empty() || !text.bytes().all(|b| b.is_ascii_digit()) {
-        return invalid(format!("{what} is not an integer: {}", py_repr(text)));
+        return invalid(format!("{what} is not an integer: {}", quote(text)));
     }
-    text.parse().or_else(|_| invalid(format!("{what} is too large: {}", py_repr(text))))
+    let digits = text.trim_start_matches('0'); // nothing left is a zero
+    if digits.len() > MAX_INTEGER.to_string().len() {
+        return invalid(format!("{what} is above {MAX_INTEGER}"));
+    }
+    Ok(digits.parse().unwrap_or(0))
 }
 
 fn attr<'a>(el: Element<'a, '_>, name: &str) -> Option<&'a str> {
@@ -933,7 +980,7 @@ fn parse_proposal(root: Element, from: &str, spec: Option<&Value>, seed: bool) -
         _ => {
             return invalid(format!(
                 "the proposal id {} is not {}",
-                py_repr(pid),
+                quote(pid),
                 if seed { format!("seed-{from}") } else { format!("r<N>-{from}") }
             ))
         }
@@ -998,7 +1045,7 @@ fn parse_score(root: Element, from: &str) -> Result<ScoreBody> {
         found = true;
         let cid = sc.attribute("candidate_id").unwrap_or("");
         let Some((_, who)) = parse_candidate_id(cid) else {
-            return invalid(format!("{} is not a candidate id", py_repr(cid)));
+            return invalid(format!("{} is not a candidate id", quote(cid)));
         };
         let raw = raw_number(&required(sc, "raw")?, &format!("the <raw> of {cid}"))?;
         let reasoning = required(sc, "reasoning")?;
@@ -1018,11 +1065,11 @@ fn parse_score(root: Element, from: &str) -> Result<ScoreBody> {
 fn parse_result(root: Element) -> Result<ResultBody> {
     let text = required(root, "outcome")?;
     let Some(outcome) = Outcome::parse(&text).filter(|o| RESULT_OUTCOMES.contains(o)) else {
-        return invalid(format!("outcome must be one of SUCCESS, BEST_EFFORT, not {}", py_repr(&text)));
+        return invalid(format!("outcome must be one of SUCCESS, BEST_EFFORT, not {}", quote(&text)));
     };
     let winner = required(root, "winning_candidate_id")?;
     if parse_candidate_id(&winner).is_none() {
-        return invalid(format!("<winning_candidate_id> is not a candidate id: {}", py_repr(&winner)));
+        return invalid(format!("<winning_candidate_id> is not a candidate id: {}", quote(&winner)));
     }
     Ok(ResultBody { outcome, winning_candidate_id: winner })
 }
@@ -1040,7 +1087,7 @@ fn parse_error(root: Element) -> Result<ErrorBody> {
         candidate: candidate.map(str::to_string),
         reference: reference.map(str::to_string),
         reason: reason.unwrap_or_default().to_string(),
-        text: own_text(root).split_whitespace().collect::<Vec<_>>().join(" "),
+        text: squeeze(own_text(root)),
     })
 }
 
@@ -1049,13 +1096,15 @@ fn parse_resend(doc: &str, root: Element) -> Result<ResendBody> {
     if kids.len() != 1 || !DATA_TAGS.contains(&name_of(kids[0])) {
         return invalid("a <concord-resend> carries exactly one message of the run");
     }
-    let start = ROOT_TAG_RE.find(doc).expect("the document was read as XML");
+    let Some(start) = ROOT_TAG_RE.find(doc) else {
+        return invalid("the start tag of a <concord-resend> is not well-formed");
+    };
     let end = doc.rfind(&format!("</{RESEND}")).unwrap_or(doc.len());
-    let inner = doc.get(start.end()..end).unwrap_or("").trim().to_string();
+    let inner = trim_ws(doc.get(start.end()..end).unwrap_or("")).to_string();
     let reply_to = root.attribute("reply_to");
     if let Some(r) = reply_to {
         if !is_uuid(r) {
-            return invalid(format!("reply_to must be a UUID, not {}", py_repr(r)));
+            return invalid(format!("reply_to must be a UUID, not {}", quote(r)));
         }
     }
     Ok(ResendBody { reply_to: reply_to.map(str::to_string), inner })
@@ -1066,8 +1115,8 @@ fn parse_cancel(root: Element) -> Result<CancelBody> {
     check_cancel_fields(reason.unwrap_or(""), by, agent)?;
     Ok(CancelBody {
         reason: reason.unwrap_or_default().to_string(),
-        superseded_by: by.filter(|v| !v.is_empty()).map(str::to_string),
-        agent: agent.filter(|v| !v.is_empty()).map(str::to_string),
+        superseded_by: by.map(str::to_string),
+        agent: agent.map(str::to_string),
     })
 }
 
@@ -1083,10 +1132,14 @@ fn parse_cancel(root: Element) -> Result<CancelBody> {
 /// `ConcordError::InvalidMessage`, with the reason a receiver puts in its error, when the message is not well-formed, lacks a field
 /// or an attribute, holds a value out of its range, or breaks the schema `spec`.
 pub fn parse_message(doc: &str, spec: Option<&Value>) -> Result<Message> {
-    let doc = doc.trim();
+    let doc = trim_ws(doc);
+    if !doc.starts_with('<') {
+        return invalid("the message is not well-formed XML: it does not start with <");
+    }
     if doc.contains("<!") || doc.contains("<?") {
         return invalid("a message holds no comments, CDATA sections, processing instructions or declarations");
     }
+    check_depth(doc)?;
     let tree = Document::parse(doc).map_err(|exc| ConcordError::invalid_message(format!("the message is not well-formed XML: {exc}")))?;
     let root = tree.root_element();
     let tag = name_of(root);

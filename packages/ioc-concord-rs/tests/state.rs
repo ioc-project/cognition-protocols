@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //! The state of an agent: its runs, the keys of the items a run is made of, and what a run keeps of its init.
-// Python test_a_new_agent_state_is_empty_and_the_agent_id_is_checked also tries None as an agent id: impossible for a `&str`.
+// An agent id that is not a `&str` cannot be written, so it is not tried.
 
 use ioc_concord::state::*;
 use ioc_concord::wire::{build_init, build_init_reply, parse_message, Body, Message};

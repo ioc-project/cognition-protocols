@@ -30,7 +30,7 @@ pub struct Status {
     pub lacking: Vec<(String, String)>,
     pub anchors_in: Vec<String>,
     /// The deadline of each timer.
-    pub timers: IndexMap<String, Option<f64>>,
+    pub timers: IndexMap<String, f64>,
 }
 
 pub fn status_of(run: &Run) -> Status {

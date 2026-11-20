@@ -4,8 +4,7 @@
 //
 //! The centre of a star: the relay on its own, an agent that has one, and whole runs through a star.
 //!
-//! `test_a_spoke_is_any_hashable_handle_that_the_caller_can_send_through` is ported with names as handles (a spoke is a `String` here):
-//! the test sends through links that it keeps under the names of the spokes. Nothing is skipped.
+//! A spoke is a name (a `String`): the tests send through links that they keep under the names of the spokes.
 
 mod common;
 
@@ -127,6 +126,19 @@ fn an_init_inside_a_resend_makes_the_run_known_too() {
     assert!(unknown.receive(&resent_score).unwrap().is_empty()); // a resend of anything else does not
     assert!(unknown.state.runs.is_empty());
     assert_eq!(r.receive(&resent_score).unwrap(), [resent_score]);
+}
+
+#[test]
+fn a_resend_nested_to_any_depth_is_read_by_the_relay_and_makes_no_run_known() {
+    let wrap = format!("<concord-resend version=\"0.3.0\" from=\"alice\" run_id=\"{RUN}\" uuid=\"{OTHER}\">");
+    for depth in [2, 2_000, 200_000] {
+        let text = format!("{}{}{}", wrap.repeat(depth), init_doc(), "</concord-resend>".repeat(depth));
+        let mut r = Relay::new();
+        assert!(r.receive(&text).unwrap().is_empty()); // a resend of a resend is not an init
+        assert!(r.state.runs.is_empty());
+        r.learn(&init_doc()).unwrap();
+        assert_eq!(r.receive(&text).unwrap(), std::slice::from_ref(&text)); // but a message of a run it knows is passed on
+    }
 }
 
 #[test]
@@ -423,6 +435,42 @@ fn what_the_agent_sends_itself_is_never_in_forward_and_submissions_forward_nothi
     assert!(!step.send.is_empty());
     assert!(step.forward.is_empty());
     assert!(a.tick(Some(1e9)).unwrap().forward.is_empty());
+}
+
+/// A store whose next save fails when `fail` is set. It clears the flag when it fails, so the call after that one works.
+#[derive(Clone, Default)]
+struct FlakyStore {
+    inner: MemoryStore,
+    fail: SCell<bool>,
+}
+
+impl Store for FlakyStore {
+    fn load(&self) -> Result<Value> {
+        self.inner.load()
+    }
+
+    fn save(&mut self, state: &Value) -> Result<()> {
+        if self.fail.get() {
+            self.fail.set(false);
+            return Err(ConcordError::state("the disk is full"));
+        }
+        self.inner.save(state)
+    }
+}
+
+#[test]
+fn a_call_that_fails_leaves_the_agent_as_it_was_and_the_relay_may_know_the_run_so_calling_again_works() {
+    let store = FlakyStore::default();
+    store.fail.set(true);
+    let mut a = Agent::builder("hub").store(store.clone()).relay(Relay::new()).build().unwrap();
+    let init = init_for(&["hub", "security"], RUN);
+    assert!(a.receive(&init, None).is_err());
+    assert!(a.status(None).is_none()); // the state of the agent is as it was, in memory...
+    assert!(store.inner.get().is_none()); // ...and in its store
+    assert_eq!(runs(a.relay().unwrap()), [RUN]); // while the relay already knows the run
+    let step = a.receive(&init, None).unwrap(); // the same call again does what it should
+    assert_eq!(step.forward, std::slice::from_ref(&init));
+    assert!(a.status(None).is_some());
 }
 
 // --- whole runs through a star ----------------------------------------------------------------------

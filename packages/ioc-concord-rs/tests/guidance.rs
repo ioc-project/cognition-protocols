@@ -7,8 +7,7 @@
 //! The texts are the reference wording of Appendix A of the specification. `the_wording_says_what_appendix_a_asks_for` keeps the two
 //! together: each point of A.5 and A.6 is a phrase that must be in the text of its task.
 //!
-//! Not ported: `test_instructions_refuse_a_task_of_a_run_the_agent_does_not_know_or_of_another_kind` keeps only its first half (a task
-//! of an unknown run); the `ValueError` for a task of a kind that does not exist cannot be written, since `Task` is an enum.
+//! A task of an unknown run is refused. A task of a kind that does not exist cannot be written, since `Task` is an enum.
 
 mod common;
 

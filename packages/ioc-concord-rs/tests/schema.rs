@@ -36,6 +36,26 @@ fn a_supported_schema_is_returned_as_parsed() {
 }
 
 #[test]
+fn only_space_tab_and_line_breaks_are_whitespace_around_a_candidate() {
+    let spec = json!({"description": "d", "pattern": "^ab$"});
+    for other in ["\u{a0}", "\u{85}", "\u{2003}", "\u{2028}", "\u{feff}", "\u{b}", "\u{c}", "\u{1c}"] {
+        assert!(check(&spec, &format!("{other}ab")).is_some(), "{other:?}");
+        assert!(check(&json!({"enum": ["ab", "cd"]}), &format!("ab{other}")).is_some(), "{other:?}");
+    }
+    assert!(check(&json!({"description": "d", "maxLength": 2}), "\u{a0}a\u{a0}").is_some());
+    assert!(check(&spec, " \t\r\nab\n ").is_none());
+}
+
+#[test]
+fn an_enum_option_with_ascii_whitespace_at_either_end_is_refused_and_one_with_other_whitespace_is_not() {
+    for text in [r#"{"enum": [" A ", "B"]}"#, r#"{"enum": ["A", "B\n"]}"#, r#"{"enum": ["A", "\tB"]}"#] {
+        assert!(refused(text, "schema").contains("has an option with whitespace at either end"), "{text}");
+    }
+    let spec = parse_schema("{\"enum\": [\"Plan  A\", \"\u{a0}B\"]}", "schema").unwrap();
+    assert!(check(&spec, "Plan  A").is_none() && check(&spec, " \u{a0}B\n").is_none() && check(&spec, "B").is_some());
+}
+
+#[test]
 fn an_unsupported_schema_is_refused_with_a_reason() {
     let not_json = "must be a JSON Schema object, but it is not valid JSON";
     for (text, message) in [

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //! The XML helpers: escaping, and the integrity check computed on the text of a document.
-// Python `esc_text(5) == "5"` has no Rust equivalent: `esc_text` takes a `&str`, so it is never given a number.
+// `esc_text` takes a `&str`, so it is never given a number.
 
 use ioc_concord::xmlutil::*;
 use sha2::{Digest, Sha256};

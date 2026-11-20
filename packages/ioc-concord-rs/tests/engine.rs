@@ -3,9 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //! The decision engine: record what the agents say, then SELECT, ACCEPT, bottleneck and the outcome, all in millionths.
-// Python parametrized cases that give a float or a bool where the library wants an integer (`satisfaction_threshold: 0.6`, `True`,
-// `eps: 0.05`, `B: 1.5`, `retries: 1.5`, an anchor of `1.5` or `80.0` or `True`, a raw score of `50.0` or `50.5`) have no Rust
-// equivalent: `Params` and the recording functions take `i64`, so the type system refuses them. `parse_candidate_id(None)` likewise.
+// A float or a bool where the engine wants an integer cannot be written: `Params` and the recording functions take `i64`, and
+// `parse_candidate_id` takes a `&str`.
 
 use ioc_concord::engine::*;
 use ioc_concord::protocol::{Outcome, MILLION as M};
@@ -73,10 +72,12 @@ fn map<V: Clone>(entries: &[(&str, V)]) -> indexmap::IndexMap<String, V> {
 // --- parameters and ids ----------------------------------------------------
 
 #[test]
-fn check_params_accepts_defaults_and_a_zero_timeout() {
+fn check_params_accepts_defaults_and_the_smallest_and_largest_values() {
     let ab = names(&["a", "b"]);
     check_params(&ab, &Params::default()).unwrap();
-    check_params(&ab, &Params { timeout: 0, retries: 0, ..Params::default() }).unwrap();
+    check_params(&ab, &Params { timeout: 1, retries: 0, ..Params::default() }).unwrap();
+    let top = 999_999_999;
+    check_params(&ab, &Params { budget: top, timeout: top, retries: top, ..Params::default() }).unwrap();
     check_params(&ab, &Params { satisfaction_threshold: 1_000_000, eps: 1, ..Params::default() }).unwrap();
 }
 
@@ -95,7 +96,11 @@ fn check_params_refuses_what_the_spec_forbids() {
         (vec!["a", "b"], Params { eps: 0, ..d() }, "eps"),
         (vec!["a", "b"], Params { budget: 0, ..d() }, "budget"),
         (vec!["a", "b"], Params { timeout: -1, ..d() }, "timeout"),
+        (vec!["a", "b"], Params { timeout: 0, ..d() }, "timeout must be an integer, from 1 to"),
         (vec!["a", "b"], Params { retries: -1, ..d() }, "retries"),
+        (vec!["a", "b"], Params { budget: 1_000_000_000, ..d() }, "budget must be an integer, from 1 to 999999999"),
+        (vec!["a", "b"], Params { timeout: 1_000_000_000, ..d() }, "timeout must be an integer, from 1 to 999999999"),
+        (vec!["a", "b"], Params { retries: 1_000_000_000, ..d() }, "retries must be an integer, from 0 to 999999999"),
     ];
     for (agents, p, message) in cases {
         match check_params(&names(&agents), &p) {
@@ -106,12 +111,6 @@ fn check_params_refuses_what_the_spec_forbids() {
 }
 
 #[test]
-fn a_zero_timeout_switches_the_timers_off() {
-    assert!(timers_enabled(&Params { timeout: 300, ..Params::default() }));
-    assert!(!timers_enabled(&Params { timeout: 0, ..Params::default() }));
-}
-
-#[test]
 fn candidate_ids_round_trip() {
     assert_eq!((seed_id("cost").as_str(), repair_id(2, "security").as_str()), ("seed-cost", "r2-security"));
     assert_eq!(parse_candidate_id("seed-cost"), Some((0, "cost")));
@@ -119,6 +118,19 @@ fn candidate_ids_round_trip() {
     for bad in ["r0-a", "seed-", "x-a", "r1", ""] {
         assert_eq!(parse_candidate_id(bad), None, "{bad:?}");
     }
+}
+
+#[test]
+fn a_candidate_id_has_nothing_around_the_agent_id_and_a_round_of_at_most_nine_digits() {
+    let long = format!("seed-{}", "a".repeat(65));
+    for bad in ["seed-ops\n", "r1-ops\n", "seed-ops ", "seed-o ps", long.as_str(), "r1-ops\u{e9}", "r1000000000-ops", "r4294967296-ops"] {
+        assert_eq!(parse_candidate_id(bad), None, "{bad:?}");
+    }
+    let huge = format!("r{}-ops", "9".repeat(5000));
+    assert_eq!(parse_candidate_id(&huge), None);
+    let longest = format!("seed-{}", "a".repeat(64));
+    assert_eq!(parse_candidate_id(&longest), Some((0, &longest[5..])));
+    assert_eq!(parse_candidate_id("r999999999-ops"), Some((999_999_999, "ops")));
 }
 
 // --- recording -------------------------------------------------------------
