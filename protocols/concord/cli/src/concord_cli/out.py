@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 # SPDX-License-Identifier: Apache-2.0
 #
-"""What a call prints, as the DESIGN says: `STATUS:`, sections that each start with a `--- TITLE` line, then `NEXT:`."""
+"""What a call prints: a `STATUS:` line, sections that each start with a `--- TITLE` line, then a `NEXT:` line that says what to do."""
 import datetime
 
 EXIT_ERROR = 2
