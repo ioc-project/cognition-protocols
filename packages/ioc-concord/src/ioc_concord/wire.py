@@ -288,13 +288,14 @@ def build_resend(from_, run_id, original, reply_to=None, uid=None):
 def _check_cancel_fields(reason, superseded_by, agent):
     if reason not in CANCEL_REASONS:
         raise InvalidMessage(f"reason must be one of {', '.join(CANCEL_REASONS)}, not {reason!r}")
-    if (reason == "superseded") != bool(superseded_by):
+    # an attribute that is there counts, whatever its value: an empty one is not a UUID or an agent id, and is refused below
+    if (reason == "superseded") != (superseded_by is not None):
         raise InvalidMessage('superseded_by goes with reason="superseded", and only with it')
-    if (reason == "missing-agent") != bool(agent):
+    if (reason == "missing-agent") != (agent is not None):
         raise InvalidMessage('agent goes with reason="missing-agent", and only with it')
-    if superseded_by and not is_uuid(superseded_by):
+    if superseded_by is not None and not is_uuid(superseded_by):
         raise InvalidMessage(f"superseded_by must be a UUID, not {superseded_by!r}")
-    if agent and not is_agent_id(agent):
+    if agent is not None and not is_agent_id(agent):
         raise InvalidMessage(f"agent must be an agent id, not {agent!r}")
 
 

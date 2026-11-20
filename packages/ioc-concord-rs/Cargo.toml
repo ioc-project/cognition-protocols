@@ -1,0 +1,23 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "ioc-concord"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+description = "CONCORD protocol library."
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/ioc-project/cognition-protocols"
+keywords = ["concord", "multi-agent", "negotiation", "protocol"]
+categories = ["algorithms"]
+
+[dependencies]
+indexmap = { version = "2", features = ["serde"] }
+regex = "1"
+roxmltree = "0.20"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4"] }

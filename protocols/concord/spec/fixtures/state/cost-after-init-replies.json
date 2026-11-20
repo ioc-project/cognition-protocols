@@ -102,7 +102,7 @@
         "score|security|seeds": {
           "requests": 0,
           "asked": false,
-          "deadline": 60,
+          "deadline": 60.0,
           "candidate": "seed-cost",
           "author": "security",
           "what": "score"
@@ -110,7 +110,6 @@
       },
       "held": {},
       "expected": [],
-      "unrated": [],
       "abort": null,
       "cancel_sent": false,
       "disputed": false,

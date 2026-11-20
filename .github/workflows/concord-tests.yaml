@@ -12,6 +12,7 @@ on:
       - "protocols/concord/skills/**"
       - "protocols/concord/tests/**"
       - "packages/ioc-concord/**"
+      - "protocols/concord/spec/fixtures/**"
       - "tools/**"
       - ".github/workflows/concord-tests.yaml"
   push:
