@@ -87,8 +87,15 @@ def read_stdin(command):
 
 
 class _Parser(argparse.ArgumentParser):
+    """A parser whose faults are CliErrors. The hint names the script, never `self.prog`: for a command that is the script and what
+    argparse puts ahead of it, which differs from one version of Python to the next."""
+
+    def __init__(self, *args, script=None, command="", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.script, self.command = script, command
+
     def error(self, message):
-        raise CliError(message, f"Run `{self.prog} --help`.")
+        raise CliError(message, f"Run `{self.script} {self.command + ' ' if self.command else ''}--help`.")
 
 
 def cli_main(prog, commands, doc, argv=None, task_text=None, add_globals=None, session_class=Session, session_options=None):
@@ -100,14 +107,14 @@ def cli_main(prog, commands, doc, argv=None, task_text=None, add_globals=None, s
             stream.reconfigure(encoding="utf-8")
         except (AttributeError, ValueError, OSError):
             pass
-    parser = _Parser(prog=prog, description=doc, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = _Parser(prog=prog, script=prog, description=doc, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--me", required=True, help="your agent id, as in the run")
     parser.add_argument("--state-dir", default=DEFAULT_STATE_DIR, help="where the state of the agent is kept (default: the current directory)")
     if add_globals:
         add_globals(parser)
     sub = parser.add_subparsers(dest="command", required=True, parser_class=_Parser)
     for c in commands:
-        p = sub.add_parser(c.name, help=c.help, description=c.help)
+        p = sub.add_parser(c.name, help=c.help, description=c.help, script=prog, command=c.name)
         if c.add_args:
             c.add_args(p)
     by_name = {c.name: c for c in commands}

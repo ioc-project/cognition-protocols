@@ -43,20 +43,20 @@ out|
 === initiator ini start (exit 2)
 $ --me ini start --participants a,b --context Pick one option --x-reject nothing --x-ideal all
 out| STATUS: ERROR
-out| give exactly one of --option (a closed list of options), --format (the open format, in words) and --schema (a ⏎
-out| JSON Schema); you gave none
-out| NEXT: If you were handed the options, use --option once for each; otherwise describe in words what one option ⏎
-out| looks like with --format. Run `start --help` for what each means.
+out| give exactly one of --option (a closed list of possible answers), --format (the open format, in words) and ⏎
+out| --schema (a JSON Schema); you gave none
+out| NEXT: If the task gave you a closed list of possible answers, use --option once for each; otherwise describe in ⏎
+out| words what an answer looks like with --format. Run `start --help` for what each means.
 out| 
 
 === initiator ini start (exit 2)
 $ --me ini start --participants a,b --context Pick one option --x-reject nothing --x-ideal all --option X --option Y ⏎
 $ --option Z --format words
 out| STATUS: ERROR
-out| give exactly one of --option (a closed list of options), --format (the open format, in words) and --schema (a ⏎
-out| JSON Schema); you gave --option, --format
-out| NEXT: If you were handed the options, use --option once for each; otherwise describe in words what one option ⏎
-out| looks like with --format. Run `start --help` for what each means.
+out| give exactly one of --option (a closed list of possible answers), --format (the open format, in words) and ⏎
+out| --schema (a JSON Schema); you gave --option, --format
+out| NEXT: If the task gave you a closed list of possible answers, use --option once for each; otherwise describe in ⏎
+out| words what an answer looks like with --format. Run `start --help` for what each means.
 out| 
 
 === initiator ini start (exit 2)
