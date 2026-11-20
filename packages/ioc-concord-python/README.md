@@ -42,6 +42,20 @@ What is a JSON document in Rust is a JSON string here (`spec_json`, `Event.detai
 `.State`, `.MissingState`). A number is a `Number` (`Number.TEXT`, `Number.INT` or `Number.FLOAT`). The API is the `ffi` module of
 [`ioc-concord-rs`](../ioc-concord-rs/README.md#bindings-for-other-languages), which also describes the model it wraps.
 
+## The `ioc-concord` command
+
+The wheel also installs the `ioc-concord` command (`uvx ioc-concord ...`). It is the crate's `cli` module, which the
+bindings export as `cli_run`: the arguments, the output and the state are all in Rust, and `ioc_concord/cli.py` only prints what comes back.
+
+    ioc-concord initiator init --agents cost,security --context "..." --x-reject "..." --x-ideal "..." --schema '{...}'
+    ioc-concord initiator --state <path> handle           # the first message; then every reply, on stdin
+    ioc-concord receiver --me cost handle                 # every CONCORD message, on stdin
+    ioc-concord receiver --me cost answer --reject N --ideal N --candidate "..." --rationale "..." --score seed-cost N "..."
+
+Every output starts with `STATUS: SEND`, `ASK`, `NONE` or `ERROR` and says what to do next. The skills in
+[`protocols/concord/skills`](../../protocols/concord/skills) describe how an agent uses it. The state is kept in
+`.concord-receiver/` (receiver) and in the file `init` prints (initiator); `CONCORD_STATE_DIR` moves the receiver's.
+
 ## Build
 
 The wheel is built with [maturin](https://www.maturin.rs/), which builds the crate with its `uniffi` feature, generates the bindings

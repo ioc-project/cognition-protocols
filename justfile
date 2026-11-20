@@ -49,7 +49,7 @@ rust-msrv:
     rustup toolchain install "$msrv" --profile minimal
     cargo "+$msrv" hack test --locked --feature-powerset
 
-# ioc-concord, Python: build the wheel of this platform into dist (arguments go to maturin: `--zig --compatibility manylinux_2_28`, ...)
+# ioc-concord, Python: build the wheel of this platform into dist; the arguments go to maturin (`--zig --compatibility manylinux_2_28`, ...)
 wheel *args:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -74,9 +74,13 @@ wheel *args:
 wheel-test:
     cd {{python}} && uv run --no-project --isolated --with pytest --with dist/*.whl python -I -m pytest -q -p no:cacheprovider tests
 
+# ioc-concord, Python: in a new environment with nothing but the wheel, check that the library and the command work
+wheel-smoke:
+    cd {{python}} && uv run --no-project --isolated --with dist/*.whl python -I tests/smoke.py
+
 # Test the skill scripts as they are checked in
 test-scripts:
     uv run --no-project --with pytest python -m pytest protocols/concord/tests -q -p no:cacheprovider
 
 # Run all the CONCORD tests (not the sync check: that is `just check-sync`)
-test-concord: test-bundler rust-test wheel wheel-test test-scripts
+test-concord: test-bundler rust-test wheel wheel-test wheel-smoke test-scripts
