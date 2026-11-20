@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.1](https://github.com/ioc-project/cognition-protocols/compare/ioc-concord-v0.1.0...ioc-concord-v0.1.1) (2026-11-20)
+
+
+### Features
+
+* **concord:** add concord lib in rust ([#125](https://github.com/ioc-project/cognition-protocols/issues/125)) ([cadc0fa](https://github.com/ioc-project/cognition-protocols/commit/cadc0fa83dd3a8da3cc44ae9cd927ff6f5563026))
+* **concord:** add relay to the library ([#121](https://github.com/ioc-project/cognition-protocols/issues/121)) ([6311de8](https://github.com/ioc-project/cognition-protocols/commit/6311de8f285cab8594a204249031c73678d9bf3e))
+* **concord:** implement latest spec in the lib ([#113](https://github.com/ioc-project/cognition-protocols/issues/113)) ([5bbbb12](https://github.com/ioc-project/cognition-protocols/commit/5bbbb1285b9f4fa22822f3c3a92e4d0de81ff8a6))
+* **ioc-concord:** add the guidance module to the library ([#124](https://github.com/ioc-project/cognition-protocols/issues/124)) ([5833bb9](https://github.com/ioc-project/cognition-protocols/commit/5833bb9aa0d7525c08c56a6fc441c50f76f8b7af))
+
 ## [0.1.0](https://github.com/ioc-project/cognition-protocols/compare/ioc-concord-v0.1.0...ioc-concord-v0.1.0) (2026-11-09)
 
 
