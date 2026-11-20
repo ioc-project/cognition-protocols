@@ -21,6 +21,7 @@ Modules:
     liveness  the messages an agent is owed and the timers that wait for them, as functions of the state of a run
     tasks     what the agent's model must write now, derived from the state
     report    where a run stands, and the report of the run
+    relay     the centre of a star: which messages it passes on to the spokes
     agent     the node: receive messages in the order of checks, ask again, give up, build what it sends
 
 A module that is bundled into a script follows the rules in `tools/bundle.py`: stdlib imports at the top, intra-package

@@ -59,6 +59,75 @@ fix it and submit again.
 `status()` says where a run stands for the agent, and `report()` is the run report of the spec: outcome, winner (id and text),
 final scores, shortfall, rounds, reason and `status`.
 
+### Relay: the centre of a star
+
+On a broadcast channel and on a full mesh nothing relays. In a star, the centre passes the messages of the runs it knows on to every
+spoke except the one a message came from, and sends its own messages to every spoke. `Relay` makes the passing-on decision and keeps
+the run ids it needs, in its own store, and the spokes. A centre that takes part in no run is just a `Relay`; one that does gives it to
+its agent. It never sends anything: you do, to the spokes that `targets` names.
+
+The spokes are the links of the centre, which only your transport knows: the init lists the agents that negotiate, not the links. So the
+transport registers them, under any hashable handle (a connection, a socket id, a name), and keeps the link behind it. The relay only
+stores the handles and gives them back from `targets`; the transport turns each one into its link and sends:
+
+```python
+class Hub:                                             # the transport of the centre
+    def __init__(self, relay):
+        self.relay = relay                             # Relay(store=FileStore("relay.json"))
+        self.links = {}                                # handle -> link
+
+    def on_connect(self, name, link):                  # when a spoke connects
+        self.links[name] = link
+        self.relay.add_spoke(name)
+
+    def on_disconnect(self, name):                     # when it goes
+        self.links.pop(name, None)
+        self.relay.remove_spoke(name)
+
+    async def _to(self, names, text):
+        for name in names:
+            await self.links[name].write(text)
+
+    async def send(self, text):                        # an own message: to every spoke
+        await self._to(self.relay.targets(), text)
+
+    async def forward(self, text, origin):             # as it came: to every spoke but the one it came from
+        await self._to(self.relay.targets(origin), text)
+```
+
+The agent does not know the relay or the links. A centre that only passes messages on is a `Relay` and this transport:
+
+```python
+for out in relay.receive(text):                        # the text itself, unchanged, or nothing
+    await hub.forward(out, origin)
+```
+
+and a centre that also takes part gives the relay to its agent and drives the transport with what the agent says:
+
+```python
+agent = Agent("hub", store=FileStore("hub.json"), relay=relay)
+step = agent.receive(text)
+for out in step.forward:                               # pass on, whatever the agent does with the message
+    await hub.forward(out, origin)
+for out in step.send:                                  # the agent's own messages
+    await hub.send(out)
+```
+
+An agent without a `relay` never fills `step.forward`. The relay knows a run once it has passed on its init, bare or inside a resend, and
+it reads only the name and the `run_id` of a message: it passes on a message of another version, a damaged one, or one the agent drops,
+and it keeps the run after the run has ended. Call `relay.forget(run_id)` when the state of a run is dropped. The run ids are saved,
+each with the time it was learned; the spokes are not, because they are live links: after a restart they connect again, and you register
+them again.
+
+Any spoke can make the centre know a run, with a `<concord-init>` that carries a `run_id` and nothing else, since the relay reads no more
+than that. So the run ids have a limit: `Relay(max_runs=1000)` keeps at most that many (`None` for no limit), and past it the oldest is
+dropped. A centre that is also an agent calls `forget` when its agent drops the state of a run. A centre that is only a relay has no such
+state, so it must expire the run ids itself, now and then, with an age longer than any run lasts:
+
+```python
+relay.expire(max_age=24 * 3600)                        # drops the runs learned more than a day ago, and returns their ids
+```
+
 ### State
 
 The state is a plain JSON-able dict (`agent.state`), saved through the `Store` after every call that changes it. A `Store` is
@@ -87,6 +156,7 @@ reports give millionths. The scores in a task are text, normalized between 0 and
 | `liveness` | the messages an agent is owed and the timers that wait for them |
 | `tasks` | what the model must write now |
 | `report` | where a run stands, and the report of the run |
+| `relay` | the centre of a star: which messages it passes on to the spokes |
 | `agent` | the node |
 
 ## Using it from a skill script

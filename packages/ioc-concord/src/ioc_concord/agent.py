@@ -23,24 +23,26 @@ of UUIDs are injected, with the standard library as default, so that a run can b
 import time
 
 from ioc_concord.engine import add_anchor, add_proposal, add_ratings, evaluate, parse_candidate_id
-from ioc_concord.errors import InvalidMessage, StateError
+from ioc_concord.errors import InvalidMessage, MissingState, StateError
 from ioc_concord.liveness import earliest_deadline, expired_keys, owed_batches, sync_timers
 from ioc_concord.protocol import ABORTED, PROTOCOL_VERSION
 from ioc_concord.report import report_of, status_of
-from ioc_concord.state import (INITIATOR, PARTICIPANT, RUN_ABORTED, RUN_ACTIVE, RUN_ENDED, active_run, item_key, keep_sent, keep_uuid,
-                               members, new_agent_state, new_run)
+from ioc_concord.state import (INITIATOR, PARTICIPANT, RUN_ABORTED, RUN_ACTIVE, RUN_ENDED, active_run, check_agent_state, item_key, keep_sent,
+                               keep_uuid, members, new_agent_state, new_run)
 from ioc_concord.tasks import tasks_of, to_rate
 from ioc_concord.wire import (DATA_TAGS, ERROR, INIT, KIND_OF_TAG, RESEND, build_cancel, build_error, build_init, build_init_reply,
                               build_repair, build_resend, build_result, build_score, check_ok, locate, new_uuid, parse_message, peek)
 
 
 class Step:
-    """What a call produced: `send`, the messages to broadcast (text), and `events`, what happened (dicts with an `event` name,
-    the time `at`, and details), for a log."""
+    """What a call produced: `send`, the messages to broadcast (text), `forward`, the messages to pass on when the agent is the centre of
+    a star (see relay.py: the text received, unchanged, or nothing), and `events`, what happened (dicts with an `event` name, the time
+    `at`, and details), for a log."""
 
     def __init__(self, now):
         self.now = now
         self.send = []
+        self.forward = []
         self.events = []
 
     def note(self, event, **details):
@@ -52,13 +54,15 @@ class Step:
 
 class Agent:
     """The node of the agent `me`. `store` keeps its state between calls (None keeps it in memory only). `clock` gives the time in
-    seconds, `uuid_fn` a new UUID as text."""
+    seconds, `uuid_fn` a new UUID as text. With a `relay` (see relay.py) the agent is the centre of a star: besides what it does as an
+    agent, it says in `step.forward` which of the messages it receives to pass on to the spokes. Without one `step.forward` stays empty."""
 
-    def __init__(self, me, store=None, clock=time.time, uuid_fn=new_uuid):
+    def __init__(self, me, store=None, clock=time.time, uuid_fn=new_uuid, relay=None):
         self.me = me
         self.store = store
         self.clock = clock
         self.new_uuid = uuid_fn
+        self.relay = relay
         self.state = self._load()
 
     # ------------------------------------------------------------------
@@ -70,11 +74,9 @@ class Agent:
             return new_agent_state(self.me)
         try:
             state = self.store.load()
-        except StateError:
+        except MissingState:                    # nothing saved yet; a state that cannot be read is an error, never a fresh start
             return new_agent_state(self.me)
-        if state.get("me") != self.me:
-            raise StateError(f"the saved state belongs to {state.get('me')!r}, not to {self.me!r}")
-        return state
+        return check_agent_state(state, self.me)
 
     def _save(self):
         if self.store is not None:
@@ -100,9 +102,20 @@ class Agent:
     def receive(self, text, now=None):
         """Handle `text`, whatever it is, in the order of checks of the spec. Returns a Step."""
         step = self._step(now)
+        if self.relay is not None:
+            step.forward = self.relay.receive(text)         # first, and whatever the agent does with the message: it is mechanical
         self._handle(text, step)
-        self._save()
+        self._finish(step)
         return step
+
+    def _finish(self, step):
+        """Every call that returns a Step ends here. A centre knows a run once it has sent that run's init to the spokes, bare or inside a
+        resend: so the relay learns from every text the agent sends, whichever call sent it (`start`, a `tick` that asks again, an answer
+        to an error). Then the state is saved."""
+        if self.relay is not None:
+            for text in step.send:
+                self.relay.learn(text)
+        self._save()
 
     def _handle(self, text, step):
         try:
@@ -661,7 +674,7 @@ class Agent:
                     self._abort(run, step, "missing-agent", agent=t["author"])
                     break
                 self._request(run, key, step, from_timer=True)
-        self._save()
+        self._finish(step)
         return step
 
     def next_wakeup(self):
@@ -704,7 +717,7 @@ class Agent:
         step.send.append(text)
         step.note("started", participants=init["participants"], run_id=init["run_id"], role=run["role"])
         self._advance(run, step)
-        self._save()
+        self._finish(step)
         return step
 
     def submit_init_reply(self, run_id, raw_reject, raw_ideal, candidate, rationale, raw, reasoning, now=None):
@@ -762,7 +775,7 @@ class Agent:
         step.send.append(text)
         step.note("sent", kind=kind, run_id=run["run_id"])
         self._advance(run, step)
-        self._save()
+        self._finish(step)
         return step
 
     # ------------------------------------------------------------------

@@ -37,7 +37,7 @@ first message recorded for an item stands, and the original is kept word for wor
 """
 from ioc_concord.engine import new_engine_state
 from ioc_concord.errors import StateError
-from ioc_concord.protocol import is_agent_id
+from ioc_concord.protocol import DEFAULT_PARAMS, is_agent_id, is_uuid
 from ioc_concord.wire import peek
 
 PARTICIPANT, INITIATOR = "participant", "initiator"
@@ -48,6 +48,56 @@ def new_agent_state(me):
     if not is_agent_id(me):
         raise StateError(f"an agent id is 1 to 64 letters, digits, _ or -, not {me!r}")
     return {"me": me, "runs": {}, "active": None}
+
+
+# What a saved run holds (see the top of this module): the keys, and which of them are lists and which are dicts.
+RUN_KEYS = ("role", "run_id", "initiator", "participants", "params", "context", "x_reject", "x_ideal", "schema", "engine", "sent",
+            "sent_by_uuid", "received", "uuids", "outcome", "reported", "mismatches", "timers", "held", "expected", "unrated", "abort",
+            "cancel_sent", "disputed", "status")
+_RUN_LISTS = ("participants", "expected", "unrated")
+_RUN_DICTS = ("params", "schema", "engine", "sent", "sent_by_uuid", "received", "uuids", "mismatches", "timers", "held")
+_ENGINE_KEYS = tuple(new_engine_state(["a", "b"], DEFAULT_PARAMS))
+
+
+def check_agent_state(state, me):
+    """`state` itself, if it is the saved state of the agent `me`: the shape that the agent relies on, not every value in it. Raises
+    StateError, with the reason, otherwise, so that a state that is not one is never taken for an empty one or fails later with a
+    KeyError. What `new_agent_state` and `new_run` make passes."""
+    def bad(why):
+        raise StateError(f"the saved state is not the state of an agent: {why}")
+
+    if not isinstance(state, dict):
+        bad("it is not a JSON object")
+    if state.get("me") != me:
+        raise StateError(f"the saved state belongs to {state.get('me')!r}, not to {me!r}")
+    runs = state.get("runs")
+    if not isinstance(runs, dict):
+        bad('"runs" is not an object')
+    if state.get("active") is not None and state["active"] not in runs:
+        bad('"active" names a run that is not in "runs"')
+    for run_id, run in runs.items():
+        if not is_uuid(run_id):
+            bad(f"{run_id!r} is not a run id")
+        if not isinstance(run, dict):
+            bad(f"the run {run_id} is not an object")
+        missing = [k for k in RUN_KEYS if k not in run]
+        if missing:
+            bad(f"the run {run_id} lacks {', '.join(missing)}")
+        if run["run_id"] != run_id:
+            bad(f"the run {run_id} says it is {run['run_id']!r}")
+        if run["role"] not in (PARTICIPANT, INITIATOR) or run["status"] not in (RUN_ACTIVE, RUN_ENDED, RUN_ABORTED):
+            bad(f"the run {run_id} has a role or a status that is not one")
+        for k in _RUN_LISTS:
+            if not isinstance(run[k], list):
+                bad(f'"{k}" of the run {run_id} is not a list')
+        for k in _RUN_DICTS:
+            if not isinstance(run[k], dict):
+                bad(f'"{k}" of the run {run_id} is not an object')
+        if not all(is_agent_id(a) for a in run["participants"]) or not is_agent_id(run["initiator"]):
+            bad(f"the run {run_id} names an agent that has no valid id")
+        if set(run["params"]) != set(DEFAULT_PARAMS) or any(k not in run["engine"] for k in _ENGINE_KEYS):
+            bad(f"the run {run_id} holds no parameters or no engine state")
+    return state
 
 
 def item_key(kind, author, item=None):
