@@ -68,3 +68,36 @@ fn with_check_adds_a_check_that_verifies() {
     assert!(!verify_check(&bare));
     assert!(with_check("<c a=\"1\"/>").unwrap().ends_with(&format!("check=\"{}\"/>", compute_check("<c a=\"1\"/>"))));
 }
+
+#[test]
+fn the_start_tag_is_read_as_an_xml_parser_reads_it() {
+    let t = start_tag(r#"<a x='1' y = "&#97;lice" z="a&gt;b" w='/>' v=">">text</a>"#).unwrap();
+    assert_eq!((t.name.as_str(), t.empty), ("a", false));
+    let get = |k: &str| t.attrs.get(k).map(String::as_str);
+    assert_eq!((get("x"), get("y"), get("z"), get("w"), get("v")), (Some("1"), Some("alice"), Some("a>b"), Some("/>"), Some(">")));
+    assert_eq!(&r#"<a x='1' y = "&#97;lice" z="a&gt;b" w='/>' v=">">text</a>"#[t.end..], "text</a>");
+    let empty = start_tag(r#"<a x="1" />"#).unwrap();
+    assert!(empty.empty && empty.attrs["x"] == "1" && empty.end == r#"<a x="1" />"#.len());
+    assert_eq!(start_tag("<a>").unwrap().attrs.len(), 0);
+}
+
+#[test]
+fn a_start_tag_that_is_not_well_formed_is_not_read() {
+    for bad in
+        [r#"<a x="1" x="2">"#, r#"<a x=1>"#, r#"<a x="a<b">"#, r#"<a x="&nope;">"#, r#"<a x="1""#, r#"<a x="1" y>"#, "words", "", " <a>"]
+    {
+        assert!(start_tag(bad).is_none(), "{bad:?}");
+    }
+}
+
+#[test]
+fn a_check_inside_the_value_of_another_attribute_is_not_the_check() {
+    let doc = r#"<x a='b check="c"' check="00000000"><y>t</y></x>"#;
+    assert_eq!(check_of(doc), Some("00000000".to_string()));
+    assert_eq!(canonical_text(doc), r#"<x a='b check="c"'><y>t</y></x>"#);
+    let hidden_only = r#"<x a='b check="c"'><y>t</y></x>"#;
+    assert_eq!(check_of(hidden_only), None);
+    assert_eq!(canonical_text(hidden_only), hidden_only);
+    let doc = with_check(hidden_only).unwrap();
+    assert!(verify_check(&doc) && check_of(&doc) == Some(compute_check(hidden_only)));
+}

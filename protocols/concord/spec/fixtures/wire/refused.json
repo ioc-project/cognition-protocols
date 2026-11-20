@@ -130,5 +130,97 @@
   {
     "file": "wire/refused/cancel-missing-agent-without-agent.xml",
     "why": "missing-agent needs agent"
+  },
+  {
+    "file": "wire/refused/cancel-with-an-unknown-reason.xml",
+    "why": "a cancel reason is superseded, version or missing-agent"
+  },
+  {
+    "file": "wire/refused/cancel-superseded-without-superseded-by.xml",
+    "why": "superseded needs superseded_by"
+  },
+  {
+    "file": "wire/refused/cancel-version-with-an-agent.xml",
+    "why": "agent goes only with missing-agent"
+  },
+  {
+    "file": "wire/refused/cancel-superseded-with-a-superseded-by-that-is-not-a-uuid.xml",
+    "why": "superseded_by is a run id"
+  },
+  {
+    "file": "wire/refused/cancel-version-with-an-empty-agent.xml",
+    "why": "an empty agent is not an agent id"
+  },
+  {
+    "file": "wire/refused/cancel-version-with-an-empty-superseded-by.xml",
+    "why": "an empty superseded_by is not a run id"
+  },
+  {
+    "file": "wire/refused/cancel-superseded-with-an-empty-agent.xml",
+    "why": "an empty agent is not an agent id"
+  },
+  {
+    "file": "wire/refused/cancel-superseded-with-an-empty-superseded-by.xml",
+    "why": "an empty superseded_by is not a run id"
+  },
+  {
+    "file": "wire/refused/cancel-missing-agent-with-an-empty-agent.xml",
+    "why": "an empty agent is not an agent id"
+  },
+  {
+    "file": "wire/refused/cancel-missing-agent-with-an-empty-superseded-by.xml",
+    "why": "an empty superseded_by is not a run id"
+  },
+  {
+    "file": "wire/refused/error-with-an-unknown-reason.xml",
+    "why": "an error reason is missing, check, invalid, mismatch, busy or version"
+  },
+  {
+    "file": "wire/refused/error-with-an-unknown-what.xml",
+    "why": "an error is about an init, init-reply, score, repair or result"
+  },
+  {
+    "file": "wire/refused/error-missing-without-a-candidate.xml",
+    "why": "a missing score or repair names its candidate"
+  },
+  {
+    "file": "wire/refused/error-about-an-init-with-the-reason-missing.xml",
+    "why": "an error about an init is busy, invalid or version"
+  },
+  {
+    "file": "wire/refused/error-mismatch-about-a-score.xml",
+    "why": "a mismatch is about a result"
+  },
+  {
+    "file": "wire/refused/error-check-without-a-ref.xml",
+    "why": "a check error names the uuid of the damaged message"
+  },
+  {
+    "file": "wire/refused/error-to-an-agent-id-that-is-not-one.xml",
+    "why": "an agent id is 1 to 64 of A-Za-z0-9_-"
+  },
+  {
+    "file": "wire/refused/resend-of-a-cancel.xml",
+    "why": "a resend carries a data message"
+  },
+  {
+    "file": "wire/refused/resend-of-nothing.xml",
+    "why": "a resend carries one message"
+  },
+  {
+    "file": "wire/refused/resend-with-a-reply-to-that-is-not-a-uuid.xml",
+    "why": "reply_to is a uuid"
+  },
+  {
+    "file": "wire/refused/resend-of-a-message-in-a-namespace.xml",
+    "why": "the message of a resend is a message of the protocol, not an element of a namespace"
+  },
+  {
+    "file": "wire/refused/score-id-with-a-space-in-the-agent.xml",
+    "why": "an agent id is 1 to 64 of A-Za-z0-9_-"
+  },
+  {
+    "file": "wire/refused/from-with-a-character-reference-to-a-line-feed.xml",
+    "why": "an agent id has no line feed"
   }
 ]

@@ -159,18 +159,18 @@ fn the_schema_in_an_init_has_its_keys_sorted() {
 // ---- the second review ----
 
 #[test]
-fn a_message_that_the_two_readers_of_the_root_read_differently_is_dropped() {
+fn a_from_hidden_in_another_attribute_is_not_taken_for_the_sender() {
     let run = RUN;
-    // `peek` reads the text, and takes the `from` of the quoted value for the sender's (a participant); the XML parser reads `mallory`
+    // the quoted value of `a` holds a `from`, which is not an attribute: both readers of the root read `mallory`, who is not in the run
     let doc = format!(
         r#"<concord-cancel version="0.3.0" from="mallory" a=' from="b"' run_id="{run}" uuid="aaaaaaaa-0000-4000-8000-000000000001" reason="version"/>"#
     );
-    assert_eq!(ioc_concord::wire::peek(&doc).unwrap().attr("from"), Some("b"));
+    assert_eq!(ioc_concord::wire::peek(&doc).unwrap().attr("from"), Some("mallory"));
     assert_eq!(ioc_concord::wire::parse_message(&doc, None).unwrap().from, "mallory");
     let mut a = Agent::new("a").unwrap();
     let _ = a.start(&["a", "b"], "c", "r", "i", &spec(), None, Some(RUN), None).unwrap();
     let step = a.receive(&doc, None).unwrap();
-    assert!(step.events.iter().any(|e| e.str("reason") == Some("invalid")), "{:?}", step.events);
+    assert!(step.events.iter().any(|e| e.str("reason") == Some("sender is not in the run")), "{:?}", step.events);
     assert_eq!(a.status(None).unwrap().status, ioc_concord::state::RunStatus::Active);
     assert!(!a.state.runs[RUN].uuids.contains_key("aaaaaaaa-0000-4000-8000-000000000001"));
 }

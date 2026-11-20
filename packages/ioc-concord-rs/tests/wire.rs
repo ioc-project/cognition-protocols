@@ -21,6 +21,7 @@ use ioc_concord::wire::{
     build_cancel, build_error, build_init, build_init_reply, build_repair, build_resend, build_result, build_score, check_ok, locate,
     parse_message, peek, Body, InitBody, InitParams, InitReplyBody, Message, Proposal, ScoreBody, ScoreEntry, ScoreIn,
 };
+use ioc_concord::xmlutil::{check_of, with_check};
 use regex::Regex;
 use serde_json::{json, Value};
 
@@ -536,6 +537,29 @@ fn a_value_that_is_wrong_is_quoted_in_the_refusal_and_a_missing_one_is_said_to_b
 }
 
 #[test]
+fn peek_and_the_parser_read_the_same_attributes_whatever_the_quotes_and_the_references() {
+    let doc = score();
+    let who = peek(&doc).unwrap().attrs["from"].clone();
+    let forged = |extra: &str| {
+        with_check(&doc.replace(&format!(" check=\"{}\"", check_of(&doc).unwrap()), "").replace(" from=", &format!(" {extra} from=")))
+            .unwrap()
+    };
+    for extra in ["x=' from=\"security\"'", "x=\">\"", "x='/>'", "x = 'a>b'", "x=\"a&gt;b\"", "x='from=\"security\"'"] {
+        let d = forged(extra);
+        assert_eq!(peek(&d).unwrap().attrs["from"], who, "{extra}");
+        assert_eq!(parse(&d).from, who, "{extra}");
+        assert!(check_ok(&d), "{extra}");
+        assert_eq!(locate(&format!("see {d} ok")).unwrap(), d, "{extra}");
+    }
+    let by_reference = doc.replace(" from=\"cost\"", " from=\"&#99;ost\"");
+    assert_eq!(peek(&by_reference).unwrap().attrs["from"], "cost");
+    assert_eq!(peek(&doc.replace(" from=\"cost\"", " from=\"cost&#10;\"")).unwrap().attrs["from"], "cost\n");
+    for bad in [" from=\"cost\" from=\"security\"", " from=\"cost\" x=1", " from=\"cost\" x=\"a<b\"", " from=\"cost\" x=\"&nope;\""] {
+        assert!(peek(&doc.replace(" from=\"cost\"", bad)).is_none(), "{bad}");
+    }
+}
+
+#[test]
 fn a_participant_can_send_again_only_its_own_data_messages() {
     let original = init_reply();
     refuses(build_resend("security", RUN, &original, None, None), "only send again its own");
@@ -688,6 +712,20 @@ fn a_gt_or_a_slash_inside_a_quoted_value_does_not_end_a_tag_for_the_depth() {
 fn an_element_that_closes_itself_and_the_ends_of_elements_do_not_count_as_depth() {
     let flat = score().replace("</concord-score>", &"<a/><b></b>".repeat(100_000).to_string());
     parse_message(&format!("{flat}</concord-score>"), None).unwrap();
+}
+
+#[test]
+fn a_parameter_element_that_is_empty_makes_the_init_invalid_and_one_that_is_left_out_takes_its_default() {
+    let doc = init();
+    for tag in ["satisfaction_threshold", "eps", "budget", "timeout", "retries"] {
+        let re = Regex::new(&format!("<{tag}>[^<]*</{tag}>")).unwrap();
+        assert!(re.is_match(&doc), "{tag} is in the init");
+        for empty in [format!("<{tag}></{tag}>"), format!("<{tag}/>"), format!("<{tag}> \n</{tag}>")] {
+            refuses_parse(&re.replace(&doc, empty.as_str()), tag);
+        }
+        let left_out = re.replace(&doc, "").into_owned();
+        parse_message(&left_out, None).unwrap_or_else(|e| panic!("{tag} left out: {e}"));
+    }
 }
 
 #[test]

@@ -37,7 +37,7 @@ use crate::protocol::{
     DEFAULT_THRESHOLD, DEFAULT_TIMEOUT, MAX_INTEGER, MILLION, PROTOCOL_VERSION, RESULT_OUTCOMES,
 };
 use crate::schema::{check_candidate, schema_text, validate_schema};
-use crate::xmlutil::{check_of, esc_attr, esc_text, verify_check, with_check};
+use crate::xmlutil::{check_of, esc_attr, esc_text, start_tag, verify_check, with_check};
 
 // --------------------------------------------------------------------------
 // vocabulary
@@ -123,10 +123,8 @@ pub fn kind_of_tag(tag: &str) -> Option<&'static str> {
 }
 
 static OPEN_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<(concord-[a-z-]+)\b").unwrap());
-static OPEN_AT_START_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^<(concord-[a-z-]+)\b").unwrap());
+static TAG_NAME_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^concord-[a-z-]+$").unwrap());
 static FENCE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?s)```(?:xml)?[ \t\r\n]*\n(.*?)\n```").unwrap());
-static ROOT_TAG_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^<[^>]*>").unwrap());
-static ATTR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"([A-Za-z_][\w.:-]*)[ \t\r\n]*=[ \t\r\n]*"([^"]*)""#).unwrap());
 static ANY_TAG_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<[^>]*>").unwrap());
 
 /// A new UUID, as text: the id of a run or of one transmission.
@@ -708,10 +706,15 @@ pub fn locate(text: &str) -> Result<&str> {
         return invalid("no CONCORD message in the text");
     };
     let (start, name) = (m.get(0).unwrap().start(), m.get(1).unwrap().as_str());
-    let Some(tag_end) = s[start..].find('>').map(|i| start + i) else {
-        return invalid("the CONCORD message is cut off inside its first tag");
+    let Some(tag) = start_tag(&s[start..]) else {
+        return invalid(if s[start..].contains('>') {
+            "the first tag of the CONCORD message is not well-formed"
+        } else {
+            "the CONCORD message is cut off inside its first tag"
+        });
     };
-    if s.as_bytes()[tag_end - 1] == b'/' {
+    let tag_end = start + tag.end - 1;
+    if tag.empty {
         return Ok(&s[start..=tag_end]);
     }
     let close = s.rfind(&format!("</{name}")).filter(|c| *c > tag_end);
@@ -750,17 +753,16 @@ pub fn peek(doc: &str) -> Option<Peek> {
 
 fn peek_level(doc: &str, nested: bool) -> Option<Peek> {
     let doc = trim_ws(doc);
-    let start = ROOT_TAG_RE.find(doc)?;
-    let name = OPEN_AT_START_RE.captures(start.as_str())?.get(1)?.as_str();
-    let attrs = ATTR_RE.captures_iter(start.as_str()).map(|c| (c[1].to_string(), unescape(&c[2]))).collect();
-    let body = if start.as_str().ends_with("/>") {
+    let tag = start_tag(doc).filter(|t| TAG_NAME_RE.is_match(&t.name))?;
+    let name = tag.name.as_str();
+    let body = if tag.empty {
         ""
     } else {
         // Like a slice up to a `rfind` that found nothing: everything but the last character.
         let end = doc.rfind(&format!("</{name}")).unwrap_or_else(|| doc.char_indices().last().map_or(0, |(i, _)| i));
-        doc.get(start.end()..end).unwrap_or("")
+        doc.get(tag.end..end).unwrap_or("")
     };
-    let mut out = Peek { tag: name.to_string(), attrs, inner: None, text: None };
+    let mut out = Peek { tag: name.to_string(), attrs: tag.attrs.clone(), inner: None, text: None };
     match name {
         RESEND if nested => out.inner = peek_level(body, false).map(Box::new),
         ERROR => {
@@ -1000,7 +1002,8 @@ fn parse_init(root: Element) -> Result<InitBody> {
     let participants: Vec<String> = children(child(root, "participants")?, "agent").map(txt).collect();
     let mut params = Params::default();
     let boxed = children(root, "params").next();
-    let given = |tag: &str| boxed.and_then(|b| children(b, tag).next()).map(txt).filter(|t| !t.is_empty());
+    // an element that is there is read: an empty one is not a number, and is refused below
+    let given = |tag: &str| boxed.and_then(|b| children(b, tag).next()).map(txt);
     if let Some(t) = given("satisfaction_threshold") {
         params.satisfaction_threshold = number(&t, "<satisfaction_threshold>")?;
     }
@@ -1093,14 +1096,15 @@ fn parse_error(root: Element) -> Result<ErrorBody> {
 
 fn parse_resend(doc: &str, root: Element) -> Result<ResendBody> {
     let kids: Vec<Element> = root.children().filter(|c| c.is_element()).collect();
-    if kids.len() != 1 || !DATA_TAGS.contains(&name_of(kids[0])) {
+    // the message that it carries is a message of the protocol: an element of a namespace with the same local name is not one
+    if kids.len() != 1 || !DATA_TAGS.contains(&name_of(kids[0])) || kids[0].tag_name().namespace().is_some() {
         return invalid("a <concord-resend> carries exactly one message of the run");
     }
-    let Some(start) = ROOT_TAG_RE.find(doc) else {
+    let Some(start) = start_tag(doc) else {
         return invalid("the start tag of a <concord-resend> is not well-formed");
     };
     let end = doc.rfind(&format!("</{RESEND}")).unwrap_or(doc.len());
-    let inner = trim_ws(doc.get(start.end()..end).unwrap_or("")).to_string();
+    let inner = trim_ws(doc.get(start.end..end).unwrap_or("")).to_string();
     let reply_to = root.attribute("reply_to");
     if let Some(r) = reply_to {
         if !is_uuid(r) {

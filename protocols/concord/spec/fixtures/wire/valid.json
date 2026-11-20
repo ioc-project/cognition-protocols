@@ -249,6 +249,78 @@
     }
   },
   {
+    "file": "wire/init-defaults.xml",
+    "kind": "init",
+    "from": "alice",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-00000000000b",
+    "check": "c8ee4a28",
+    "parsed": {
+      "kind": "init",
+      "tag": "concord-init",
+      "check": "c8ee4a28",
+      "version": "0.3.0",
+      "from": "alice",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-00000000000b",
+      "participants": [
+        "cost",
+        "security"
+      ],
+      "params": {
+        "satisfaction_threshold": 600000,
+        "eps": 50000,
+        "B": 8,
+        "timeout": 300,
+        "retries": 3
+      },
+      "context": "Cut errors to < 1% & keep the cost down",
+      "x_reject": "errors stay as they are",
+      "x_ideal": "no error and a low cost",
+      "schema": {
+        "description": "a short plan, in lower case",
+        "maxLength": 80,
+        "pattern": "^[a-z ]+$"
+      }
+    }
+  },
+  {
+    "file": "wire/init-with-a-parameter-left-out.xml",
+    "kind": "init",
+    "from": "alice",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-00000000000c",
+    "check": "0d7c771d",
+    "parsed": {
+      "kind": "init",
+      "tag": "concord-init",
+      "check": "0d7c771d",
+      "version": "0.3.0",
+      "from": "alice",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-00000000000c",
+      "participants": [
+        "cost",
+        "security"
+      ],
+      "params": {
+        "satisfaction_threshold": 700000,
+        "eps": 50000,
+        "B": 3,
+        "timeout": 60,
+        "retries": 2
+      },
+      "context": "Cut errors to < 1% & keep the cost down",
+      "x_reject": "errors stay as they are",
+      "x_ideal": "no error and a low cost",
+      "schema": {
+        "description": "a short plan, in lower case",
+        "maxLength": 80,
+        "pattern": "^[a-z ]+$"
+      }
+    }
+  },
+  {
     "file": "wire/tricky/hidden-from-in-a-single-quoted-value.xml",
     "kind": "score",
     "from": "cost",
@@ -362,6 +434,42 @@
         "rationale": "cheap   &\t\tfast",
         "raw": 82500000,
         "reasoning": "good for cost"
+      }
+    }
+  },
+  {
+    "file": "wire/tricky/a-character-reference-in-from.xml",
+    "kind": "init",
+    "from": "alice",
+    "run_id": "11111111-1111-4111-8111-111111111111",
+    "uuid": "a0000000-0000-4000-8000-000000000001",
+    "check": "c0ea887e",
+    "parsed": {
+      "kind": "init",
+      "tag": "concord-init",
+      "check": "c0ea887e",
+      "version": "0.3.0",
+      "from": "alice",
+      "run_id": "11111111-1111-4111-8111-111111111111",
+      "uuid": "a0000000-0000-4000-8000-000000000001",
+      "participants": [
+        "cost",
+        "security"
+      ],
+      "params": {
+        "satisfaction_threshold": 700000,
+        "eps": 100000,
+        "B": 3,
+        "timeout": 60,
+        "retries": 2
+      },
+      "context": "Cut errors to < 1% & keep the cost down",
+      "x_reject": "errors stay as they are",
+      "x_ideal": "no error and a low cost",
+      "schema": {
+        "description": "a short plan, in lower case",
+        "maxLength": 80,
+        "pattern": "^[a-z ]+$"
       }
     }
   }
