@@ -19,12 +19,16 @@ dependencies = []
 dev = ["pytest"]
 
 # The package is the crate in ../ioc-concord-rs, built with its feature `uniffi`, with the Python bindings UniFFI generates for it.
+[project.scripts]
+ioc-concord = "ioc_concord.cli:main"
+
 [tool.maturin]
 manifest-path = "../ioc-concord-rs/Cargo.toml"
 bindings = "uniffi"
-module-name = "ioc_concord"
-# `uniffi-cli` is `uniffi` and the `uniffi-bindgen` binary of the crate, which maturin runs to generate the bindings
-features = ["uniffi-cli"]
+python-source = "python"
+module-name = "ioc_concord.ioc_concord"
+# `uniffi-cli` is `uniffi` and the `uniffi-bindgen` binary of the crate, which maturin runs to generate the bindings; `cli` is the command
+features = ["uniffi-cli", "cli"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
