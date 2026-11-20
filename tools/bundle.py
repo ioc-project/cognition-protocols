@@ -30,8 +30,10 @@ A module is bundled as it is, minus its docstring, its imports (hoisted to the t
 
 A library can build on another one that goes into the same script (`uses = ["ioc_concord"]` in its `[[library]]`): its modules may then
 import that library's names as `from ioc_concord.<module> import <names>`. Those imports are not copied: the names come from the other
-library's block in the script, which must be listed first, and a script marks a block for each library. The blocks are written until
-they stop changing, since what one library's block keeps depends on what the other's code uses.
+library's block in the script. A script marks a block for each library, and the block of the library that is used comes first in the
+script (the order that matters is the one in the script, not in the config). The blocks are written until they stop changing, since
+what one library's block keeps depends on what the other's code uses. All of this is checked before anything is written: `uses` is a list
+of other libraries of the config with no cycle, a script that bundles a library bundles the ones it uses, and their blocks are in order.
 
 Only what the script reaches is copied: a function, class or constant that neither the script nor anything it uses refers to
 is left out, so a script does not carry library code it never runs. A target with `shake = false` gets every module whole.
@@ -216,7 +218,7 @@ class Module:
                                   f"`from {lib}.<module> import <names>`")
             if root not in sys.stdlib_module_names:
                 raise BundleError(f"{self.where}: line {node.lineno}: `{root}` is not in the standard library; a bundled "
-                                  "module is stdlib-only")
+                                  "module is stdlib-only (a library it builds on is named in `uses`)")
         self.imports[ast.get_source_segment(text, node)] = top_level_names(ast.Module([node], []))
 
 
@@ -312,6 +314,45 @@ def render(lib, target, script_text, shake=None):
     return head + content + f"\n# <<< END BUNDLED {name}\n"
 
 
+def check_uses(config):
+    """The `uses` of every library, before anything is read or written: a list of the names of other libraries of the config, and no
+    library that uses itself or, through others, uses a library that uses it."""
+    names = [lib["name"] for lib in config["library"]]
+    uses = {}
+    for lib in config["library"]:
+        used = lib.get("uses", [])
+        if not isinstance(used, list) or not all(isinstance(u, str) for u in used):
+            raise BundleError(f"{lib['name']}: `uses` must be a list of library names, like [\"ioc_concord\"]")
+        for u in used:
+            if u == lib["name"]:
+                raise BundleError(f"{lib['name']} lists itself in `uses`")
+            if u not in names:
+                raise BundleError(f"{lib['name']} uses {u}, which is not a library of this config: add it, or take it out of `uses`")
+        uses[lib["name"]] = used
+
+    def visit(name, chain):
+        if name in chain:
+            raise BundleError("libraries that use each other: " + " -> ".join(chain[chain.index(name):] + [name]))
+        for u in uses[name]:
+            visit(u, chain + [name])
+
+    for name in uses:
+        visit(name, [])
+
+
+def check_blocks(file, text, targets):
+    """What a script needs for a library that builds on another: the library it uses is bundled into the same script, and its block
+    comes first (the names of the other are in it). A script that lacks a block is told so by `render`, which needs it."""
+    here = {lib["name"] for lib, _ in targets}
+    for lib, _ in targets:
+        for u in lib.get("uses", []):
+            if u not in here:
+                raise BundleError(f"{file}: {lib['name']} is bundled here and uses {u}, which is not: add a target for {u} in this file")
+            mine, theirs = marker_re(lib["name"]).search(text), marker_re(u).search(text)
+            if mine and theirs and theirs.start() > mine.start():
+                raise BundleError(f"{file}: the block of {u} must come before the block of {lib['name']}, which uses it: swap them")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--check", action="store_true", help="exit 1 if a script differs from its library; change nothing")
@@ -324,19 +365,25 @@ def main(argv=None):
             lib["ref"] = args.ref
     drifted = []
     try:
+        check_uses(config)
         files = {}                                             # file -> [(lib, target)] in the order of the config
         for lib in config["library"]:
             for target in lib["target"]:
                 files.setdefault(target["file"], []).append((lib, target))
+        for file, targets in files.items():                    # all of it is checked before the first script is written
+            check_blocks(file, (ROOT / file).read_text(), targets)
         for file, targets in files.items():
             path = ROOT / file
             original = text = path.read_text()
-            for _ in range(5):                                 # a block depends on what the other blocks of the script use
+            # A block depends on what the other blocks of the script use. The library that is used never refers to the one that uses it
+            # (see check_uses), so the second round can change the block of the first at most, and the third finds nothing to do: five
+            # rounds are a guard against a library that does not settle, and not a number to reach.
+            for _ in range(5):
                 new = text
                 for lib, target in targets:
+                    block = render(lib, target, new)           # raises when the script has no markers for this library
                     m = marker_re(lib["name"]).search(new)
-                    block = render(lib, target, new)
-                    new = new[:m.start()] + block + new[m.end():] if m else new
+                    new = new[:m.start()] + block + new[m.end():]
                 if new == text:
                     break
                 text = new
