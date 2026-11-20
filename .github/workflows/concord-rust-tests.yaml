@@ -8,9 +8,12 @@ name: concord-rust-tests
 on:
   pull_request:
     paths:
-      - "packages/ioc-concord-rs/**"
+      - "packages/*-rs/**"
+      - "rustfmt.toml"
       - "protocols/concord/spec/fixtures/**"
       - "justfile"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/concord-rust-tests.yaml"
   push:
     branches:
@@ -31,7 +34,6 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           components: rustfmt, clippy
-          rust-src-dir: packages/ioc-concord-rs
 
       - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
@@ -55,8 +57,6 @@ jobs:
 
       # the toolchain of the recipe is the oldest Rust: it installs it itself
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-        with:
-          rust-src-dir: packages/ioc-concord-rs
 
       - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:

@@ -17,24 +17,23 @@ run:
 rust := "packages/ioc-concord-rs"
 python := "packages/ioc-concord-python"
 
-# ioc-concord, Rust: formatting, then clippy for every combination of the features, and the documentation, all without warnings
+# Rust, every crate of the workspace: formatting, then clippy for every combination of the features, and the documentation, all without warnings
 rust-lint:
-    cd {{rust}} && cargo fmt --check
-    cd {{rust}} && cargo hack clippy --locked --feature-powerset --all-targets -- -D warnings
-    cd {{rust}} && RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
+    cargo fmt --all --check
+    cargo hack clippy --workspace --locked --feature-powerset --all-targets -- -D warnings
+    RUSTDOCFLAGS="-D warnings" cargo doc --workspace --locked --no-deps --all-features
 
-# ioc-concord, Rust: the tests, for every combination of the features
+# Rust, every crate of the workspace: the tests, for every combination of the features
 rust-test:
-    cd {{rust}} && cargo hack test --locked --feature-powerset
+    cargo hack test --workspace --locked --feature-powerset
 
-# ioc-concord, Rust: the crate builds and passes its tests on the oldest Rust it declares (`rust-version` in its Cargo.toml)
+# Rust: the workspace builds and passes its tests on the oldest Rust ioc-concord declares (`rust-version` in its Cargo.toml)
 rust-msrv:
     #!/usr/bin/env bash
     set -euo pipefail
-    cd {{rust}}
-    msrv=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
+    msrv=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' {{rust}}/Cargo.toml)
     rustup toolchain install "$msrv" --profile minimal
-    cargo "+$msrv" hack test --locked --feature-powerset
+    cargo "+$msrv" hack test --workspace --locked --feature-powerset
 
 # ioc-concord, Python: build the wheel of this platform into dist; the arguments go to maturin (`--zig --compatibility manylinux_2_28`, ...)
 wheel *args:
