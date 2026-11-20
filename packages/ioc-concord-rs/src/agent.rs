@@ -518,6 +518,7 @@ impl Agent {
             run.keep_sent(&key, &text)?;
             let mut node = Node { me: &self.me, new_uuid: &mut *self.uuid_fn };
             let step = node.sent(run, &text, "init-reply", step)?;
+            self.state.session.refusal = None; // a refusal is of the answer that came before this one
             self.save()?;
             Ok(step)
         })();
@@ -568,6 +569,7 @@ impl Agent {
             }
             let mut node = Node { me: &self.me, new_uuid: &mut *self.uuid_fn };
             let step = node.sent(run, &text, "score", step)?;
+            self.state.session.refusal = None; // a refusal is of the answer that came before this one
             self.save()?;
             Ok(step)
         })();
@@ -613,6 +615,7 @@ impl Agent {
             run.keep_sent(&item_key("repair", &self.me, Some(&p.id)), &text)?;
             let mut node = Node { me: &self.me, new_uuid: &mut *self.uuid_fn };
             let step = node.sent(run, &text, "repair", step)?;
+            self.state.session.refusal = None; // a refusal is of the answer that came before this one
             self.save()?;
             Ok(step)
         })();
@@ -635,6 +638,120 @@ impl Agent {
     #[must_use]
     pub fn status(&self, run_id: Option<&str>) -> Option<Status> {
         self.run_of(run_id).map(status_of)
+    }
+
+    // ------------------------------------------------------------------
+    // what a program that drives the agent keeps (see `state::Session`)
+    // ------------------------------------------------------------------
+
+    /// The participants of a run (the active one when `run_id` is None; None when there is none), in the order of the init.
+    #[must_use]
+    pub fn participants(&self, run_id: Option<&str>) -> Option<Vec<String>> {
+        self.run_of(run_id).map(|run| run.participants.clone())
+    }
+
+    /// Whether `answer` (what the matching `submit_*` takes, by name: see `guidance::check_answer`) has problems, as sentences; the
+    /// agent's own anchors are taken from its state.
+    #[must_use]
+    pub fn check_answer(&self, kind: &str, answer: &Value) -> Vec<String> {
+        let anchors = self.state.active_run().and_then(|run| run.engine.anchors.get(&self.me)).map(|a| crate::guidance::RawAnchors {
+            raw_reject: a.raw_reject as f64 / 1_000_000.0,
+            raw_ideal: a.raw_ideal as f64 / 1_000_000.0,
+        });
+        crate::guidance::check_answer(kind, answer, anchors)
+    }
+
+    /// What the model reads for the refusal of its answer: `guidance::refusal_text`, told how many times in a row the same refusal came.
+    /// Nothing is recorded for the answer itself; a successful `submit_*` forgets the refusal.
+    ///
+    /// # Errors
+    ///
+    /// `ConcordError::State` when the state cannot be saved.
+    pub fn refuse(&mut self, text: &str) -> Result<String> {
+        let repeats = match &self.state.session.refusal {
+            Some(r) if r.text == text => r.repeats + 1,
+            _ => 1,
+        };
+        self.state.session.refusal = Some(crate::state::Refusal { text: text.to_string(), repeats });
+        self.save()?;
+        Ok(crate::guidance::refusal_text(text, repeats))
+    }
+
+    /// Keep the messages a program has produced for the agent's callers (to hand out, or to send again), and when. `handed` says whether
+    /// they have been handed out.
+    ///
+    /// # Errors
+    ///
+    /// `ConcordError::State` when the state cannot be saved.
+    pub fn set_outbox(&mut self, messages: &[String], handed: bool, now: Option<f64>) -> Result<()> {
+        let at = self.now(now)?;
+        self.state.session.outbox = Some(crate::state::Outbox { messages: messages.to_vec(), at, handed });
+        self.save()
+    }
+
+    /// The messages kept by `set_outbox`; none when nothing was kept.
+    #[must_use]
+    pub fn outbox(&self) -> Option<&crate::state::Outbox> {
+        self.state.session.outbox.as_ref()
+    }
+
+    /// Hand out the messages kept by `set_outbox` that have not been handed out: the first time only; none after.
+    ///
+    /// # Errors
+    ///
+    /// `ConcordError::State` when the state cannot be saved.
+    pub fn hand_outbox(&mut self, now: Option<f64>) -> Result<Vec<String>> {
+        let at = self.now(now)?;
+        let Some(outbox) = self.state.session.outbox.as_mut().filter(|o| !o.handed) else { return Ok(Vec::new()) };
+        outbox.handed = true;
+        outbox.at = at;
+        let messages = outbox.messages.clone();
+        self.save()?;
+        Ok(messages)
+    }
+
+    /// Note that the progress of the run is `fingerprint`: the nudges counted so far are forgotten when it changed.
+    ///
+    /// # Errors
+    ///
+    /// `ConcordError::State` when the state cannot be saved.
+    pub fn watch_progress(&mut self, fingerprint: &str) -> Result<()> {
+        if self.state.session.watch.as_ref().is_some_and(|w| w.fingerprint == fingerprint) {
+            return Ok(());
+        }
+        self.state.session.watch = Some(crate::state::Watch { fingerprint: fingerprint.to_string(), nudges: 0 });
+        self.save()
+    }
+
+    /// Count one more nudge for the progress `fingerprint` (the first, when it is not the one noted), and say how many in a row.
+    ///
+    /// # Errors
+    ///
+    /// `ConcordError::State` when the state cannot be saved.
+    pub fn watch_nudge(&mut self, fingerprint: &str) -> Result<u32> {
+        let nudges = match &self.state.session.watch {
+            Some(w) if w.fingerprint == fingerprint => w.nudges + 1,
+            _ => 1,
+        };
+        self.state.session.watch = Some(crate::state::Watch { fingerprint: fingerprint.to_string(), nudges });
+        self.save()?;
+        Ok(nudges)
+    }
+
+    /// The spokes of the star when the agent is its centre, as kept in its state; none when it is not.
+    #[must_use]
+    pub fn kept_spokes(&self) -> Option<&[String]> {
+        self.state.session.spokes.as_deref()
+    }
+
+    /// Keep the spokes of the relay in the state, so that the agent can be the centre again after a restart (none: not a centre).
+    ///
+    /// # Errors
+    ///
+    /// `ConcordError::State` when the state cannot be saved.
+    pub fn keep_spokes(&mut self) -> Result<()> {
+        self.state.session.spokes = self.relay.as_ref().map(Relay::spokes);
+        self.save()
     }
 
     /// What the agent's model reads when a run is over: `guidance::render_end` of its report (the active run when `run_id` is None; None

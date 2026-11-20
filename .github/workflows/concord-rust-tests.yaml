@@ -2,7 +2,7 @@ name: concord-rust-tests
 
 # The ioc-concord library (packages/ioc-concord-rs). Two jobs that run side by side:
 #   concord-rust-library  formatting, clippy without warnings, the documentation without warnings, and the tests, with every combination of
-#                         the features (`uniffi`: the API for other languages)
+#                         the features (`uniffi`: the API for other languages, `cli`: the `ioc-concord` command)
 #   concord-rust-msrv     the crate builds, and its tests pass, on the oldest Rust it declares (`rust-version` in its Cargo.toml)
 
 on:

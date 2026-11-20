@@ -164,12 +164,59 @@ impl Run {
     }
 }
 
-/// The state of an agent: `{"me": id, "runs": {run id: run}, "active": run id or None}`.
+/// The last answer that was refused, and how many times in a row.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Refusal {
+    pub text: String,
+    pub repeats: u32,
+}
+
+/// What a caller that watches a run for stalls has seen: a fingerprint of the progress, and the nudges sent since it last changed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Watch {
+    pub fingerprint: String,
+    pub nudges: u32,
+}
+
+/// The messages an agent has produced and what became of them: the text to send again, when it was handed out and whether it has been.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Outbox {
+    pub messages: Vec<String>,
+    pub at: f64,
+    pub handed: bool,
+}
+
+/// What a program that drives an agent keeps between its calls, with the state of the agent: which of its answers was refused, the
+/// messages it last produced, how long a run has been stalled, and whether the agent is the centre of a star and for which spokes. It is
+/// not part of the protocol: it is saved only when it holds something.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Session {
+    /// `Some` when the agent is the centre of a star.
+    #[serde(default)]
+    pub spokes: Option<Vec<String>>,
+    #[serde(default)]
+    pub outbox: Option<Outbox>,
+    #[serde(default)]
+    pub refusal: Option<Refusal>,
+    #[serde(default)]
+    pub watch: Option<Watch>,
+}
+
+impl Session {
+    pub fn is_empty(&self) -> bool {
+        *self == Session::default()
+    }
+}
+
+/// The state of an agent: `{"me": id, "runs": {run id: run}, "active": run id or None}`, and `"session"` when a program that drives the
+/// agent keeps something there.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AgentState {
     pub me: String,
     pub runs: IndexMap<String, Run>,
     pub active: Option<String>,
+    #[serde(default, skip_serializing_if = "Session::is_empty")]
+    pub session: Session,
 }
 
 impl AgentState {
@@ -182,7 +229,7 @@ impl AgentState {
         if !is_agent_id(me) {
             return Err(ConcordError::state(format!("an agent id is 1 to 64 letters, digits, _ or -, not {}", crate::protocol::quote(me))));
         }
-        Ok(AgentState { me: me.to_string(), runs: IndexMap::new(), active: None })
+        Ok(AgentState { me: me.to_string(), runs: IndexMap::new(), active: None, session: Session::default() })
     }
 
     /// The run that is active for the agent, or None.
