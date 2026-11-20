@@ -42,6 +42,8 @@ def _bundles():
     first): running the same code twice would only slow the tests down."""
     out, seen = {}, set()
     for lib in CONFIG["library"]:
+        if lib["name"] != "ioc_concord":                  # the other libraries of the config (the CLI of the scripts) build on this one
+            continue
         for target in lib["target"]:
             block = bundle_tool.render({**lib, "ref": bundle_tool.WORKTREE}, {**target, "modules": MODULES},
                                        (ROOT / target["file"]).read_text(), shake=False)
