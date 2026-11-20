@@ -22,14 +22,14 @@ of UUIDs are injected, with the standard library as default, so that a run can b
 """
 import time
 
-from ioc_concord.engine import add_anchor, add_proposal, add_ratings, evaluate, parse_candidate_id, timers_enabled
+from ioc_concord.engine import add_anchor, add_proposal, add_ratings, evaluate, parse_candidate_id
 from ioc_concord.errors import InvalidMessage, MissingState, StateError
 from ioc_concord.guidance import render_task
 from ioc_concord.liveness import earliest_deadline, expired_keys, owed_batches, sync_timers
 from ioc_concord.protocol import ABORTED, PROTOCOL_VERSION
 from ioc_concord.report import report_of, status_of
-from ioc_concord.state import (INITIATOR, PARTICIPANT, RUN_ABORTED, RUN_ACTIVE, RUN_ENDED, active_run, item_key, keep_sent, keep_uuid,
-                               members, new_agent_state, new_run)
+from ioc_concord.state import (INITIATOR, PARTICIPANT, RUN_ABORTED, RUN_ACTIVE, RUN_ENDED, active_run, check_agent_state, item_key, keep_sent,
+                               keep_uuid, members, new_agent_state, new_run)
 from ioc_concord.tasks import tasks_of, to_rate
 from ioc_concord.wire import (DATA_TAGS, ERROR, INIT, KIND_OF_TAG, RESEND, build_cancel, build_error, build_init, build_init_reply,
                               build_repair, build_resend, build_result, build_score, check_ok, locate, new_uuid, parse_message, peek)
@@ -79,11 +79,7 @@ class Agent:
             state = self.store.load()
         except MissingState:                    # nothing saved yet; a state that cannot be read is an error, never a fresh start
             return new_agent_state(self.me)
-        if not isinstance(state, dict):
-            raise StateError("the saved state is not the state of an agent")
-        if state.get("me") != self.me:
-            raise StateError(f"the saved state belongs to {state.get('me')!r}, not to {self.me!r}")
-        return state
+        return check_agent_state(state, self.me)
 
     def _save(self):
         if self.store is not None:
@@ -114,8 +110,17 @@ class Agent:
         self._handle(text, step)
         if any(e["event"] in ("joined", "recorded") for e in step.events):
             step.accepted.append(text)
-        self._save()
+        self._finish(step)
         return step
+
+    def _finish(self, step):
+        """Every call that returns a Step ends here. A centre knows a run once it has sent that run's init to the spokes, bare or inside a
+        resend: so the relay learns from every text the agent sends, whichever call sent it (`start`, a `tick` that asks again, an answer
+        to an error). Then the state is saved."""
+        if self.relay is not None:
+            for text in step.send:
+                self.relay.learn(text)
+        self._save()
 
     def _handle(self, text, step):
         try:
@@ -203,11 +208,8 @@ class Agent:
             return self._known_init(run, msg, resent, step)
         kept = self._record(run, msg, doc, step)
         if kept is None:                                  # it cannot be judged before the run state is complete
-            if info["attrs"]["uuid"] not in run["held"]:
-                if len(run["held"]) >= len(run["participants"]) * (run["params"]["B"] + 1):
-                    step.note("ignored", reason="too many messages held", kind=msg["kind"], **{"from": msg["from"]})
-                    return False
-                run["held"][info["attrs"]["uuid"]] = doc
+            if not self._hold(run, msg, doc, info["attrs"]["uuid"], step):
+                return False
             step.note("held", kind=msg["kind"], reason="the run state is incomplete", **{"from": msg["from"]})
             self._ask_keys(run, self._lacking_keys(run), step)
             return False
@@ -330,13 +332,21 @@ class Agent:
         if msg["reason"] == "check":
             stored = run["sent_by_uuid"].get(msg["ref"])
         else:
-            stored = run["sent"].get(item_key(msg["what"], self.me, msg["candidate"]))
+            stored = run["sent"].get(self._key_asked(msg))
         if stored is None:
             step.note("nothing to send", **where)
             return True
         step.send.append(build_resend(self.me, run["run_id"], stored, reply_to=msg["uuid"], uid=self.new_uuid()))
         step.note("resent", kind=msg["what"], to=msg["from"], run_id=run["run_id"])
         return True
+
+    def _key_asked(self, msg):
+        """The key in `run["sent"]` of the message that answers the `missing` error `msg`. An init reply and a repair hold the
+        proposer's own score, so a request for the score of this agent's own candidate is answered by the message that proposed it."""
+        parsed = parse_candidate_id(msg["candidate"]) if msg["what"] == "score" and msg["candidate"] else None
+        if parsed is not None and parsed[1] == self.me:
+            return item_key("init-reply", self.me) if parsed[0] == 0 else item_key("repair", self.me, msg["candidate"])
+        return item_key(msg["what"], self.me, msg["candidate"])
 
     def _record_cancel(self, run, msg, step):
         """A cancel ends the run for this agent, whatever its stage, and is passed on once."""
@@ -354,7 +364,7 @@ class Agent:
         if run["status"] == RUN_ACTIVE:
             run["status"], run["outcome"], run["abort"] = RUN_ABORTED, ABORTED, {"reason": reason, "agent": agent,
                                                                                  "superseded_by": superseded_by, "note": None}
-            run["timers"], run["held"] = {}, {}
+            run["timers"], run["held"], run["unrated"] = {}, {}, []
             step.note("aborted", **why)
         elif run["status"] == RUN_ENDED:
             run["disputed"] = True
@@ -421,9 +431,11 @@ class Agent:
             keys = []
             for cid in unknown:
                 rnd, proposer = parse_candidate_id(cid)
-                if proposer in run["participants"]:
+                if proposer in run["participants"] and rnd <= run["params"]["B"]:   # a later round can never exist
                     if cid not in run["expected"]:
                         run["expected"].append(cid)
+                    if [author, cid] not in run["unrated"]:
+                        run["unrated"].append([author, cid])
                     keys.append(f"init-reply|{proposer}" if rnd == 0 else f"repair|{proposer}|{rnd}")
             self._ask_keys(run, keys, step)
         step.note("recorded", kind="score", candidates=recorded, **{"from": author})
@@ -499,6 +511,9 @@ class Agent:
         if author not in run["participants"] or msg["to"] != run["participants"][0]:
             step.note("ignored", reason="not about the result of the reporter", **where)
             return False
+        if author in run["mismatches"]["received"]:           # an agent compares the one result once: a second one adds nothing
+            step.note("ignored", reason="already counted", **where)
+            return False
         run["mismatches"]["received"].append(author)
         step.note("mismatch received", **where)
         return True
@@ -520,20 +535,55 @@ class Agent:
         if run["outcome"] is not None and run["status"] == RUN_ACTIVE:
             self._confirm(run, ev, step)
         self._sync_timers(run, step, ev)
+        if run["status"] == RUN_ACTIVE:
+            self._ask_unrated(run, step)
+
+    def _ask_unrated(self, run, step):
+        """A rating that arrived before the proposal it rates was not recorded. Now that the proposal is in, ask its author for the score
+        at once, since it is known to exist, and do not wait for the timer. An entry goes when the rating is in."""
+        pool, raw, keys = {c["id"] for c in run["engine"]["pool"]}, run["engine"]["raw"], []
+        for author, cid in list(run["unrated"]):
+            if cid in raw[author]:
+                run["unrated"].remove([author, cid])
+            elif cid in pool:
+                keys.append(f"score|{author}|{'seeds' if parse_candidate_id(cid)[0] == 0 else cid}")
+        if keys:
+            self._ask_keys(run, keys, step)
+
+    def _hold(self, run, msg, doc, uid, step):
+        """Keeps `doc`, a repair or a result that cannot be judged yet, to judge it again when the run state is complete. Only the first
+        message for an item is kept (an item is the repair of a round by its author, or the result), and only a repair of a round up to B (a
+        repair from a non-participant and a result from anyone but the reporter are ignored before this). An author has at most
+        B + 1 items, so one peer can never take the place of the others. Returns whether it is held, or already was."""
+        author, where = msg["from"], {"kind": msg["kind"], "from": msg["from"]}
+        if msg["kind"] == "repair":
+            key, rnd = item_key("repair", author, msg["proposal"]["id"]), msg["proposal"]["round"]
+        else:
+            key, rnd = item_key("result", author), 0
+        if key in run["held"]:
+            if run["held"][key]["uuid"] == uid:          # the same transmission again: still held
+                return True
+            step.note("ignored", reason="already held", **where)
+            return False
+        if rnd > run["params"]["B"]:
+            step.note("ignored", reason="no repair of this round is owed", **where)
+            return False
+        run["held"][key] = {"uuid": uid, "doc": doc}
+        return True
 
     def _replay_held(self, run, step):
         """Judge again the repairs and results that were held, now that the run state may be complete."""
         moved = True
         while moved and run["held"]:
             moved = False
-            for uid, doc in list(run["held"].items()):
-                kept = self._record(run, parse_message(doc, run["schema"]), doc, step)
+            for key, held in list(run["held"].items()):
+                kept = self._record(run, parse_message(held["doc"], run["schema"]), held["doc"], step)
                 if kept is None:
                     continue
-                del run["held"][uid]
+                del run["held"][key]
                 moved = True
                 if kept:
-                    keep_uuid(run, uid)
+                    keep_uuid(run, held["uuid"])
 
     def _confirm(self, run, ev, step):
         """The reporter ends its run by sending its result; another participant ends it when it holds that result, and a result
@@ -585,8 +635,7 @@ class Agent:
         elif not self._error(step, t["author"], run["run_id"], t["what"], "missing", candidate=t["candidate"]):
             return False
         t["requests"] += 1
-        if timers_enabled(run["params"]):
-            t["deadline"] = step.now + run["params"]["timeout"]
+        t["deadline"] = step.now + run["params"]["timeout"]
         step.note("asked", author=t["author"], what=t["what"], candidate=t["candidate"], request=t["requests"], run_id=run["run_id"])
         return True
 
@@ -596,7 +645,7 @@ class Agent:
         is early, or the agent holds it already) is not asked for: the timer will ask when it is owed."""
         author, kind = info["attrs"].get("from"), KIND_OF_TAG[info["tag"]]
         self._sync_timers(run, step)
-        for key, t in sorted(run["timers"].items(), key=lambda kv: (kv[1]["deadline"] is None, kv[1]["deadline"] or 0, kv[0])):
+        for key, t in sorted(run["timers"].items(), key=lambda kv: (kv[1]["deadline"], kv[0])):
             if t["author"] == author and t["what"] == kind and t["requests"] < run["params"]["retries"]:
                 if self._request(run, key, step, ref=info["attrs"].get("uuid")):
                     return
@@ -616,11 +665,10 @@ class Agent:
 
     def tick(self, now=None):
         """Time has passed: for every timer that has expired, ask again, or, when `retries` requests have not been answered, give up on
-        the author: the run ends `ABORTED` with the reason "missing-agent" and the cancel goes out. Returns a Step. A run with a
-        `timeout` of 0 has no timers."""
+        the author: the run ends `ABORTED` with the reason "missing-agent" and the cancel goes out. Returns a Step."""
         step = self._step(now)
         for run in list(self.state["runs"].values()):
-            if run["status"] != RUN_ACTIVE or not timers_enabled(run["params"]):
+            if run["status"] != RUN_ACTIVE:
                 continue
             self._sync_timers(run, step)
             for key in expired_keys(run, step.now):
@@ -631,7 +679,7 @@ class Agent:
                     self._abort(run, step, "missing-agent", agent=t["author"])
                     break
                 self._request(run, key, step, from_timer=True)
-        self._save()
+        self._finish(step)
         return step
 
     def next_wakeup(self):
@@ -677,10 +725,8 @@ class Agent:
         step = self._step(now)
         step.send.append(text)
         step.note("started", participants=init["participants"], run_id=init["run_id"], role=run["role"])
-        if self.relay is not None:
-            self.relay.learn(text)              # the centre sends this init to the spokes: what comes back for the run is passed on
         self._advance(run, step)
-        self._save()
+        self._finish(step)
         return step
 
     def submit_init_reply(self, run_id, raw_reject, raw_ideal, candidate, rationale, raw, reasoning, now=None):
@@ -738,7 +784,7 @@ class Agent:
         step.send.append(text)
         step.note("sent", kind=kind, run_id=run["run_id"])
         self._advance(run, step)
-        self._save()
+        self._finish(step)
         return step
 
     # ------------------------------------------------------------------

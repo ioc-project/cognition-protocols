@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 """The messages, as imported and as bundled into each script (see conftest.py)."""
+import time
+
 import pytest
 
 M = 1_000_000
@@ -59,11 +61,27 @@ def test_init_reads_back_with_every_parameter(wire):
     assert (m["context"], m["x_reject"], m["x_ideal"], m["schema"]) == ("pick one", "nothing", "all agree", SPEC)
 
 
-def test_init_defaults_fill_what_is_left_out_and_a_zero_timeout_is_valid(wire, protocol):
+def test_init_defaults_fill_what_is_left_out_and_a_zero_timeout_is_not(wire, protocol):
     assert wire.parse_message(init(wire))["params"] == protocol.DEFAULT_PARAMS
-    assert wire.parse_message(init(wire, params={"timeout": 0}))["params"]["timeout"] == 0
+    refuses(wire, wire.parse_message, "timeout", init(wire).replace("<timeout>300", "<timeout>0"))
+    refuses(wire, wire.build_init, "timeout", "alice", ["a", "b"], "c", "x", "y", {"description": "d"}, params={"timeout": 0})
     bare = init(wire).replace("<params>", "<x>").replace("</params>", "</x>")
     assert wire.parse_message(bare)["params"] == protocol.DEFAULT_PARAMS
+
+
+@pytest.mark.parametrize("tag, value", [("satisfaction_threshold", "0.6"), ("eps", "0.05"), ("budget", "8"), ("timeout", "300"),
+                                        ("retries", "3")])
+def test_a_parameter_element_that_is_empty_makes_the_init_invalid(wire, tag, value):
+    doc = init(wire)
+    assert f"<{tag}>{value}</{tag}>" in doc
+    for empty in (f"<{tag}></{tag}>", f"<{tag}/>", f"<{tag}> \n</{tag}>"):
+        refuses(wire, wire.parse_message, tag, doc.replace(f"<{tag}>{value}</{tag}>", empty))
+
+
+def test_a_parameter_that_is_left_out_takes_its_default_but_one_that_is_there_must_be_valid(wire, protocol):
+    doc = init(wire)
+    assert wire.parse_message(doc.replace("<eps>0.05</eps>", ""))["params"] == protocol.DEFAULT_PARAMS
+    refuses(wire, wire.parse_message, "eps", doc.replace("<eps>0.05</eps>", "<eps>x</eps>"))
 
 
 def test_init_makes_a_run_id_when_none_is_given(wire):
@@ -131,6 +149,14 @@ def test_the_text_of_a_message_survives_escaping_and_quotes(wire):
     assert wire.parse_message(odd)["scores"][0]["reasoning"] == 'why "not" <this> & that' and wire.check_ok(odd)
 
 
+def test_only_space_tab_and_line_breaks_are_trimmed_from_the_text_of_a_message(wire):
+    cand = "\u00a0\x85local cache\u2003"
+    m = wire.parse_message(init_reply(wire, candidate=" \t" + cand + "\n "))
+    assert m["proposal"]["candidate"] == cand
+    err = wire.build_error("alice", RUN, "cost", "init", "invalid", text="\u00a0too   many\n\tspaces\u00a0")
+    assert wire.parse_message(err)["text"] == "\u00a0too many spaces\u00a0"
+
+
 # --- the author's responsibility --------------------------------------------
 
 def test_init_is_refused_when_it_breaks_a_rule_of_the_configuration(wire):
@@ -139,6 +165,9 @@ def test_init_is_refused_when_it_breaks_a_rule_of_the_configuration(wire):
     refuses(wire, init, "satisfaction_threshold", wire, params={"satisfaction_threshold": 0})
     refuses(wire, init, "budget", wire, params={"B": 0})
     refuses(wire, init, "retries", wire, params={"retries": -1})
+    refuses(wire, init, "budget", wire, params={"B": 1_000_000_000})
+    refuses(wire, init, "timeout", wire, params={"timeout": 1_000_000_000})
+    refuses(wire, init, "retries", wire, params={"retries": 10 ** 5000})
     refuses(wire, init, "timeout", wire, params={"timeout": -5})
     refuses(wire, init, "unknown parameters: nope", wire, params={"nope": 1})
     refuses(wire, init, "context is required", wire, context=" ")
@@ -271,6 +300,27 @@ def test_locate_takes_the_document_unchanged_out_of_prose_or_a_fence(wire):
     assert wire.locate(f"> {res} <") == res
 
 
+def test_locate_reads_the_fence_that_holds_the_message_and_skips_the_others(wire):
+    doc = score(wire)
+    assert wire.locate(f"```\nnot it\n```\n```\n{doc}\n```") == doc
+    assert wire.locate(f"``` \t\n  \n{doc}\n```") == doc
+    assert wire.locate(f"```xml\n\n{doc}\n```") == doc
+    assert wire.locate(f"```\nopen, never closed\n then ```xml\n{doc}\n```") == doc
+    assert wire.locate(f"```xmlx\n{doc}\n```") == doc          # not a fence: the message is found in the prose
+    assert wire.locate(f"```text {doc}") == doc
+
+
+def test_locate_takes_time_in_proportion_to_the_text_even_with_many_fences_never_closed(wire):
+    doc = score(wire)
+    for text in (" ```\n" * 80_000 + "x", " ```\n" * 80_000 + doc, "```xml\n" * 50_000 + doc, "```\n" + "``` \n" * 80_000 + doc):
+        start = time.perf_counter()
+        try:
+            assert wire.locate(text) == doc
+        except wire.InvalidMessage:
+            pass
+        assert time.perf_counter() - start < 1, len(text)
+
+
 def test_locate_refuses_what_is_not_a_complete_message(wire):
     for text in ("just words", "<other>x</other>", "<concord-score from='a'>never closed", "<concord-score from='a'"):
         refuses(wire, wire.locate, "CONCORD|closed|cut off", text)
@@ -283,6 +333,76 @@ def test_peek_reads_the_root_of_anything_and_nothing_of_the_rest(wire):
     p = wire.peek(err)
     assert (p["tag"], p["attrs"]["reason"], p["attrs"]["version"], p["text"]) == (
         "concord-error", "version", "9.9.9", "I speak 9.9.9, got 0.3.0 & more")
+
+
+def hidden(wire, doc, old, new):
+    """`doc` with `old` replaced by `new` and the check computed again."""
+    assert old in doc
+    return wire.with_check(doc.replace(f' check="{wire.peek(doc)["attrs"]["check"]}"', "").replace(old, new, 1))
+
+
+def test_peek_and_the_parser_read_the_same_attributes_whatever_the_quotes(wire):
+    doc = score(wire)
+    who = wire.peek(doc)["attrs"]["from"]
+    for extra in (' x=\' from="cost"\'', " x='\" from=\"cost\" '", ' x=">" ', ' x="/>"', " x = 'a>b' ", ' x="a&gt;b"', " x='from=\"cost\"'"):
+        forged = hidden(wire, doc, f' from="{who}"', f' from="{who}"{extra}')
+        assert wire.peek(forged)["attrs"]["from"] == who == wire.parse_message(forged)["from"], extra
+        assert wire.check_ok(forged) and wire.locate("see " + forged + " ok") == forged
+
+
+def test_a_check_cannot_be_hidden_in_the_value_of_another_attribute(wire):
+    doc = score(wire)
+    real = wire.peek(doc)["attrs"]["check"]
+    forged = hidden(wire, doc, " from=", " x='a check=\"00000000\"' from=")
+    assert wire.peek(forged)["attrs"]["check"] == wire.check_of(forged) != "00000000"
+    assert wire.check_ok(forged) and wire.check_ok(doc) and real != wire.check_of(forged)
+    assert not wire.check_ok(forged.replace("risky", "risk"))
+
+
+def test_peek_reads_a_character_reference_as_the_parser_does(wire):
+    doc = score(wire)
+    who = wire.peek(doc)["attrs"]["from"]
+    forged = hidden(wire, doc, f' from="{who}"', f' from="{who}&#10;"')
+    assert wire.peek(forged)["attrs"]["from"] == who + "\n"
+    refuses(wire, wire.parse_message, "from", forged)
+    assert wire.peek(hidden(wire, doc, f' from="{who}"', f' from="&#x63;{who[1:]}"'))["attrs"]["from"] == who
+
+
+def test_a_start_tag_that_is_not_well_formed_is_not_a_concord_element(wire):
+    doc = score(wire)
+    who = wire.peek(doc)["attrs"]["from"]
+    for bad in (f' from="{who}" from="cost"', f' from="{who}" x=1', f' from="{who}" x="a<b"', f' from="{who}" &x;="1"',
+                f' from="{who}" x="&nope;"'):
+        forged = doc.replace(f' from="{who}"', bad, 1)
+        assert wire.peek(forged) is None, bad
+        assert wire.check_of(forged) is None
+        with pytest.raises(wire.InvalidMessage):
+            wire.parse_message(forged)
+
+
+def test_the_start_tag_is_read_in_time_proportional_to_its_length(wire):
+    doc = score(wire)
+    for junk in (' a="b"' * 50_000, " " * 200_000, ' a=" ' * 50_000, " a" * 100_000):
+        start = time.perf_counter()
+        text = doc.replace("<concord-score", "<concord-score" + junk, 1)
+        assert wire.peek(text) is None or wire.peek(text)["attrs"]
+        try:
+            wire.locate(text)
+        except wire.InvalidMessage:
+            pass
+        assert time.perf_counter() - start < 2, junk[:10]
+
+
+def test_peek_reads_one_level_into_a_resend_and_none_into_a_resend_of_a_resend(wire):
+    inner = score(wire)
+    once = wire.build_resend("cost", RUN, inner)
+    p = wire.peek(once)
+    assert p["inner"]["tag"] == "concord-score" and p["inner"]["inner"] is None
+    twice = f'<concord-resend version="0.3.0" from="cost" run_id="{RUN}" uuid="{RUN}">{once}</concord-resend>'
+    p = wire.peek(twice)
+    assert p["inner"]["tag"] == "concord-resend" and p["inner"]["inner"] is None
+    deep = f'<concord-resend version="0.3.0" from="cost" run_id="{RUN}" uuid="{RUN}">' * 100_000 + inner + "</concord-resend>" * 100_000
+    assert wire.peek(deep)["inner"]["tag"] == "concord-resend"
 
 
 # --- the receiver's side -----------------------------------------------------
@@ -316,6 +436,7 @@ def test_a_receiver_refuses_invalid_scores_and_anchors_it_reads(wire):
     refuses(wire, wire.parse_message, "0 to 100", score(wire).replace("41.0", "141.0"))
     refuses(wire, wire.parse_message, "is not a number", score(wire).replace("41.0", "lots"))
     refuses(wire, wire.parse_message, "not a candidate id", score(wire).replace("seed-security", "nope"))
+    refuses(wire, wire.parse_message, "not a candidate id", score(wire).replace("seed-security", "seed-security&#10;"))
     refuses(wire, wire.parse_message, "must exceed", init_reply(wire).replace("<raw_ideal>95.0", "<raw_ideal>5.0"))
     refuses(wire, wire.parse_message, "is not a number", init_reply(wire).replace("<raw_reject>8.0", "<raw_reject>-8.0"))
     refuses(wire, wire.parse_message, "<reasoning> in <score> is empty",

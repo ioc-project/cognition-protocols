@@ -43,6 +43,67 @@ def test_a_run_holds_what_the_init_says_and_is_json_able(state):
     assert json.loads(json.dumps(run)) == run
 
 
+def saved(state):
+    """A state as the agent `cost` saves it: JSON that has been through a file."""
+    init, doc = parsed_init()
+    s = state.new_agent_state("cost")
+    s["runs"][RUN] = state.new_run("cost", init, doc)
+    s["active"] = RUN
+    return json.loads(json.dumps(s))
+
+
+def test_the_keys_of_a_run_that_a_saved_state_must_hold_are_those_new_run_makes(state):
+    init, doc = parsed_init()
+    assert set(state.RUN_KEYS) == set(state.new_run("cost", init, doc)) == set(state.new_run("alice", init, doc))
+
+
+def test_a_state_that_the_library_made_passes_the_check_and_is_returned_as_it_is(state):
+    s = saved(state)
+    assert state.check_agent_state(s, "cost") is s
+    empty = state.new_agent_state("cost")
+    assert state.check_agent_state(empty, "cost") is empty
+
+
+@pytest.mark.parametrize("change, why", [
+    (lambda s: s.pop("runs"), '"runs" is not an object'),
+    (lambda s: s.update(runs=[]), '"runs" is not an object'),
+    (lambda s: s.update(runs=5), '"runs" is not an object'),
+    (lambda s: s.update(active="22222222-2222-4222-8222-222222222222"), '"active" names a run'),
+    (lambda s: s["runs"].update({"not-a-uuid": s["runs"][RUN]}), "is not a run id"),
+    (lambda s: s["runs"].update({RUN: None}), "is not an object"),
+    (lambda s: s["runs"].update({RUN: []}), "is not an object"),
+    (lambda s: s["runs"][RUN].pop("engine"), "lacks engine"),
+    (lambda s: s["runs"][RUN].pop("held"), "lacks held"),
+    (lambda s: s["runs"][RUN].update(run_id="22222222-2222-4222-8222-222222222222"), "says it is"),
+    (lambda s: s["runs"][RUN].update(status="paused"), "a role or a status"),
+    (lambda s: s["runs"][RUN].update(role="spectator"), "a role or a status"),
+    (lambda s: s["runs"][RUN].update(participants="cost"), '"participants" of the run'),
+    (lambda s: s["runs"][RUN].update(timers=[]), '"timers" of the run'),
+    (lambda s: s["runs"][RUN].update(uuids=None), '"uuids" of the run'),
+    (lambda s: s["runs"][RUN].update(participants=["cost", "a b"]), "no valid id"),
+    (lambda s: s["runs"][RUN].update(initiator=None), "no valid id"),
+    (lambda s: s["runs"][RUN]["params"].pop("retries"), "no parameters or no engine"),
+    (lambda s: s["runs"][RUN]["engine"].pop("pool"), "no parameters or no engine"),
+])
+def test_a_state_of_the_wrong_shape_is_refused_with_the_reason(state, change, why):
+    s = saved(state)
+    change(s)
+    with pytest.raises(state.StateError, match="not the state of an agent") as e:
+        state.check_agent_state(s, "cost")
+    assert why in str(e.value)
+
+
+@pytest.mark.parametrize("value", [None, [], "state", 5, True])
+def test_a_saved_state_that_is_not_an_object_is_refused(state, value):
+    with pytest.raises(state.StateError, match="not a JSON object"):
+        state.check_agent_state(value, "cost")
+
+
+def test_the_state_of_another_agent_is_refused(state):
+    with pytest.raises(state.StateError, match="belongs to 'cost', not to 'security'"):
+        state.check_agent_state(saved(state), "security")
+
+
 def test_the_members_of_a_run_are_its_participants_and_its_initiator(state):
     init, doc = parsed_init()
     assert state.members(state.new_run("cost", init, doc)) == {"alice", "cost", "security"}

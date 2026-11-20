@@ -2,20 +2,27 @@
 # Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 # SPDX-License-Identifier: Apache-2.0
 #
-"""XML text helpers: escaping, and the integrity check of a document.
+"""XML text helpers: escaping, the start tag of a document, and its integrity check.
 
 The check works on the text of a document, exactly as it was sent: a document is never parsed and written again before its
 check is computed or verified.
+
+The root start tag is read here, once, for everything that looks at a document before it is parsed (the `check`, the `from` and
+`uuid` that decide whether a message is dropped). `start_tag` finds its end and reads its attributes with an XML parser, so they are
+exactly what the parser reads from the whole document: no attribute can be hidden in the value of another one.
 """
 import hashlib
 import re
+import xml.etree.ElementTree as ET
 
-_WS = " \t\r\n"
-_START_TAG_RE = re.compile(r"<[^>]*>")
-_CHECK_ATTR_RE = re.compile(r' check="[^"]*"')
-_CHECK_VALUE_RE = re.compile(r'\scheck="([^"]*)"')
+from ioc_concord.protocol import WS, squeeze
+
+_B = r"[ \t\r\n]"                                  # XML blanks: the same four characters as `WS`
+_NAME = r"[^ \t\r\n\"'<>/=]+"
+_VALUE = r"\"[^\"<]*\"|'[^'<]*'"
+_ATTR_RE = re.compile(rf"{_B}+({_NAME}){_B}*={_B}*({_VALUE})")
+_START_TAG_RE = re.compile(rf"<({_NAME})((?:{_B}+{_NAME}{_B}*={_B}*(?:{_VALUE}))*){_B}*(/?)>")
 _TEXT_RUN_RE = re.compile(r">([^<]*)<")
-_BLANKS_RE = re.compile(r"[ \t\r\n]+")
 
 
 def esc_text(v):
@@ -30,17 +37,37 @@ def esc_attr(v):
 
 def _squeeze(match):
     text = match.group(1)
-    return ">" + ("" if not text.strip(_WS) else _BLANKS_RE.sub(" ", text).strip(_WS)) + "<"
+    return ">" + squeeze(text) + "<"
+
+
+def start_tag(doc):
+    """The root start tag of `doc`, which must begin with it: (its match, its attributes), or None when `doc` does not begin with a
+    well-formed start tag. In the match, group 1 is the name, group 3 is "/" for an empty element and the end is where the content
+    begins. The attributes are a dict, as an XML parser reads them: quotes of either kind, character references, line breaks and
+    all. A repeated attribute is not well-formed."""
+    m = _START_TAG_RE.match(doc)
+    if m is None:
+        return None
+    try:
+        root = ET.fromstring(m.group(0) if m.group(3) else f"{m.group(0)}</{m.group(1)}>")
+    except ET.ParseError:
+        return None
+    return m, dict(root.attrib)
 
 
 def canonical_text(doc):
     """The text the check is computed over: the document without its `check` attribute (and the space before it), with
     each stretch of text between a `>` and the next `<` made of whitespace only removed, and each other one with its runs of
     whitespace made one space and none left at either end. Nothing else changes."""
-    doc = doc.strip(_WS)
+    doc = doc.strip(WS)
     start = _START_TAG_RE.match(doc)
     if start:
-        doc = _CHECK_ATTR_RE.sub("", start.group(0), count=1) + doc[start.end():]
+        tag = start.group(0)
+        for a in _ATTR_RE.finditer(tag, start.start(2), start.end(2)):
+            if a.group(1) == "check":
+                tag = tag[:a.start(1) - 1] + tag[a.end():]
+                break
+        doc = tag + doc[start.end():]
     return _TEXT_RUN_RE.sub(_squeeze, doc)
 
 
@@ -51,9 +78,8 @@ def compute_check(doc):
 
 def check_of(doc):
     """The value of the `check` attribute on the root element of `doc`, or None when it has none."""
-    start = _START_TAG_RE.match(doc.strip(_WS))
-    m = _CHECK_VALUE_RE.search(start.group(0)) if start else None
-    return m.group(1) if m else None
+    st = start_tag(doc.strip(WS))
+    return st[1].get("check") if st else None
 
 
 def verify_check(doc):
@@ -64,7 +90,7 @@ def verify_check(doc):
 
 def with_check(doc_without_check):
     """`doc_without_check`, whose root start tag has no `check`, with the attribute added as its last attribute."""
-    doc = doc_without_check.strip(_WS)
+    doc = doc_without_check.strip(WS)
     start = _START_TAG_RE.match(doc)
     tag = start.group(0)
     closing = "/>" if tag.endswith("/>") else ">"

@@ -41,6 +41,29 @@ def test_an_init_inside_a_resend_makes_the_run_known_too(relay):
     assert r.receive(resent_score) == [resent_score]
 
 
+def nested(depth, inner):
+    """`inner` inside `depth` resends, written by hand: the library never builds a resend of a resend."""
+    head = f'<concord-resend version="0.3.0" from="alice" run_id="{RUN}" uuid="{OTHER}">'
+    return head * depth + inner + "</concord-resend>" * depth
+
+
+@pytest.mark.parametrize("depth", [2, 2000, 100_000])
+def test_a_resend_nested_to_any_depth_is_read_in_a_fixed_number_of_steps_and_makes_no_run_known(relay, depth):
+    r = relay.Relay()
+    text = nested(depth, init_doc())
+    assert r.receive(text) == [] and r.state["runs"] == {}                  # a resend of a resend is not an init
+    r.learn(init_doc())
+    assert r.receive(text) == [text]                                        # but a message of a run it knows is passed on
+
+
+@pytest.mark.parametrize("depth", [2, 2000, 100_000])
+def test_a_nested_resend_raises_nothing_in_the_agent_with_or_without_a_relay(agent, depth):
+    text = nested(depth, init_doc(["hub", "security"]))
+    assert agent.Agent("hub").receive(text).events[0]["event"] == "ignored"
+    a = centre(agent)
+    assert a.receive(text).forward == [] and a.status() is None
+
+
 def test_the_message_is_passed_on_exactly_as_it_came(relay):
     r = relay.Relay()
     text = "Here it is:\n```xml\n" + init_doc() + "\n```\n"
@@ -127,9 +150,24 @@ def test_a_saved_state_that_is_not_a_relay_state_is_refused(relay, text):
         relay.Relay(store=store)
 
 
+@pytest.mark.parametrize("runs", ['{"not-a-uuid": 5}', '{"%s": null}' % RUN, '{"%s": true}' % RUN, '{"%s": "now"}' % RUN, '{"%s": [1]}' % RUN,
+                                  '{"%s": {}}' % RUN, '{"%s": 5, "x": 1}' % RUN, '{"AAAAAAAA-0000-4000-8000-000000000000": 5}'])
+def test_a_saved_state_with_a_run_that_is_not_a_run_id_with_the_time_it_was_learned_is_refused(relay, runs):
+    store = MemStore(relay)
+    store.text = '{"runs": %s}' % runs
+    with pytest.raises(relay.StateError, match="not a run id and the time it was learned"):
+        relay.Relay(store=store)
+
+
+def test_a_saved_state_with_integer_and_float_times_is_read(relay):
+    store = MemStore(relay)
+    store.text = '{"runs": {"%s": 5, "%s": 6.5}}' % (RUN, OTHER)
+    assert list(relay.Relay(store=store).state["runs"]) == [RUN, OTHER]
+
+
 def test_a_state_that_cannot_be_read_does_not_make_the_relay_forget_its_runs(relay):
     store = MemStore(relay)
-    r = relay.Relay(store=store)
+    r = relay.Relay(store=store, clock=lambda: 100)
     r.receive(init_doc())
 
     def unreadable():
@@ -137,7 +175,7 @@ def test_a_state_that_cannot_be_read_does_not_make_the_relay_forget_its_runs(rel
     store.load = unreadable
     with pytest.raises(relay.StateError, match="not valid JSON"):
         relay.Relay(store=store)                                            # not an empty relay: the saved runs are not thrown away
-    assert json.loads(store.text)["runs"] == {RUN: True}
+    assert json.loads(store.text)["runs"] == {RUN: 100}
     assert relay.Relay(store=MemStore(relay)).state == {"runs": {}}         # nothing saved at all: a fresh start
 
 
@@ -147,6 +185,82 @@ def test_a_run_id_in_capitals_is_not_a_uuid_and_names_no_run(relay):
     init = init_doc(run_id=lower)
     assert r.receive(init.replace(lower, lower.upper())) == [] and r.state["runs"] == {}
     assert r.receive(init) == [init] and list(r.state["runs"]) == [lower]
+
+
+# --- the run ids have a limit and an owner ---------------------------------------------------
+
+class Clock:
+    def __init__(self):
+        self.now = 1000.0
+
+    def __call__(self):
+        return self.now
+
+
+def run_id(n):
+    return f"{n:08x}-0000-4000-8000-000000000000"
+
+
+def test_each_run_is_saved_with_the_time_it_was_learned_oldest_first(relay):
+    clock, store = Clock(), MemStore(relay)
+    r = relay.Relay(store=store, clock=clock)
+    r.receive(init_doc())
+    clock.now += 5
+    r.receive(init_doc(run_id=OTHER))
+    clock.now += 5
+    r.receive(init_doc())                                                   # a run it knows is not learned again
+    assert json.loads(store.text)["runs"] == {RUN: 1000.0, OTHER: 1005.0}
+    assert list(relay.Relay(store=store).state["runs"]) == [RUN, OTHER]
+
+
+def test_expire_drops_the_runs_learned_more_than_so_long_ago_and_says_which(relay):
+    clock, store = Clock(), MemStore(relay)
+    r = relay.Relay(store=store, clock=clock)
+    r.receive(init_doc())
+    clock.now += 60
+    r.receive(init_doc(run_id=OTHER))
+    clock.now += 40                                                         # RUN is 100 seconds old, OTHER 40
+    assert r.expire(100) == []                                              # not more than 100
+    assert r.expire(99) == [RUN] and list(r.state["runs"]) == [OTHER]
+    assert r.receive(score()) == [] and r.receive(score(OTHER)) == [score(OTHER)]
+    assert list(json.loads(store.text)["runs"]) == [OTHER]                  # saved
+    assert r.expire(0) == [OTHER] and r.state["runs"] == {} and r.expire(0) == []
+
+
+def test_expire_saves_only_when_it_drops_something(relay):
+    saves, store = [], MemStore(relay)
+    r = relay.Relay(store=store, clock=Clock())
+    r.receive(init_doc())
+    store.save = lambda state: saves.append(1)
+    r.expire(10 ** 9)
+    assert saves == []
+
+
+def test_past_max_runs_the_oldest_run_is_dropped_so_a_flood_cannot_grow_the_state(relay):
+    clock = Clock()
+    r = relay.Relay(clock=clock, max_runs=3)
+    for n in range(10):
+        clock.now += 1
+        assert r.receive(init_doc(run_id=run_id(n))) != []                 # every init is still passed on
+    assert list(r.state["runs"]) == [run_id(7), run_id(8), run_id(9)]
+    assert r.receive(score(run_id(9))) == [score(run_id(9))] and r.receive(score(run_id(0))) == []
+
+
+def test_a_flood_of_bare_inits_is_bounded_by_the_default_limit(relay):
+    r = relay.Relay()
+    for n in range(relay.Relay().max_runs + 500):
+        r.learn(f'<concord-init run_id="{run_id(n)}"/>')
+    assert len(r.state["runs"]) == r.max_runs == 1000
+
+
+def test_max_runs_none_keeps_every_run_and_zero_is_refused(relay):
+    r = relay.Relay(max_runs=None)
+    for n in range(1200):
+        r.learn(f'<concord-init run_id="{run_id(n)}"/>')
+    assert len(r.state["runs"]) == 1200
+    for bad in (0, -1):
+        with pytest.raises(ValueError, match="max_runs"):
+            relay.Relay(max_runs=bad)
 
 
 # --- the spokes --------------------------------------------------------------------------------
@@ -186,9 +300,9 @@ def test_a_spoke_is_any_hashable_handle_that_the_caller_can_send_through(relay):
 
 def test_the_spokes_are_not_part_of_the_saved_state_and_a_restarted_relay_has_none(relay):
     store = MemStore(relay)
-    r = relay.Relay(store=store, spokes=["a", "b"])
+    r = relay.Relay(store=store, spokes=["a", "b"], clock=lambda: 100)
     r.receive(init_doc())
-    assert "spokes" not in json.loads(store.text) and json.loads(store.text)["runs"] == {RUN: True}
+    assert "spokes" not in json.loads(store.text) and json.loads(store.text)["runs"] == {RUN: 100}
     again = relay.Relay(store=store)
     assert again.spokes == () and list(again.state["runs"]) == [RUN]        # the runs are kept, the links connect again
     again.add_spoke("a")
@@ -256,6 +370,28 @@ def test_a_centre_that_opens_a_run_knows_it_and_passes_on_what_comes_back(agent)
     assert step.forward == [] and len(step.send) == 1 and list(a.relay.state["runs"]) == [RUN]
     reply = W.build_init_reply("cost", RUN, 0, 100, "plan", "because", 80, "good")
     assert a.receive(reply).forward == [reply]
+
+
+def test_a_centre_that_sends_its_init_again_inside_a_resend_after_a_restart_knows_the_run_then(agent):
+    store = MemStore(agent)                                        # the agent keeps its state; its relay is in memory and starts empty
+    first = agent.Agent("hub", store=store, relay=Relay(), uuid_fn=uuids("cccccccc"), clock=lambda: 0)
+    first.start(["hub", "cost", "security"], "pick one", "nothing", "all agree", {"type": "string", "description": "d"}, run_id=RUN,
+                params={"timeout": 10})
+    again = agent.Agent("hub", store=store, relay=Relay(), uuid_fn=uuids("dddddddd"), clock=lambda: 0)
+    assert again.relay.state["runs"] == {}
+    step = again.tick(100)                                     # the init replies are missing: the init goes out again, in a resend
+    assert [W.peek(t)["tag"] for t in step.send] == ["concord-resend", "concord-resend"]
+    assert [W.peek(t)["inner"]["tag"] for t in step.send] == ["concord-init", "concord-init"] and list(again.relay.state["runs"]) == [RUN]
+    reply = W.build_init_reply("cost", RUN, 0, 100, "plan", "because", 80, "good")
+    assert again.receive(reply).forward == [reply]                 # so the other spokes get what cost answered
+
+
+def test_a_message_the_agent_sends_that_is_not_an_init_makes_no_run_known(agent):
+    a = centre(agent)
+    a.receive(init_doc(["hub", "security"], run_id=OTHER))
+    a.relay.forget(OTHER)
+    step = a.submit_init_reply(OTHER, 0, 100, "plan", "because", 80, "good")
+    assert step.send and a.relay.state["runs"] == {}
 
 
 def test_what_the_agent_sends_itself_is_never_in_forward_and_submissions_forward_nothing(agent):
