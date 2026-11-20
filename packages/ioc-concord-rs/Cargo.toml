@@ -4,12 +4,12 @@
 [package]
 name = "ioc-concord"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 rust-version = "1.89"
 description = "CONCORD protocol library."
-license = "Apache-2.0"
+license.workspace = true
 readme = "README.md"
-repository = "https://github.com/ioc-project/cognition-protocols"
+repository.workspace = true
 keywords = ["concord", "multi-agent", "negotiation", "protocol"]
 categories = ["algorithms"]
 
@@ -47,9 +47,3 @@ uniffi = { version = "0.31", optional = true }
 # The local time of the `WAKE` lines of the command (feature `cli`).
 [target.'cfg(unix)'.dependencies]
 libc = { version = "0.2", optional = true }
-
-# The library ships inside wheels: size over speed.
-[profile.release]
-opt-level = "z"
-lto = "fat"
-codegen-units = 1

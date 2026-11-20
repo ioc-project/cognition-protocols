@@ -1,0 +1,19 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
+# The Rust crates of the repository, built together: one lock file, one build folder, one release profile. A crate is a folder
+# `packages/*-rs`; what the crates share is set here and inherited with `field.workspace = true`.
+[workspace]
+members = ["packages/*-rs"]
+resolver = "3"
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/ioc-project/cognition-protocols"
+
+# The libraries shipped in the Python wheels: small before fast, the work is text handling.
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1

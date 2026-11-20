@@ -178,7 +178,7 @@ when it is a dependency of another). The feature `uniffi-cli` is `uniffi` plus t
 library is built with, which generates the bindings:
 
     cargo build --release --features uniffi-cli
-    target/release/uniffi-bindgen generate --library target/release/libioc_concord.dylib --language python --out-dir out
+    ../../target/release/uniffi-bindgen generate --library ../../target/release/libioc_concord.dylib --language python --out-dir out
 
 `--language` takes `python`, `swift` and `kotlin`. For Go, C#, Java and JavaScript (Node) use the generator of that language, which must
 be built for the same version of UniFFI. The Python package [`ioc-concord`](../ioc-concord-python) builds its wheels this way.
@@ -227,8 +227,8 @@ The behaviour is the same, and the saved state is the same JSON. What the langua
 
 ## Formatting
 
-The code is formatted with `cargo fmt`, which reads `rustfmt.toml`: lines run to 140 columns and short expressions stay on one line
-(`use_small_heuristics = "Max"`). That is not the default of `rustfmt`, so run `cargo fmt` from this folder, not a global setting. CI checks
+The code is formatted with `cargo fmt`, which reads `rustfmt.toml` at the root of the repository: lines run to 140 columns and short expressions stay on one line
+(`use_small_heuristics = "Max"`). That is not the default of `rustfmt`, so run `cargo fmt` inside the repository, not with a global setting. CI checks
 `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings`.
 
 ## Tests

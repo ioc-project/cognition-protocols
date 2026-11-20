@@ -17,6 +17,8 @@ on:
       - "protocols/concord/spec/fixtures/**"
       - "protocols/concord/tests/**"
       - "justfile"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/concord-python.yaml"
   push:
     branches:
@@ -27,6 +29,8 @@ on:
       - "protocols/concord/spec/fixtures/**"
       - "protocols/concord/tests/**"
       - "justfile"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/concord-python.yaml"
 
 permissions:
@@ -84,7 +88,6 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           target: ${{ matrix.target }}
-          rust-src-dir: packages/ioc-concord-rs
           rustflags: ""
           # the job is the same on every row: without this the rows of one runner share a cache
           cache-key: ${{ matrix.name }}
