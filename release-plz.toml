@@ -1,0 +1,19 @@
+# release-plz: the release of the Rust crates (https://release-plz.dev), run by .github/workflows/release.yaml. It opens a PR with the new
+# version and the changelog of a crate that changed, from the Conventional Commits that touched its folder; merging the PR publishes the
+# crate to crates.io, tags it and creates the GitHub release.
+# The tag `ioc-concord-v<version>` is what publish-packages.yaml publishes the Python package on: the Python package has the version of the
+# crate, so it is released when the crate is and not otherwise.
+
+[workspace]
+# `release_always` stays at its default (true): a crate is released when its version in Cargo.toml is not on crates.io yet, which only
+# happens after its release PR is merged. Set to false, a run that the concurrency of the workflow drops would lose the release.
+git_release_enable = true
+git_tag_name = "{{ package }}-v{{ version }}"
+git_release_name = "{{ package }} v{{ version }}"
+pr_name = "chore: release{% if package and version %} {{ package }} v{{ version }}{% endif %}"
+# The API of the crate for other languages is not a Rust API that cargo-semver-checks can compare.
+semver_check = false
+
+[[package]]
+name = "ioc-concord"
+changelog_path = "packages/ioc-concord-rs/CHANGELOG.md"
