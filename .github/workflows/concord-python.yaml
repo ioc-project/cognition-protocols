@@ -1,0 +1,109 @@
+name: concord-python
+
+# The Python package packages/ioc-concord-python: the Rust library (packages/ioc-concord-rs, feature `uniffi`) with its UniFFI bindings, built into a wheel on
+# each platform it is meant for, and tested there with the wheel installed. The wheels are kept as artifacts, and publish-packages.yaml
+# (which calls this workflow) publishes them on a release tag.
+#
+# A wheel is built on a runner of its own platform and architecture. On Linux the wheels are built with zig: for manylinux_2_28, so that
+# they install on any distribution at least as recent, and for musllinux_1_2 (Alpine), which is tested in an Alpine container.
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - "packages/ioc-concord-python/**"
+      - "packages/ioc-concord-rs/**"
+      - "protocols/concord/spec/fixtures/**"
+      - "justfile"
+      - ".github/workflows/concord-python.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/ioc-concord-python/**"
+      - "packages/ioc-concord-rs/**"
+      - "protocols/concord/spec/fixtures/**"
+      - "justfile"
+      - ".github/workflows/concord-python.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  concord-python:
+    name: concord-python (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-24.04
+            compat: "--zig --compatibility manylinux_2_28"
+          - name: linux-aarch64
+            runner: ubuntu-24.04-arm
+            compat: "--zig --compatibility manylinux_2_28"
+          - name: linux-musl-x86_64
+            runner: ubuntu-24.04
+            libc: musl
+            target: x86_64-unknown-linux-musl
+            compat: "--zig --target x86_64-unknown-linux-musl --compatibility musllinux_1_2"
+          - name: linux-musl-aarch64
+            runner: ubuntu-24.04-arm
+            libc: musl
+            target: aarch64-unknown-linux-musl
+            compat: "--zig --target aarch64-unknown-linux-musl --compatibility musllinux_1_2"
+          - name: macos-aarch64
+            runner: macos-15
+            compat: ""
+          - name: macos-x86_64
+            runner: macos-15-intel
+            compat: ""
+          - name: windows-x86_64
+            runner: windows-2025
+            compat: ""
+          - name: windows-aarch64
+            runner: windows-11-arm
+            compat: ""
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          target: ${{ matrix.target }}
+          rust-src-dir: packages/ioc-concord-rs
+          rustflags: ""
+          # the job is the same on every row: without this the rows of one runner share a cache
+          cache-key: ${{ matrix.name }}
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Build the wheel
+        run: just wheel ${{ matrix.compat }}
+
+      # a musl wheel does not install on this (glibc) runner: it is tested on Alpine, as a musl system has it
+      - name: Test the wheel on Alpine
+        if: matrix.libc == 'musl'
+        run: docker run --rm -v "$PWD:/repo:ro" -w /repo python:3.12-alpine sh -c "pip install -q rust-just uv && just wheel-test"
+
+      - name: Test the wheel
+        if: matrix.libc != 'musl'
+        run: just wheel-test
+
+      - name: Upload the wheel
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ioc-concord-wheel-${{ matrix.name }}
+          path: packages/ioc-concord-python/dist/*.whl
+          retention-days: 30

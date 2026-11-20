@@ -1,7 +1,12 @@
 # ioc-concord (Rust)
 
-The CONCORD protocol as a Rust library. The protocol is described in
-[`protocols/concord/spec/CONCORD-SPEC.md`](../../protocols/concord/spec/CONCORD-SPEC.md).
+The CONCORD protocol as a Rust library: the node that every participant of a run runs, and the pieces it is made of. It replaces the
+pure-Python library that was in `packages/ioc-concord`, and speaks the same wire version, `0.3.0`
+(`ioc_concord::protocol::PROTOCOL_VERSION`); the protocol is in
+[`protocols/concord/spec/CONCORD-SPEC.md`](../../protocols/concord/spec/CONCORD-SPEC.md). A run can have agents of this library and of
+the Python one it replaces: the state each saves is the same JSON. Without a feature this is a plain Rust crate; the feature `uniffi` adds
+an [API for other languages](#bindings-for-other-languages) (Python, Go, JavaScript, ...), which the Python package
+[`ioc-concord`](../ioc-concord-python) is built on.
 
 The library does no I/O. It has no transport, no model and no threads, it never prints or exits, and it keeps no global state. You give
 it the messages that arrive and the time that passes; it hands back the messages to send and what happened. Every fallible call
@@ -153,6 +158,31 @@ text, an integer or a float (read from its shortest text, so at most 6 decimal p
 (`82.5`); parsers, reports and tasks give millionths, and `guidance` writes them as text. The scores in a task are normalized between 0
 and 1.
 
+## Bindings for other languages
+
+The feature `uniffi` adds the module `ffi`: the node wrapped with [UniFFI](https://mozilla.github.io/uniffi-rs/), in an API made for the
+languages that call it and not for Rust. It holds no logic of its own: it translates, and it does not follow the types of the rest of the
+crate one to one, so that they are not shaped by what a foreign language can carry.
+
+* objects: `Agent` (one agent of a run) and `Relay` (the centre of a star), each safe to share between threads; an object that panicked
+  inside the library is not used again (its calls fail with `ConcordError.State`): make a new one
+* records and enums with named fields: `Step`, `Event`, `Task`, `RunParams`, `ScoreInput`, `Number`
+* lists in place of ordered maps (`AgentScore`, `AgentText`), and JSON documents as text (`spec_json`, `Event.details_json`,
+  `Agent.status_json()`, `Agent.report_json()`, the `schema_json` of a task): read them with the language's own JSON library
+* `ConcordError`, an exception per kind, and `refusal` and `settled`, which take one
+* an `Agent` made with `new_centre` is the centre of a star: it has `spokes`, `targets`, `knows` and `forget`, and keeps the runs it knows
+  in `relay_state_path`; on any other agent these fail with `ConcordError.State`
+
+The library is also a `cdylib` (`libioc_concord.so`, `.dylib` or `ioc_concord.dll`; Cargo builds it only when this crate is built, not
+when it is a dependency of another). The feature `uniffi-cli` is `uniffi` plus the `uniffi-bindgen` binary, at the version of UniFFI the
+library is built with, which generates the bindings:
+
+    cargo build --release --features uniffi-cli
+    target/release/uniffi-bindgen generate --library target/release/libioc_concord.dylib --language python --out-dir out
+
+`--language` takes `python`, `swift` and `kotlin`. For Go, C#, Java and JavaScript (Node) use the generator of that language, which must
+be built for the same version of UniFFI. The Python package [`ioc-concord`](../ioc-concord-python) builds its wheels this way.
+
 ## Modules
 
 | Module | Contents |
@@ -171,3 +201,30 @@ and 1.
 | `guidance` | what the model reads: the wording of the run and of each task, the messages of the others, the end, a refusal |
 | `relay` | the centre of a star: which messages it passes on to the spokes |
 | `agent` | the node |
+| `ffi` | the API for other languages (feature `uniffi`) |
+
+## Differences from the Python library it replaces
+
+The behaviour is the same, and the saved state is the same JSON. What the language changes:
+
+* The state, the messages as read, the tasks, the evaluation and the reports are typed structs and enums, not dicts.
+* Errors are one enum, `ConcordError`, with `code()`, instead of a class hierarchy.
+* Parameters of an init are `InitParams`, with the defaults filled in, instead of a dict.
+* An agent is made with `Agent::builder(me)`; its relay is owned by it (`agent.relay()`), and spokes are names (`String`s).
+* A `pattern` of a schema is translated to the syntax of the `regex` crate, which, like the Python translation, only ever receives the
+  subset of the spec.
+
+## Formatting
+
+The code is formatted with `cargo fmt`, which reads `rustfmt.toml`: lines run to 140 columns and short expressions stay on one line
+(`use_small_heuristics = "Max"`). That is not the default of `rustfmt`, so run `cargo fmt` from this folder, not a global setting. CI checks
+`cargo fmt --check` and `cargo clippy --all-targets -- -D warnings`.
+
+## Tests
+
+    cargo test                         # from packages/ioc-concord-rs
+    cargo test --features uniffi       # and the API for other languages
+
+The node is also run on a simulated network in virtual time, with delayed, duplicated and lost messages, restarts from the saved state,
+silent agents, other versions and two runs at once. The tests of the Python library, which are in the git history, are ported one to one, except those
+that only make sense in Python (they say so in a comment).
