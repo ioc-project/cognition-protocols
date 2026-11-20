@@ -381,6 +381,21 @@ impl Agent {
         Ok(render_task(run, &self.me, task))
     }
 
+    /// The text for the task of this `kind` (see `Task::kind`) that the agent owes in `run_id` now, and in this `round` when it is a
+    /// repair: `instructions` for a caller that holds the identity of a task, not the task.
+    ///
+    /// # Errors
+    ///
+    /// `ConcordError::State` when the agent owes no such task now (a repair of an earlier round is not owed), and as `instructions`.
+    pub fn instructions_for(&self, kind: &str, run_id: &str, round: Option<u32>) -> Result<String> {
+        let task = self
+            .due()
+            .into_iter()
+            .find(|t| t.kind() == kind && t.run_id() == run_id && t.round() == round)
+            .ok_or_else(|| ConcordError::state("instructions: the agent owes no such task now"))?;
+        self.instructions(&task)
+    }
+
     /// The tasks the agent's model owes now:
     ///
     /// * `InitReply`: anchors, a seed and a score for it
@@ -620,6 +635,13 @@ impl Agent {
     #[must_use]
     pub fn status(&self, run_id: Option<&str>) -> Option<Status> {
         self.run_of(run_id).map(status_of)
+    }
+
+    /// What the agent's model reads when a run is over: `guidance::render_end` of its report (the active run when `run_id` is None; None
+    /// when there is none).
+    #[must_use]
+    pub fn ending(&self, run_id: Option<&str>) -> Option<String> {
+        self.report(run_id).map(|report| crate::guidance::render_end(&self.me, &report))
     }
 
     /// The report of a run (the active one when `run_id` is None; None when there is none), as the spec describes it (see report.rs).

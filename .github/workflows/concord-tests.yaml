@@ -1,9 +1,9 @@
 name: concord-tests
 
-# Three jobs that run side by side, so that a failure in one does not hide the others:
+# Two jobs that run side by side, so that a failure in one does not hide the others:
 #   concord-bundler  the bundler's own tests
-#   concord-library  the ioc-concord library as it is on disk, as imported and as bundled
 #   concord-scripts  the skill scripts as they are checked in
+# The library itself is tested by concord-rust-tests.yaml.
 # That the scripts carry the library revision they are pinned to is `check-sync` (validate-skills.yaml).
 
 on:
@@ -11,8 +11,6 @@ on:
     paths:
       - "protocols/concord/skills/**"
       - "protocols/concord/tests/**"
-      - "packages/ioc-concord/**"
-      - "protocols/concord/spec/fixtures/**"
       - "tools/**"
       - ".github/workflows/concord-tests.yaml"
   push:
@@ -31,7 +29,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
 
@@ -41,24 +39,6 @@ jobs:
       - name: Bundler
         run: python -m pytest tools -q
 
-  concord-library:
-    name: concord-library
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest and the library
-        run: pip install pytest ./packages/ioc-concord
-
-      - name: Library, as imported and as bundled
-        run: python -m pytest packages/ioc-concord/tests -q
-
   concord-scripts:
     name: concord-scripts
     runs-on: ubuntu-latest
@@ -67,12 +47,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
 
-      - name: Install pytest and the library
-        run: pip install pytest ./packages/ioc-concord
+      - name: Install pytest
+        run: pip install pytest
 
       - name: Scripts
         run: python -m pytest protocols/concord/tests -q

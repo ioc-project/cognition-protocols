@@ -13,6 +13,20 @@ repository = "https://github.com/ioc-project/cognition-protocols"
 keywords = ["concord", "multi-agent", "negotiation", "protocol"]
 categories = ["algorithms"]
 
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[features]
+# The API for other languages (Python, Go, JavaScript, ...), through UniFFI: module `ffi`. Without it this is a plain Rust crate.
+uniffi = ["dep:uniffi"]
+# The `uniffi-bindgen` binary, at the version of UniFFI the library is built with, to generate the bindings.
+uniffi-cli = ["uniffi", "uniffi/cli"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["uniffi-cli"]
+
 [dependencies]
 indexmap = { version = "2", features = ["serde"] }
 regex = "1"
@@ -21,3 +35,10 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
+uniffi = { version = "0.31", optional = true }
+
+# The library ships inside wheels: size over speed.
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
