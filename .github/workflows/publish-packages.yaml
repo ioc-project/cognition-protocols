@@ -69,6 +69,20 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Check that the tag is the version of the crate
+        if: needs.resolve.outputs.name == 'ioc-concord'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os, tomllib
+          with open("packages/ioc-concord-rs/Cargo.toml", "rb") as f:
+              version = tomllib.load(f)["package"]["version"]
+          tag = os.environ["TAG"]
+          if tag != f"ioc-concord-v{version}":
+              raise SystemExit(f"the tag {tag} is not the version {version} of the crate at this commit")
+          PY
+
       - name: Setup Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
