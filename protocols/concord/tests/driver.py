@@ -3,10 +3,11 @@
 # Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 # SPDX-License-Identifier: Apache-2.0
 #
-"""Plays a scripted CONCORD run through the real initiator and receiver scripts and records every call.
+"""Plays a scripted CONCORD run through the `ioc-concord` command (`ioc-concord initiator` and `ioc-concord receiver`) and records every
+call.
 
 The agents' judgement comes from a policy (a function of what the script printed), so a run is deterministic. What is not is
-normalised in the transcript: every UUID becomes `<UUID-n>` in the order it first appears, every `check` becomes `<CHECK>`, a time to
+normalised in the transcript: the name of the command is written as the name of the script it replaces, every UUID becomes `<UUID-n>` in the order it first appears, every `check` becomes `<CHECK>`, a time to
 come back becomes `<WAKE>` and the temporary directory `<TMP>`. What the scripts pass to each other is never normalised: only what is
 recorded.
 
@@ -16,14 +17,19 @@ reads the TASK the script printed and answers it from the policy, as an agent wo
 import json
 import os
 import re
+import shlex
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 
-SKILLS = Path(__file__).resolve().parents[1] / "skills"
-INITIATOR = SKILLS / "concord-initiator" / "scripts" / "concord_initiator.py"
-RECEIVER = SKILLS / "concord-receiver" / "scripts" / "concord_receiver.py"
+# The command that is run: `ioc-concord` as installed (the wheel of packages/ioc-concord-python), or what CONCORD_COMMAND says, split as a
+# shell would split it (`uv run --with dist/x.whl ioc-concord`, for example).
+COMMAND = shlex.split(os.environ.get("CONCORD_COMMAND", "ioc-concord"))
+INITIATOR, RECEIVER = "initiator", "receiver"
+# The transcripts were recorded with the skill scripts that came before the command, and the command prints what they printed with its
+# own name: the name the command prints is written as the name of the script in what is recorded, so the transcripts are those of the
+# scripts, byte for byte.
+PROGS = {INITIATOR: ("uvx ioc-concord initiator", "concord_initiator.py"), RECEIVER: ("uvx ioc-concord receiver", "concord_receiver.py")}
 MAX_ROUNDS = 100
 
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
@@ -41,18 +47,25 @@ class Run:
 
     def norm(self, text):
         text = text.replace(str(self.tmp), "<TMP>").replace(str(self.tmp.resolve()), "<TMP>")
+        for command, script in PROGS.values():
+            text = text.replace(command, script)
         text = UUID.sub(lambda m: f"<UUID-{self.uuids.setdefault(m.group(0), len(self.uuids) + 1)}>", text)
         return WAKE.sub("<WAKE>", CHECK.sub('check="<CHECK>"', text))
 
     def call(self, me, script, argv, stdin="", before=()):
-        """Run `script` for agent `me`, with the flags `before` (the global ones) ahead of the command."""
+        """Run the role `script` (INITIATOR or RECEIVER) for agent `me`, with the flags `before` (the global ones) ahead of the command."""
         args = ["--me", me, *before, *argv]
-        p = subprocess.run([sys.executable, "-I", str(script), *args], input=stdin, capture_output=True, text=True, env=self.env,
-                           cwd=self.tmp, timeout=120)
-        name = "initiator" if script == INITIATOR else "receiver"
+        p = run_command([script, *args], stdin=stdin, env=self.env, cwd=self.tmp)
+        name = script
         self.log.append({"call": f"{name} {me} {argv[0]}", "argv": [self.norm(a) for a in args], "stdin": self.norm(stdin),
                          "rc": p.returncode, "stdout": self.norm(p.stdout), "stderr": self.norm(p.stderr)})
         return p
+
+
+def run_command(argv, stdin="", env=None, cwd=None):
+    """Run `ioc-concord <argv>`: UTF-8 in and out, whatever the locale says."""
+    p = subprocess.run([*COMMAND, *argv], input=stdin.encode("utf-8"), capture_output=True, env=env, cwd=cwd, timeout=120)
+    return subprocess.CompletedProcess(p.args, p.returncode, p.stdout.decode("utf-8"), p.stderr.decode("utf-8"))
 
 
 def sections(out, title):

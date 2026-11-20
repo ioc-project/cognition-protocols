@@ -6,6 +6,7 @@
 """What the scripts are given that is not what they expect, and what they must do about it: a clean error that says what to do, never a
 traceback, and no run started on a wrong configuration. One file for the review of the scripts; the scenarios are in test_scripts.py."""
 import json
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -13,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import driver  # noqa: E402
 import scenarios  # noqa: E402
-from driver import INITIATOR, RECEIVER, REASONS  # noqa: E402
+from driver import COMMAND, INITIATOR, RECEIVER, REASONS  # noqa: E402
 
 
 def start(run, me, *extra, participants="a,b", context="c", before=()):
@@ -95,7 +96,7 @@ def test_a_text_that_starts_with_an_at_sign_is_a_text_and_not_a_file():
 # --- the ways in -------------------------------------------------------------------------------------------------------------------
 
 def test_a_closed_standard_input_is_an_error_and_not_a_traceback(tmp_path):
-    p = subprocess.run(["bash", "-c", f'"{sys.executable}" -I "{RECEIVER}" --me a receive <&-'], capture_output=True, text=True, cwd=tmp_path)
+    p = subprocess.run(["sh", "-c", f"{shlex.join(COMMAND)} {RECEIVER} --me a receive <&-"], capture_output=True, text=True, cwd=tmp_path)
     assert p.returncode == 2 and "Traceback" not in p.stderr
     assert p.stdout.startswith("STATUS: ERROR\nreceive reads standard input and there is none\nNEXT: Pipe the text in")
 
@@ -106,23 +107,3 @@ def test_wait_on_a_run_that_is_over_does_not_print_the_result_again():
         p = run.call("a", RECEIVER, ["wait"])
         assert p.returncode == 0 and p.stdout.startswith("STATUS: DONE\nNEXT: The run is over") and "--- END" not in p.stdout
     assert "--- END" in run.call("a", RECEIVER, ["report"]).stdout                            # `report` still gives it
-
-
-# --- the state is never kept in the folder of the skill ------------------------------------------------------------------------------
-
-def test_a_script_run_from_its_own_skill_folder_keeps_nothing_there(tmp_path):
-    """A model reads `scripts/x.py` in the skill, goes into the folder to run it, and the state of its run would be left there, where the
-    next call from another folder would not find it. The scripts refuse, and say what to do; with `--state-dir` they work."""
-    for script in (INITIATOR, RECEIVER):
-        skill = Path(script).resolve().parent.parent
-        before = sorted(p.name for p in skill.rglob("*"))
-        for cwd in (skill, skill / "scripts"):
-            p = subprocess.run([sys.executable, "-I", str(script), "--me", "a", "report"], cwd=cwd, capture_output=True, text=True)
-            assert p.returncode == 2 and "is inside the folder of this skill" in p.stdout and "Traceback" not in p.stderr
-            assert "--state-dir" in p.stdout and "Nothing was changed" in p.stdout
-        assert sorted(p.name for p in skill.rglob("*")) == before, "the call left something in the skill"
-        p = subprocess.run([sys.executable, "-I", str(script), "--me", "a", "--state-dir", str(tmp_path), "report"], cwd=skill,
-                           capture_output=True, text=True)
-        assert p.returncode == 2 and "there is no run for a" in p.stdout                 # an ordinary fault: the guard let it by
-        p = subprocess.run([sys.executable, "-I", str(script), "--me", "a", "report"], cwd=tmp_path, capture_output=True, text=True)
-        assert p.returncode == 2 and "there is no run for a" in p.stdout

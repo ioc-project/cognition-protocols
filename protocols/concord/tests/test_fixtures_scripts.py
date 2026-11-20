@@ -3,19 +3,16 @@
 # Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 # SPDX-License-Identifier: Apache-2.0
 #
-"""The cross-implementation fixtures (protocols/concord/spec/fixtures) at the level of a script.
+"""The cross-implementation fixtures (protocols/concord/spec/fixtures) at the level of the command.
 
 The library is tested against these files as it is imported and as it is bundled (packages/ioc-concord/tests/test_fixtures.py): what a
 message means, what is refused, the check. That says nothing about the script: that it reads a message from standard input whatever
 the message holds, that it never crashes on one that is wrong, that a wrong message changes nothing and is not answered, and that a
-message with an odd character in it comes out as it went in. That is what is tested here, by handing each fixture to `receive`.
-
-The cases run the script in this process, as `__main__` (the real wiring, with no process for each case); the scenarios of
-test_scripts.py run it as a process.
+message with an odd character in it comes out as it went in. That is what is tested here, by handing each fixture to `receive` of
+`ioc-concord receiver` (see driver.py for the command that is run).
 """
-import io
 import json
-import runpy
+import os
 import shutil
 import subprocess
 import sys
@@ -24,7 +21,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from driver import RECEIVER  # noqa: E402
+from driver import COMMAND, RECEIVER, run_command  # noqa: E402
 
 FIXTURES = Path(__file__).resolve().parents[1] / "spec" / "fixtures"
 WIRE = FIXTURES / "wire"
@@ -38,16 +35,11 @@ def text(rel):
 
 
 @pytest.fixture
-def invoke(monkeypatch, capsys):
-    """Run the receiver script, as `__main__`, in a directory: (exit code, what it printed, what it wrote on the error stream)."""
+def invoke():
+    """Run the receiver in a directory: (exit code, what it printed, what it wrote on the error stream)."""
     def run(cwd, me, command, stdin=""):
-        monkeypatch.chdir(cwd)
-        monkeypatch.setattr(sys, "argv", [str(RECEIVER), "--me", me, command])
-        monkeypatch.setattr(sys, "stdin", io.StringIO(stdin))
-        with pytest.raises(SystemExit) as stop:
-            runpy.run_path(str(RECEIVER), run_name="__main__")
-        printed = capsys.readouterr()
-        return stop.value.code, printed.out, printed.err
+        p = run_command([RECEIVER, "--me", me, command], stdin=stdin, cwd=cwd)
+        return p.returncode, p.stdout, p.stderr
     return run
 
 
@@ -56,8 +48,7 @@ def joined(tmp_path_factory):
     """A directory in which `security` and `cost` have joined the run of the fixtures (the init of `wire/init.xml`)."""
     d = tmp_path_factory.mktemp("joined")
     for me in ("cost", "security"):
-        p = subprocess.run([sys.executable, "-I", str(RECEIVER), "--me", me, "receive"], input=text("wire/init.xml"), capture_output=True,
-                           text=True, cwd=d)
+        p = run_command([RECEIVER, "--me", me, "receive"], stdin=text("wire/init.xml"), cwd=d)
         assert p.returncode == 0 and p.stdout.startswith("STATUS: ANSWER"), p.stdout + p.stderr
     return d
 
@@ -154,7 +145,7 @@ def test_a_message_with_a_no_break_space_comes_out_as_it_went_in_whatever_the_lo
     doc = text("wire/tricky/blanks-and-unicode-spaces-in-the-text.xml")
     assert " " in doc
     d = copy_of(joined, tmp_path)
-    p = subprocess.run([sys.executable, "-I", str(RECEIVER), "--me", "security", "receive"], input=doc.encode("utf-8"), capture_output=True,
-                       cwd=d, env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"})
+    p = subprocess.run([*COMMAND, RECEIVER, "--me", "security", "receive"], input=doc.encode("utf-8"), capture_output=True, cwd=d,
+                       env={**os.environ, "LC_ALL": "C", "LANG": "C"})
     out = p.stdout.decode("utf-8")
     assert p.returncode == 0 and "--- READ" in out and doc.strip() in out, out + p.stderr.decode()

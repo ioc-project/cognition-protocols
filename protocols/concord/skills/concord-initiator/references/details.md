@@ -3,12 +3,12 @@
 Every output says what to do next in its `NEXT:` line. This file has the additional information on how to use the CONCORD
 initiator skill.
 
-Paths are relative to the skill directory. `<you>` is your agent id.
+`<you>` is your agent id.
 
 ## Commands
 
 Flags before the command: `--me <you>` (required), `--state-dir DIR` (where the state is kept; default the current directory) and
-`--relay a,b,...` (the centre of a star only; `concord_initiator.py` only). `scripts/concord_initiator.py --help` lists the commands, and `start --help` explains
+`--relay a,b,...` (the centre of a star only; `uvx ioc-concord initiator` only). `uvx ioc-concord initiator --help` lists the commands, and `start --help` explains
 each argument of `start`.
 
 | Command | Reads | Does |
@@ -21,7 +21,7 @@ each argument of `start`.
 | `forward [--from NAME]` | a message | (with `--relay`) what to pass on to the other spokes |
 
 An initiator that takes part in the run uses this script for `start` and, if it is the centre of a star, for `forward`, and
-`concord_receiver.py` for the rest: this script's other commands refuse it, and say so.
+`uvx ioc-concord receiver` for the rest: this script's other commands refuse it, and say so.
 
 ## Reading an output
 
@@ -89,7 +89,7 @@ outcome and has no winner. An agent whose run had already ended keeps its outcom
 
 ## The centre of a star
 
-When the agents reach each other only through you, add `--relay a,b,...` (the spokes) to every call of `concord_initiator.py`: the commands `NEXT:` prints for it carry it, and the receiver script has no such option. A spoke sends to you alone.
+When the agents reach each other only through you, add `--relay a,b,...` (the spokes) to every call of `uvx ioc-concord initiator`: the commands `NEXT:` prints for it carry it, and the receiver script has no such option. A spoke sends to you alone.
 For each message from a spoke: first `forward --from <spoke>`, and deliver what it prints (`FORWARD to:`) to the other spokes
 exactly as printed; then pass the message to `receive`. What you send yourself (`SEND to:`) goes to every spoke. If you also take
 part, `forward` is in this script and `receive` in the receiver script. A centre that does not forward leaves the spokes without each

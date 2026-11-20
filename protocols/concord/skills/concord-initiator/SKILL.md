@@ -25,7 +25,7 @@ metadata:
 # CONCORD: initiator
 
 Get one outcome that every agent in a named set rates at or above a threshold. You open the run
-and follow it; the agents rate and repair among themselves, and the script `scripts/concord_initiator.py`
+and follow it; the agents rate and repair among themselves, and the script `uvx ioc-concord initiator`
 does everything mechanical. The result is `SUCCESS` (every agent at or above the threshold) or
 `BEST_EFFORT` (who is short, by how much). You never rate or propose anything yourself.
 
@@ -40,12 +40,12 @@ to. Do not use it when one role owns the decision or the agents work on separate
 
 ## Open the run
 
-Paths are relative to this skill's directory: resolve them against where you found this file, and call the script by its full path.
-Run it from your own working directory and never `cd` into the skill's directory: the state of the run is kept in the current
-directory, and every call of the run must see the same one. `<you>` is your own agent id. Run `start --help` before the first run: it says how to fill each argument.
+The script is the command `uvx ioc-concord initiator` (it needs `uv`, nothing else installed). Run it from your own working
+directory and never `cd` into the skill's directory: the state of the run is kept in the current directory, and every call of the run
+must see the same one. `<you>` is your own agent id. Run `start --help` before the first run: it says how to fill each argument.
 
 ```
-scripts/concord_initiator.py --me <you> start --participants <a,b,...> \
+uvx ioc-concord initiator --me <you> start --participants <a,b,...> \
   --context "<the problem>" --x-reject "<an outcome that fails every criterion>" \
   --x-ideal "<an outcome that fully satisfies them>" \
   (--option "<A>" --option "<B>" ... | --format "<what one option looks like>") \
@@ -62,7 +62,7 @@ scripts/concord_initiator.py --me <you> start --participants <a,b,...> \
   `--format`, and the agents propose their own. Never write the list yourself.
 - **If you take part in the decision yourself**, list yourself in `--participants`, first. `start` then
   hands you over: load the `concord-receiver` skill and use only its script from then on. The one exception
-  is the centre of a star (you run `scripts/concord_initiator.py` with `--relay`): it keeps using that script,
+  is the centre of a star (you run `uvx ioc-concord initiator` with `--relay`): it keeps using that script,
   but only for `forward`, to pass the messages on (see below).
 
 ## Follow the run
@@ -85,7 +85,7 @@ A run can last as long as the agents need: there is no deadline for the result. 
 reaches you.
 
 **If you are the centre of a star** (the agents reach each other only through you), add `--relay <a,b,...>`,
-the names of the spokes, before the command on every call of `concord_initiator.py` (the commands `NEXT:` prints for it carry it; the
+the names of the spokes, before the command on every call of `uvx ioc-concord initiator` (the commands `NEXT:` prints for it carry it; the
 receiver script has no such option). For each message from a spoke, first run
 `forward --from <spoke>` and deliver what it prints to the other spokes, then pass the message to `receive`
 (the receiver script's, if you also take part).

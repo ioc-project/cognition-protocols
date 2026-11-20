@@ -3,18 +3,17 @@
 # Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
 # SPDX-License-Identifier: Apache-2.0
 #
-"""Script tests: the scripts' complete output on scripted runs must not change.
+"""Script tests: the complete output of the `ioc-concord` command on scripted runs must be what the skill scripts printed.
 
-    python3 -m pytest protocols/concord/tests        compare against the recorded transcripts
-    UPDATE_TRANSCRIPTS=1 python3 -m pytest protocols/concord/tests    re-record them (review the diff before committing)
+    just test-transcripts        compare against the recorded transcripts, with the command of the wheel
+    CONCORD_COMMAND=... UPDATE_TRANSCRIPTS=1 python3 -m pytest protocols/concord/tests    re-record them (review the diff before committing)
 
-A transcript changes only when the scripts' behavior does, so a refactor that must not change behavior leaves them as they are.
+A transcript changes only when the behavior does, so a refactor that must not change behavior leaves them as they are.
 """
 import json
 import os
 import re
 import shlex
-import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -24,7 +23,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import driver  # noqa: E402
 import scenarios  # noqa: E402
-from driver import INITIATOR, RECEIVER, REASONS  # noqa: E402
+from driver import INITIATOR, PROGS, RECEIVER, REASONS, run_command  # noqa: E402
 
 TRANSCRIPTS = Path(__file__).resolve().parent / "transcripts"
 
@@ -83,16 +82,17 @@ def test_a_centre_that_takes_part_ends_the_run_with_the_others():
 
 
 def printed(out, script):
-    """The commands of `script` that the NEXT line of `out` prints, each between backticks, as the list of its arguments."""
-    return [shlex.split(m.replace("<the spoke>", "<the-spoke>")) for m in re.findall(rf"`({re.escape(script.name)} [^`]*)`", out.split("NEXT:", 1)[1])]
+    """The commands of the role `script` that the NEXT line of `out` prints, each between backticks, as the list of its arguments after
+    the name of the command (`initiator --me ...`)."""
+    command = PROGS[script][0]
+    return [[script, *shlex.split(m.replace("<the spoke>", "<the-spoke>"))]
+            for m in re.findall(rf"`{re.escape(command)} ([^`]*)`", out.split("NEXT:", 1)[1])]
 
 
 def run_printed(run, argv, stdin="", spoke="a"):
     """Run a command exactly as NEXT printed it, with the spoke filled in for `<the spoke>` and nothing else added: the way an agent runs it."""
     argv = [spoke if a == "<the-spoke>" else a for a in argv]
-    script = {INITIATOR.name: INITIATOR, RECEIVER.name: RECEIVER}[argv[0]]
-    return subprocess.run([sys.executable, "-I", str(script), *argv[1:]], input=stdin, capture_output=True, text=True, env=run.env,
-                          cwd=run.tmp, timeout=120)
+    return run_command(argv, stdin=stdin, env=run.env, cwd=run.tmp)
 
 
 def test_the_commands_the_centre_of_a_star_is_told_to_run_work_as_printed():
@@ -102,7 +102,7 @@ def test_the_commands_the_centre_of_a_star_is_told_to_run_work_as_printed():
     assert start.returncode == 0, start.stdout + start.stderr
     init = driver.sections(start.stdout, "SEND")[0][1]
     forward = next(c for c in printed(start.stdout, INITIATOR) if "forward" in c)
-    assert forward[:5] == [INITIATOR.name, "--me", "ini", "--relay", "a,b"]
+    assert forward[:5] == [INITIATOR, "--me", "ini", "--relay", "a,b"]
     out = run_printed(run, forward, stdin=init)
     assert out.returncode == 0 and "--- FORWARD to: b" in out.stdout, out.stdout + out.stderr
     receive = next(c for c in printed(out.stdout, INITIATOR) if c[-1] == "receive")
@@ -123,7 +123,7 @@ def test_a_centre_that_takes_part_gives_its_spokes_to_the_initiator_script_and_n
 def test_a_participant_is_sent_to_the_receiver_script_by_the_guard():
     run = scenarios.initiator_takes_part()
     guard = next(e for e in run.log if e["call"] == "initiator ini receive")
-    assert guard["rc"] == 2 and "you take part in this run" in guard["stdout"] and "concord_receiver.py --me ini" in guard["stdout"]
+    assert guard["rc"] == 2 and "you take part in this run" in guard["stdout"] and "concord_receiver.py --me ini" in guard["stdout"]     # as recorded
 
 
 def test_a_silent_agent_ends_the_run_for_everyone_with_a_cancel():
@@ -175,9 +175,8 @@ def test_messages_that_arrive_at_the_same_time_are_all_recorded():
 
 
 def help_words(script, *argv):
-    """(exit code, the help of a script as one line of words): argparse wraps its text to the width of the terminal, which is not the same
-    everywhere, so what is compared is the words, never the lines."""
-    p = subprocess.run([sys.executable, "-I", str(script), *argv], capture_output=True, text=True)
+    """(exit code, the help of a role as one line of words): what is compared is the words, never the lines."""
+    p = run_command([script, *argv])
     return p.returncode, " ".join(p.stdout.split())
 
 
@@ -191,5 +190,5 @@ def test_the_scripts_say_how_to_use_them():
 
 
 def test_a_command_line_that_is_wrong_is_an_error_that_says_what_to_do():
-    p = subprocess.run([sys.executable, "-I", str(RECEIVER), "nonsense"], capture_output=True, text=True)
+    p = run_command([RECEIVER, "nonsense"])
     assert p.returncode == 2 and p.stdout.startswith("STATUS: ERROR\n") and "NEXT:" in p.stdout
