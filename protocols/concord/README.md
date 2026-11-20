@@ -5,9 +5,9 @@ Skills (`skills/`) and metrics (`mce-metrics/`) for the CONCORD protocol.
 ## Shared code
 
 The protocol's code lives in the Rust crate [`ioc-concord-rs`](../../packages/ioc-concord-rs), which has an API for other languages
-(feature `uniffi`); the Python library [`ioc-concord`](../../packages/ioc-concord-python) is built on it. A skill must stay self-contained, so `concord_initiator.py` and
-`concord_receiver.py` each carry a generated copy of the modules of the Python library, at the release they are pinned to (`ref` in
-[`tools/bundle.toml`](../../tools/bundle.toml)), between `BUNDLED ioc_concord` markers. That library is no longer on main: the pin
-reads it from its git tag. CI runs `just check-sync` and fails if a script has drifted from the revision it is pinned to.
+(feature `uniffi`). The Python package [`ioc-concord`](../../packages/ioc-concord-python) is built on it, and carries the command the
+skills run: `uvx ioc-concord initiator ...` and `uvx ioc-concord receiver ...`. A skill is its `SKILL.md` and nothing else: it needs `uv`
+and nothing installed beforehand.
 
-`just test-concord` runs all of it: the bundler's tests, the library's tests and the script tests ([`tests/`](tests)).
+`just test-concord` runs the tests of the crate (`packages/ioc-concord-rs/tests/cli.rs` drives a whole run through the command line) and of
+the Python package (`packages/ioc-concord-python/tests`).

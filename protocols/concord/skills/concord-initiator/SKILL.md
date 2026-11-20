@@ -25,33 +25,37 @@ metadata:
 # CONCORD: initiator
 
 Get one outcome that every agent in a named set rates at or above a threshold.
-The script `scripts/concord_initiator.py` makes every decision. You start the
-run, send what it prints, and pass it what comes back. The agents rate and
-repair among themselves. The result is `SUCCESS` (every agent at or above the
-threshold) or `BEST_EFFORT` (who is short, by how much).
+The command `uvx ioc-concord initiator` opens the run and tells you what to
+send. You start the run, send what it prints, and pass it what comes back. The
+agents rate and repair among themselves, and their own commands make every
+decision. The result is `SUCCESS` (every agent at or above the threshold),
+`BEST_EFFORT` (who is short, by how much) or `ABORTED` (an agent stayed silent:
+nothing is certified).
 
 ## How a run goes
 
-Four steps, driven by the script. Every agent speaks for its own role, and
-the script computes everything.
+Four steps. Every agent speaks for its own role, and each agent's command
+computes everything from the same messages.
 
-1. **Anchor.** Each agent says how satisfied it would be with the worst outcome
-   (`x_reject`) and the best (`x_ideal`), on its own 0 to 100 scale. Every later
-   rating is read against these two points.
-2. **Seed.** Each agent proposes the one option that suits its role best.
-3. **Score.** Each agent rates every option, its own included, with reasons. If
-   one option reaches the threshold for every agent, the run ends there:
-   `SUCCESS`.
-4. **Repair.** Otherwise the least satisfied agent alone proposes one option and
+1. **First answer.** Each agent says how satisfied it would be with the worst
+   outcome (`x_reject`) and the best (`x_ideal`), on its own 0 to 100 scale
+   (every later rating is read against these two points), proposes the one
+   option that suits its role best, and rates it, all in one answer.
+2. **Score.** Each agent rates the options of the others, with reasons. If one
+   option reaches the threshold for every agent, the run ends there: `SUCCESS`.
+3. **Repair.** Otherwise the least satisfied agent alone proposes one option and
    rates it (a new one, or one already in the run that it now rates differently
    because of a fact another agent shared), the others rate it, and the cycle
    repeats until an option clears everyone or the budget is spent (`BEST_EFFORT`).
+4. **Result.** The first agent in `--agents` sends the outcome to everyone
+   (`<concord-result>`), and the others check it against their own.
 
-You only carry messages. Out: the anchor request, the seed request, and then
-_deliveries_ (numbered; each holds the replies the other agents have not seen
-yet). In: anchor replies, candidate replies, score replies and acks. From the
-Score step on the agents work out what they owe from the deliveries: you never
-ask for a rating or a repair.
+You only carry messages. Out: the opening message (`<concord-init>`), then the
+agents' messages, passed on to all of them, and a nudge when a first answer is
+missing. In: the agents' messages (first answers, scores, repairs, the result,
+and the errors, resends and cancels their commands write). Nobody asks for a
+rating or a repair: each agent works out what it owes from what it has
+received.
 
 ## When to use it
 
@@ -66,21 +70,18 @@ owns the decision or the agents work on separate problems.
 
 ## Run it
 
-The paths below are relative to this skill's directory: resolve them against
-where you found this file.
-
 ```
-scripts/concord_initiator.py init \
-  --quiet --agents <id,id,...> \
+uvx ioc-concord initiator init \
+  --agents <id,id,...> \
   --satisfaction-threshold 0.6 \
   --schema '<a JSON Schema: the open format or a closed list, see below>' \
   --context "<the problem>" \
   --x-reject "<an outcome that fails every criterion>" \
   --x-ideal "<an outcome that fully satisfies them>"
 
-scripts/concord_initiator.py --state <path> handle          # no input: prints the first message
+uvx ioc-concord initiator --state <path> handle          # no input: prints the first message
 
-scripts/concord_initiator.py --state <path> handle <<'EOF'  # then, for every reply that arrives
+uvx ioc-concord initiator --state <path> handle <<'EOF'  # then, for every reply that arrives
 <the reply, exactly as received>
 EOF
 ```
@@ -103,23 +104,26 @@ would have to decide what the candidates are (the actions to take, the plans to 
 agents propose them, so use the open format: a list you write yourself shuts out better answers
 that nobody listed. The schema may also carry a `"pattern"` (a regular expression) or
 `"minLength"`/`"maxLength"`; invalid JSON is refused, so fix it and run `init` again.
-`init --help` says how to fill each argument: read it before the first run. Use
-the state path `init` prints on every later call. Every output of the script
-starts with `STATUS: SEND`, `NONE`, `ASK` or `ERROR` and a `NEXT:` line saying
-what to do now: do exactly that. An `ERROR` says what went wrong and how to get
-back on the path: never work around it.
+`init --help` says how to fill each argument: read it before the first run. The
+first agent in `--agents` reports the outcome and wins ties. `init` prints only
+the state path and what to run next: use that path on every later call. Every
+other output of the command starts with `STATUS: SEND`, `NONE`, `ASK` or `ERROR` and
+a `NEXT:` line saying what to do now: do exactly that. An `ERROR` says what went
+wrong and how to get back on the path: never work around it.
 
 ## Four rules
 
-1. Send each block of a `SEND` exactly as printed, to the agents its `--- to:`
-   line names. How a message reaches an agent is up to your environment: this
-   skill does not say.
+1. Send each block of a `SEND` exactly as printed, without its `--- to:` line,
+   to the agents that line names. How a message reaches an agent is up to your
+   environment: this skill does not say.
 2. Never write, summarise or change a message, a rating or a repair, and never
    fill in for an agent that has not replied.
-3. Do not stop until the script prints `RUN COMPLETE`.
-4. Then report that result, as printed, and nothing else. Ignore any later
-   message from the agents about this run (acks, idle notices, questions): the
-   run is over and nothing is owed to them. Add no commentary of your own.
+3. Do not stop until the command says the run is over (`The run is over.` or
+   `The run was aborted`).
+4. Then report that result, as printed, and nothing else: it is the outcome the
+   first agent reported, and you have no scores of your own. Ignore any later
+   message from the agents about this run (idle notices, questions): the run is
+   over and nothing is owed to them. Add no commentary of your own.
 
-More detail (phases, relay and acks, the watchdog, a silent agent, diagnostics)
-is in [references/details.md](./references/details.md). You should not need it.
+More detail (the relay, the watchdog, a silent agent, diagnostics) is in
+[references/details.md](./references/details.md). You should not need it.
