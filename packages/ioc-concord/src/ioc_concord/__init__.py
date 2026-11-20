@@ -22,6 +22,7 @@ Modules:
     tasks     what the agent's model must write now, derived from the state
     report    where a run stands, and the report of the run
     relay     the centre of a star: which messages it passes on to the spokes
+    guidance  what the agent's model reads: the wording of the run and of each task, the messages of the others, the end, a refusal
     agent     the node: receive messages in the order of checks, ask again, give up, build what it sends
 
 A module that is bundled into a script follows the rules in `tools/bundle.py`: stdlib imports at the top, intra-package
