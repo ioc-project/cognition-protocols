@@ -92,6 +92,14 @@ impl Task {
         }
     }
 
+    /// The round of a repair; none for the other tasks.
+    pub fn round(&self) -> Option<u32> {
+        match self {
+            Task::Repair(t) => Some(t.round),
+            _ => None,
+        }
+    }
+
     pub fn run_id(&self) -> &str {
         match self {
             Task::InitReply(t) => &t.run_id,

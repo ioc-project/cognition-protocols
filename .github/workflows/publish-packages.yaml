@@ -34,7 +34,7 @@ jobs:
           packages = [
               ("ioc-accord-mce-metrics", "protocols/accord/mce-metrics"),
               ("ioc-concord-mce-metrics", "protocols/concord/mce-metrics"),
-              ("ioc-concord", "packages/ioc-concord"),
+              ("ioc-concord", "packages/ioc-concord-python"),
           ]
           tag = os.environ["TAG"]
           for name, path in packages:
@@ -44,31 +44,54 @@ jobs:
                   break
           PY
 
+  # ioc-concord has native code: its wheels are built and tested on every platform (concord-python.yaml) before they are published
+  wheels:
+    name: Wheels of ioc-concord
+    needs: resolve
+    if: needs.resolve.outputs.name == 'ioc-concord'
+    uses: ./.github/workflows/concord-python.yaml
+
   publish:
     name: Build and publish ${{ needs.resolve.outputs.name }}
-    needs: resolve
+    needs: [resolve, wheels]
+    if: ${{ !cancelled() && needs.resolve.result == 'success' && (needs.wheels.result == 'success' || needs.wheels.result == 'skipped') }}
     runs-on: ubuntu-latest
     environment:
       name: pypi-${{ needs.resolve.outputs.name }}
     permissions:
       contents: read
+      actions: read
       id-token: write
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       - name: Build package
-        run: uv build --directory "${{ needs.resolve.outputs.path }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: ${{ needs.resolve.outputs.name }}
+          PACKAGE_PATH: ${{ needs.resolve.outputs.path }}
+        run: |
+          if [ "$NAME" = "ioc-concord" ]; then
+            # the wheels the platform jobs built and tested, and the source distribution
+            gh run download "$GITHUB_RUN_ID" --pattern 'ioc-concord-wheel-*' --dir "$RUNNER_TEMP/wheels"
+            mkdir -p "$PACKAGE_PATH/dist"
+            find "$RUNNER_TEMP/wheels" -name '*.whl' -exec mv {} "$PACKAGE_PATH/dist/" \;
+            uv build --sdist --directory "$PACKAGE_PATH"
+          else
+            uv build --directory "$PACKAGE_PATH"
+          fi
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
@@ -78,7 +101,7 @@ jobs:
 
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist-${{ needs.resolve.outputs.name }}-${{ github.sha }}
           path: ${{ needs.resolve.outputs.path }}/dist/*

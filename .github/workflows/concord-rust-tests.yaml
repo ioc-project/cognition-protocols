@@ -1,10 +1,16 @@
 name: concord-rust-tests
 
+# The ioc-concord library (packages/ioc-concord-rs). Two jobs that run side by side:
+#   concord-rust-library  formatting, clippy without warnings, the documentation without warnings, and the tests, with every combination of
+#                         the features (`uniffi`: the API for other languages)
+#   concord-rust-msrv     the crate builds, and its tests pass, on the oldest Rust it declares (`rust-version` in its Cargo.toml)
+
 on:
   pull_request:
     paths:
       - "packages/ioc-concord-rs/**"
       - "protocols/concord/spec/fixtures/**"
+      - "justfile"
       - ".github/workflows/concord-rust-tests.yaml"
   push:
     branches:
@@ -17,27 +23,46 @@ jobs:
   concord-rust-library:
     name: concord-rust-library
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/ioc-concord-rs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Toolchain
-        run: rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          components: rustfmt, clippy
+          rust-src-dir: packages/ioc-concord-rs
 
-      - name: Formatting
-        run: cargo fmt --check
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
+        with:
+          tool: cargo-hack
 
-      - name: Clippy
-        run: cargo clippy --locked --all-targets -- -D warnings
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
-      - name: Documentation
-        env:
-          RUSTDOCFLAGS: -D warnings
-        run: cargo doc --locked --no-deps
+      - name: Formatting, clippy and documentation
+        run: just rust-lint
 
       - name: Tests
-        run: cargo test --locked
+        run: just rust-test
+
+  concord-rust-msrv:
+    name: concord-rust-msrv
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # the toolchain of the recipe is the oldest Rust: it installs it itself
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          rust-src-dir: packages/ioc-concord-rs
+
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
+        with:
+          tool: cargo-hack
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+
+      - name: Oldest supported Rust
+        run: just rust-msrv
