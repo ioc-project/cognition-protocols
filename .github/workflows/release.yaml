@@ -112,6 +112,10 @@ jobs:
           changed = False
 
           for skill_path, version in manifest.items():
+              # the manifest also lists the spec, the libraries and the metrics, which have no SKILL.md
+              if "/skills/" not in skill_path:
+                  continue
+
               # only skills released by this PR, i.e. bumped relative to the base branch
               if base_manifest.get(skill_path) == version:
                   continue
