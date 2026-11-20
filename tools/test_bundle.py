@@ -267,3 +267,74 @@ def test_a_tag_can_be_the_pin(repo):
     repo("one", "X = 2\n")
     assert repo.run("one", ref="lib-v1") == 0 and "X = 1" in (repo.root / "script.py").read_text()
     assert repo.run("one", ref="lib-v1", check=True) == 0
+
+
+# --- a library that builds on another one in the same script (`uses`) -----------------------------------------------------------
+
+TWO = "import os\n\n# >>> BUNDLED lib\n# <<< END BUNDLED lib\n\n# >>> BUNDLED cli\n# <<< END BUNDLED cli\n\nprint(run())\n"
+
+
+@pytest.fixture
+def two(tmp_path, monkeypatch):
+    """A library `lib` (with a version) and a source-only library `cli` that uses it, bundled into one script."""
+    monkeypatch.setattr(bundle, "ROOT", tmp_path)
+    (tmp_path / "pkg/src/lib").mkdir(parents=True)
+    (tmp_path / "cli/src/cli").mkdir(parents=True)
+    (tmp_path / "pkg/pyproject.toml").write_text('[project]\nname = "lib"\nversion = "1.2.3"\n')
+    (tmp_path / "script.py").write_text(TWO)
+    (tmp_path / "pkg/src/lib/a.py").write_text("def f():\n    return 'f'\n\ndef unused():\n    return 'u'\n")
+    (tmp_path / "cli/src/cli/c.py").write_text("from lib.a import f\n\ndef run():\n    return f() + '!'\n")
+
+    def sync(uses='uses = ["lib"]', check=False, cli_modules=("c",)):
+        (tmp_path / "bundle.toml").write_text(
+            "[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nfile = 'script.py'\nmodules = ['a']\n\n"
+            f"[[library]]\nname = 'cli'\npath = 'cli'\n{uses}\n[[library.target]]\nfile = 'script.py'\nmodules = {list(cli_modules)!r}\n")
+        return bundle.main(["--config", str(tmp_path / "bundle.toml")] + (["--check"] if check else []))
+
+    sync.root = tmp_path
+    return sync
+
+
+def test_a_library_can_import_the_names_of_the_one_it_uses(two, capsys):
+    assert two() == 0
+    out = (two.root / "script.py").read_text()
+    ns = {}
+    exec(compile(out.replace("print(run())", ""), "script.py", "exec"), ns)
+    assert ns["run"]() == "f!"
+    assert "from lib.a import" not in out                       # the import is not copied: the names are in the other block
+    assert "# >>> BUNDLED lib 1.2.3 [a]" in out and "# >>> BUNDLED cli [c] sha256:" in out     # a source-only library has no version
+
+
+def test_what_the_user_library_reaches_keeps_the_names_of_the_other_one_in_a_single_run(two):
+    two()
+    out = (two.root / "script.py").read_text()
+    assert "def f(" in out and "def unused(" not in out         # f is kept only because the cli block uses it
+    before = out
+    assert two() == 0 and (two.root / "script.py").read_text() == before     # and a second run changes nothing
+    assert two(check=True) == 0
+
+
+def test_a_check_fails_when_a_block_of_the_other_library_is_stale(two, capsys):
+    two()
+    (two.root / "cli/src/cli/c.py").write_text("from lib.a import f, unused\n\ndef run():\n    return f() + unused()\n")
+    assert two(check=True) == 1
+    assert "script.py" in capsys.readouterr().err
+    assert two() == 0 and "def unused(" in (two.root / "script.py").read_text()
+
+
+def test_without_uses_an_import_of_the_other_library_is_refused(two, capsys):
+    assert two(uses="") == 2
+    assert "not in the standard library" in capsys.readouterr().err
+
+
+def test_a_user_library_must_import_names_of_a_module(two, capsys):
+    (two.root / "cli/src/cli/c.py").write_text("from lib import f\n\ndef run():\n    return f()\n")
+    assert two() == 2
+    assert "from lib.<module> import <names>" in capsys.readouterr().err
+
+
+def test_a_name_in_both_libraries_is_refused(two, capsys):
+    (two.root / "cli/src/cli/c.py").write_text("from lib.a import f\n\ndef f2():\n    return 1\n\ndef unused():\n    return 2\n\n"
+                                              "def run():\n    return f() + unused()\n")
+    assert two() == 2
+    assert "unused" in capsys.readouterr().err
