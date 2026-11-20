@@ -49,7 +49,7 @@ rust-msrv:
     rustup toolchain install "$msrv" --profile minimal
     cargo "+$msrv" hack test --locked --feature-powerset
 
-# ioc-concord, Python: build the wheel of this platform into dist (arguments go to maturin: `--zig --compatibility manylinux_2_28`, ...)
+# ioc-concord, Python: build the wheel of this platform into dist; the arguments go to maturin (`--zig --compatibility manylinux_2_28`, ...)
 wheel *args:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -75,6 +75,10 @@ wheel-test:
     @ls {{python}}/dist/*.whl >/dev/null 2>&1 || { echo "no wheel in {{python}}/dist: run 'just wheel' first"; exit 1; }
     cd {{python}} && uv run --no-project --isolated --with pytest --with dist/*.whl python -I -m pytest -q -p no:cacheprovider tests
 
+# ioc-concord, Python: in a new environment with nothing but the wheel, check that the library and the command work
+wheel-smoke:
+    cd {{python}} && uv run --no-project --isolated --with dist/*.whl python -I tests/smoke.py
+
 # Test the shared command-line library of the skill scripts, as it is on disk (on the last release of the pure-Python library)
 test-cli:
     uv run --no-project --with pytest --with ioc-concord==0.2.0 python -m pytest protocols/concord/cli/tests -q -p no:cacheprovider
@@ -84,7 +88,7 @@ test-scripts:
     uv run --no-project --with pytest python -m pytest protocols/concord/tests -q -p no:cacheprovider
 
 # Run all the CONCORD tests (not the sync check: that is `just check-sync`)
-test-concord: test-bundler rust-test wheel wheel-test test-cli test-scripts
+test-concord: test-bundler rust-test wheel wheel-test wheel-smoke test-cli test-scripts
 
 # Run the ACCORD tests: the initiator script, against the recorded transcripts
 test-accord:

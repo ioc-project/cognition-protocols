@@ -42,6 +42,21 @@ What is a JSON document in Rust is a JSON string here (`spec_json`, `Event.detai
 `.State`, `.MissingState`). A number is a `Number` (`Number.TEXT`, `Number.INT` or `Number.FLOAT`). The API is the `ffi` module of
 [`ioc-concord-rs`](../ioc-concord-rs/README.md#bindings-for-other-languages), which also describes the model it wraps.
 
+## The `ioc-concord` command
+
+The wheel also installs the `ioc-concord` command (`uvx ioc-concord ...`). It is the crate's `cli` module, which the
+bindings export as `cli_run`: the arguments, the output and the state are all in Rust, and `ioc_concord/cli.py` only prints what comes back.
+It is the command line of the skill scripts `concord_initiator.py` and `concord_receiver.py` that came before it, with the same commands:
+
+    ioc-concord initiator --me ini start --participants cost,security --context "..." --x-reject "..." --x-ideal "..." --format "..."
+    ioc-concord receiver --me cost receive               # every CONCORD message, on stdin
+    ioc-concord receiver --me cost answer                # the answer to the TASK, as one JSON object on stdin
+
+`initiator` has `start`, `receive`, `tick`, `wait`, `report` and `forward`; `receiver` has `receive`, `answer`, `tick`, `wait`, `task`,
+`status` and `report`. Every output starts with `STATUS: SEND`, `ANSWER`, `WAIT`, `DONE` or `ERROR` and ends with a `NEXT:` line that says
+what to do. The skills in [`protocols/concord/skills`](../../protocols/concord/skills) describe how an agent uses it. The state of an agent
+is kept in `concord-state-<me>.json` in `--state-dir` (the current directory by default).
+
 ## Build
 
 The wheel is built with [maturin](https://www.maturin.rs/), which builds the crate with its `uniffi` feature, generates the bindings
