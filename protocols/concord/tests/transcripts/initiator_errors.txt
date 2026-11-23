@@ -158,8 +158,8 @@ out|
 === initiator ini report (exit 0)
 $ --me ini report
 out| STATUS: WAIT
-out| --- END
-out| The run is not over: the result of the reporter has not arrived.
+out| --- NOT OVER
+out| The run is not over: nothing is final until a call prints STATUS: DONE.
 out| --- WAKE
 out| <WAKE>
 out| NEXT: Pass every message of this run you receive, exactly as received, one per call, to `concord_initiator.py ⏎
