@@ -133,8 +133,8 @@ def test_wait_returns_what_the_tick_produced_when_the_timer_is_due(cli):
     assert code == 0 and out.startswith("STATUS: SEND\n--- SEND to: b, ini\n<concord-error ") and 'reason="missing"' in out
     code, out = cli("wait", extra=("--poll", "0.1"))                         # after `retries` requests the agent gives up on b
     assert out.startswith("STATUS: SEND") and "<concord-cancel " in out and "--- END\nThe run was aborted" in out
-    code, out = cli("wait")                                                  # over: nothing to wait for
-    assert out.startswith("STATUS: DONE\n--- END")
+    code, out = cli("wait")                                                  # over: nothing to wait for, and not the result once more
+    assert out.startswith("STATUS: DONE\nNEXT: The run is over, so there is nothing to wait for: do not start") and "--- END" not in out
 
 
 def test_wait_returns_at_once_when_no_timer_runs(cli):
@@ -408,4 +408,22 @@ def test_a_message_with_no_recipient_that_can_be_worked_out_is_never_printed_for
         with pytest.raises(CliError):
             s.add_sends(out, type("Step", (), {"send": ["<concord-note version='0.3.0' from='a'/>"]})())
         assert out.sections == []                                                                    # and nothing was added
+
+
+def test_wait_on_a_run_that_is_over_does_not_print_the_result_again_but_report_does(cli):
+    cli("receive", stdin=init_text(timeout=1, retries=0))
+    code, out = cli("wait", extra=("--poll", "0.05"))                        # b never answers: the run is given up, and END says so once
+    assert out.startswith("STATUS: SEND") and "--- END\nThe run was aborted" in out
+    for _ in range(2):                                                       # a model that starts `wait` again each time it returns
+        code, out = cli("wait")
+        assert code == 0 and out.startswith("STATUS: DONE\n") and "--- END" not in out and "do not start" in out
+    code, out = cli("report")
+    assert out.startswith("STATUS: DONE\n--- END\nThe run was aborted")      # and `report` still gives it
+
+
+def test_standard_input_that_is_closed_is_an_error_that_says_what_to_do(cli, monkeypatch, capsys):
+    monkeypatch.setattr("sys.stdin", None)                                   # what a process gets when it is started with `<&-`
+    code = cli_main("prog.py", COMMANDS, "doc", ["--me", "a", "--state-dir", str(cli.dir), "receive"])
+    out = capsys.readouterr().out
+    assert code == 2 and out.startswith("STATUS: ERROR\nreceive reads standard input and there is none\nNEXT: Pipe the text in")
 

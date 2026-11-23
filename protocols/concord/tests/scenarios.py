@@ -117,31 +117,34 @@ def initiator_errors():
 
 
 def receiver_errors():
+    """Every kind of refused answer. A task is refused at most STOP_AFTER_ANY - 1 times in a row here (a model is stopped at the sixth), so
+    the kinds are shared between two participants."""
     run = driver.Run()
     ini = lambda *argv, **kw: run.call("ini", INITIATOR, list(argv), **kw)
     rec = lambda *argv, **kw: run.call("a", RECEIVER, list(argv), **kw)
+    recb = lambda *argv, **kw: run.call("b", RECEIVER, list(argv), **kw)
     for command in ("tick", "report", "task", "status"):                           # no run yet
         rec(command)
     rec("answer", stdin="{}")                                                     # nothing is due
     init = driver.sections(ini("start", "--participants", "a,b", *start_args(OPTIONS)).stdout, "SEND")[0][1]
     rec("receive", stdin=init)
     rec("receive", stdin=init)                                                    # the same message again: a duplicate
+    recb("receive", stdin=init)
     good = {"raw_reject": 10, "raw_ideal": 90, "candidate": "X", "rationale": REASONS, "raw": 85, "reasoning": REASONS}
     rec("answer", stdin="{not json")
     rec("answer", stdin="[1, 2]")                                                 # not an object
     rec("answer", stdin=json.dumps({"raw_reject": 10}))                           # what it lacks, next to what it sent
     rec("answer", stdin=json.dumps({**good, "raw": "high"}))                      # a number that is not one
     rec("answer", stdin=json.dumps({**good, "raw_reject": 0.1, "raw_ideal": 0.9, "raw": 0.8}))      # normalised scores
-    rec("answer", stdin=json.dumps({**good, "raw_reject": 80, "raw_ideal": 20}))  # anchors the wrong way round
-    rec("answer", stdin=json.dumps({**good, "rationale": "short", "reasoning": "short"}))           # three times: it stops
-    rec("answer", stdin=json.dumps({**good, "rationale": "short", "reasoning": "short"}))
-    rec("answer", stdin=json.dumps({**good, "rationale": "short", "reasoning": "short"}))
-    rec("answer", stdin=json.dumps({**good, "rationale": "short", "reasoning": "short"}))
     rec("answer", stdin=json.dumps(good))                                         # and a good answer is taken
     rec("answer", stdin=json.dumps(good))                                         # nothing is due again: not to be retried
     rec("task")
     rec("status")
     rec("receive", stdin="   ")
+    recb("answer", stdin=json.dumps({**good, "raw_reject": 80, "raw_ideal": 20}))  # anchors the wrong way round
+    for _ in range(4):                                                            # the same refusal three times: it stops, and goes on stopping
+        recb("answer", stdin=json.dumps({**good, "rationale": "short", "reasoning": "short"}))
+    recb("answer", stdin=json.dumps(good))                                        # a good answer is taken, whatever came before
     return run
 
 

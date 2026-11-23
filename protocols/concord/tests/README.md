@@ -41,6 +41,13 @@ and the diff is where to read it. Do not re-record to make a test pass.
 adds what a transcript cannot show: a negative control for the star (the same run, with a centre that does not `forward`, never ends),
 the lock (messages that arrive at the same time are all recorded), `--help`, and a wrong command line.
 
+## Inputs the scripts do not expect (`test_scripts_inputs.py`)
+
+What the scripts are given that is wrong, and that each must answer with a clean error and not a traceback: a model that changes its bad
+answer each time (it is stopped after six refusals of one task, besides the stop at three identical ones), a `--relay` list that leaves
+a participant out, `forward --from` an agent that is not a spoke, a file that is not UTF-8, a text that starts with `@`, a closed
+standard input, and `wait` on a run that is over.
+
 ## Fixtures (`test_fixtures_scripts.py`)
 
 The files of `protocols/concord/spec/fixtures` say what every implementation must do with a message; the library is tested against them as
