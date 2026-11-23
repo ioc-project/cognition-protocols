@@ -25,7 +25,7 @@ class ConcordMetric(Metric):
     """A session metric. ``facet`` gets the parsed CONCORD session; the gates are handled here.
 
     ``NEEDS_COMPLETE`` mirrors the scripts: most of them measure only runs that
-    used CONCORD AND reached ``Phase: Complete``, and skip the others.
+    used CONCORD AND reached the end (COMMIT or BEST_EFFORT), and skip the others.
     """
 
     NAME = ""

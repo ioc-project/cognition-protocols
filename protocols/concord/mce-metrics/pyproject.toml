@@ -11,7 +11,11 @@ version = "0.1.0"
 description = "CONCORD compliance, rounds, satisfaction, fairness and token cost as MCE metric plugins."
 requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
-dependencies = ["ioc-scope-mce-core>=2.0.0", "openai", "python-dotenv"]
+dependencies = ["ioc-concord", "ioc-scope-mce-core>=2.0.0", "openai", "python-dotenv"]
+
+# Until ioc-concord is published, it is installed from this repository.
+[tool.uv.sources]
+ioc-concord = { git = "https://github.com/ioc-project/cognition-protocols.git", subdirectory = "packages/ioc-concord", rev = "22d36f835cc3760680f163e73d16423248109d4c" }
 
 [project.scripts]
 concord-mce-trace = "concord_mce_metrics.trace_cli:main"
