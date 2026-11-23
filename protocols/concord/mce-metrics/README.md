@@ -45,7 +45,7 @@ uv sync --extra dev
 uv run pytest
 ```
 
-`ioc-concord` is installed from this repository (`[tool.uv.sources]` in `pyproject.toml`) until it is published.
+`ioc-concord` is installed from [PyPI](https://pypi.org/project/ioc-concord/).
 
 The tests use a small synthetic session, the initiator calls of five real runs (`tests/traces/`) and a canned judge answer,
 so they need no KG and no LLM.

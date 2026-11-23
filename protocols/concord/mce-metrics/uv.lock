@@ -251,7 +251,11 @@ wheels = [
 [[package]]
 name = "ioc-concord"
 version = "0.1.0"
-source = { git = "https://github.com/ioc-project/cognition-protocols.git?subdirectory=packages%2Fioc-concord&rev=22d36f835cc3760680f163e73d16423248109d4c#22d36f835cc3760680f163e73d16423248109d4c" }
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/13/e7/3608438e83f5439986b01e464c94ae682b53ce41d9590e29a54ce36def45/ioc_concord-0.1.0.tar.gz", hash = "sha256:4e19f8b92c1b0c63d04a069793c8aaff2c7828eea3867c5f38b48ad56f2d33e9", size = 26986, upload-time = "2026-11-10T16:21:39.211Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a0/51/8740245fc77549bfe24d798c58820728b701483f09e576152e7f8327e6af/ioc_concord-0.1.0-py3-none-any.whl", hash = "sha256:1a361380e4e1fe0d564be298cdbaf54b5cc438f495c737305681413a3cf6f2b3", size = 19459, upload-time = "2026-11-10T16:21:37.928Z" },
+]
 
 [[package]]
 name = "ioc-concord-mce-metrics"
@@ -271,7 +275,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ioc-concord", git = "https://github.com/ioc-project/cognition-protocols.git?subdirectory=packages%2Fioc-concord&rev=22d36f835cc3760680f163e73d16423248109d4c" },
+    { name = "ioc-concord", specifier = "~=0.1.0" },
     { name = "ioc-scope-mce-core", specifier = ">=2.0.0" },
     { name = "openai" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
