@@ -14,8 +14,6 @@
 
 use std::collections::HashMap;
 
-use crate::py::is_space;
-
 /// The tokens of a text, `[a-z0-9]+` of its lowercase form, joined with one space.
 pub fn normalize_text(text: &str) -> String {
     let lower = text.to_lowercase();
@@ -168,11 +166,6 @@ impl SequenceMatcher {
         }
         2.0 * matches as f64 / length as f64
     }
-}
-
-/// `re.sub(r"\s+", "", text)`: the text without its whitespace, Python's whitespace.
-pub(crate) fn without_space(text: &str) -> String {
-    text.chars().filter(|c| !is_space(*c)).collect()
 }
 
 #[cfg(test)]

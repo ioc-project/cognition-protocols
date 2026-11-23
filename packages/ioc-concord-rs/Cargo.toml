@@ -32,13 +32,18 @@ required-features = ["uniffi-cli"]
 
 [dependencies]
 indexmap = { version = "2", features = ["serde"] }
+# What the protocol libraries share: the message format (text, XML, the check) and the state storage. The version is for crates.io.
+ioc-protocol = { version = "0.1.0", path = "../ioc-protocol-rs" }
 # Without the other speed features, for size. `perf-dfa` stays: the size limit of a pattern (schema.rs) counts the lazy DFA of the regex too, so
 # which patterns are refused depends on it.
 regex = { version = "1", default-features = false, features = ["std", "unicode", "perf-dfa"] }
 roxmltree = "0.20"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
 uniffi = { version = "0.31", optional = true }
 clap = { version = "4", default-features = false, features = ["std", "derive", "help", "usage", "error-context"], optional = true }
+
+[dev-dependencies]
+# the tests compute the check of a document themselves
+sha2 = "0.10"

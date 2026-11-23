@@ -341,10 +341,10 @@ name = "ioc-accord"
 version = "0.1.0"
 dependencies = [
  "indexmap",
+ "ioc-protocol",
  "regex",
  "serde",
  "serde_json",
- "sha2",
  "uuid",
 ]
 
@@ -354,12 +354,24 @@ version = "0.2.0"
 dependencies = [
  "clap",
  "indexmap",
+ "ioc-protocol",
  "regex",
  "roxmltree",
  "serde",
  "serde_json",
  "sha2",
  "uniffi",
+ "uuid",
+]
+
+[[package]]
+name = "ioc-protocol"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "roxmltree",
+ "serde_json",
+ "sha2",
  "uuid",
 ]
 

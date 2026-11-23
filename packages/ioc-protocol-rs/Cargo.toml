@@ -1,0 +1,26 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "ioc-protocol"
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.89"
+description = "What the cognition protocol libraries share: the message format and the state storage."
+license.workspace = true
+readme = "README.md"
+repository.workspace = true
+keywords = ["multi-agent", "protocol", "state", "message"]
+categories = ["encoding", "filesystem"]
+
+[lib]
+name = "ioc_protocol"
+
+[dependencies]
+# Without the other speed features, for size, as in the protocol crates.
+regex = { version = "1", default-features = false, features = ["std", "unicode", "perf-dfa"] }
+roxmltree = "0.20"
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+# v5: the isolated path of a state file under a run key (path::keyed_path).
+uuid = { version = "1", features = ["v5"] }

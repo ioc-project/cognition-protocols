@@ -38,6 +38,8 @@ use crate::protocol::{
 };
 use crate::schema::{check_candidate, schema_text, validate_schema};
 use crate::xmlutil::{check_of, esc_attr, esc_text, start_tag, verify_check, with_check};
+use ioc_protocol::message::{Decode, MessageError};
+use ioc_protocol::xml::Locator;
 
 // --------------------------------------------------------------------------
 // vocabulary
@@ -122,9 +124,9 @@ pub fn kind_of_tag(tag: &str) -> Option<&'static str> {
     Kind::from_tag(tag).map(Kind::as_str)
 }
 
-static OPEN_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<(concord-[a-z-]+)\b").unwrap());
+/// Where a CONCORD message is in a text: a root element `concord-…`, in a fence marked `xml` or not, or with prose around it.
+static LOCATOR: LazyLock<Locator> = LazyLock::new(|| Locator::new("concord-", "CONCORD", "xml"));
 static TAG_NAME_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^concord-[a-z-]+$").unwrap());
-static FENCE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?s)```(?:xml)?[ \t\r\n]*\n(.*?)\n```").unwrap());
 static ANY_TAG_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<[^>]*>").unwrap());
 
 /// A new UUID, as text: the id of a run or of one transmission.
@@ -698,31 +700,7 @@ pub fn build_cancel(
 ///
 /// `ConcordError::InvalidMessage` when `text` holds no CONCORD message, or the message is cut off.
 pub fn locate(text: &str) -> Result<&str> {
-    let mut s = trim_ws(text);
-    if let Some(fenced) = FENCE_RE.captures_iter(s).filter_map(|c| c.get(1)).find(|g| g.as_str().contains("<concord-")) {
-        s = trim_ws(fenced.as_str());
-    }
-    let Some(m) = OPEN_RE.captures(s) else {
-        return invalid("no CONCORD message in the text");
-    };
-    let (start, name) = (m.get(0).unwrap().start(), m.get(1).unwrap().as_str());
-    let Some(tag) = start_tag(&s[start..]) else {
-        return invalid(if s[start..].contains('>') {
-            "the first tag of the CONCORD message is not well-formed"
-        } else {
-            "the CONCORD message is cut off inside its first tag"
-        });
-    };
-    let tag_end = start + tag.end - 1;
-    if tag.empty {
-        return Ok(&s[start..=tag_end]);
-    }
-    let close = s.rfind(&format!("</{name}")).filter(|c| *c > tag_end);
-    let end = close.and_then(|c| s[c..].find('>').map(|i| c + i));
-    match end {
-        Some(end) => Ok(&s[start..=end]),
-        None => invalid(format!("the <{name}> message is not closed")),
-    }
+    Ok(LOCATOR.locate(text)?)
 }
 
 /// The root of a document, read from its text without validating anything.
@@ -1174,4 +1152,15 @@ pub fn parse_message(doc: &str, spec: Option<&Value>) -> Result<Message> {
         Kind::Cancel => Body::Cancel(parse_cancel(root)?),
     };
     Ok(Message { version, from, run_id, uuid, check: check_of(doc), body })
+}
+
+/// A CONCORD message is decoded by `parse_message`, with the candidate schema of the run when the caller has it:
+/// `ioc_protocol::message::read::<Message>(text, locate, spec)` locates it in a text, then reads it. Every refusal is `Invalid`, with
+/// the reason a receiver puts in its error.
+impl Decode for Message {
+    type Context<'a> = Option<&'a Value>;
+
+    fn decode(doc: &str, spec: Option<&Value>) -> std::result::Result<Self, MessageError> {
+        parse_message(doc, spec).map_err(|exc| MessageError::invalid(exc.message()))
+    }
 }

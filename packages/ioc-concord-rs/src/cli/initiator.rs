@@ -156,17 +156,7 @@ fn open(state: &str) -> Res<Agent> {
 
 /// The state path of a new run: the one given when it is free, else with a random suffix (a run's id is not shared with another).
 fn unique_state_path(path: &str) -> String {
-    if !Path::new(path).exists() {
-        return path.to_string();
-    }
-    let suffix = &crate::wire::new_uuid()[..8];
-    let path = Path::new(path);
-    let stem = path.file_stem().map_or_else(String::new, |s| s.to_string_lossy().into_owned());
-    let name = match path.extension() {
-        Some(ext) => format!("{stem}-{suffix}.{}", ext.to_string_lossy()),
-        None => format!("{stem}-{suffix}"),
-    };
-    path.with_file_name(name).to_string_lossy().into_owned()
+    ioc_protocol::path::unique_path(path, || crate::wire::new_uuid()[..8].to_string())
 }
 
 fn over(agent: &Agent) -> bool {

@@ -42,7 +42,9 @@ carried no delivery check) keeps the state as the refusal left it, because the a
 too, as the script does.
 
 `state::resolve_state_path(path, run_key, state_dir)` is the script's isolation of the state file under `$ACCORD_RUN_KEY`, as a pure
-function: the caller reads the environment and creates the folder.
+function: the caller reads the environment and creates the folder. To keep the state in a file, use the `FileStore` of
+[`ioc-protocol`](../ioc-protocol-rs) with `state::StateCodec` (the script's text, loaded over the blank state), and its `FileLock` to
+serialise the commands of one session.
 
 ## Differences from the script
 
@@ -61,6 +63,10 @@ The behaviour is the script's, quirks included. What differs:
 
 ## Modules
 
+What the protocol libraries share is in [`ioc-protocol`](../ioc-protocol-rs): the fence and the prose around a reply, escaping, the
+short fingerprint, the path under a run key, and the state backends. This crate keeps the messages, the state and the wording of the
+script.
+
 | Module | Contents |
 |---|---|
 | `errors` | `AccordError` and `hint_for` |
@@ -70,8 +76,8 @@ The behaviour is the script's, quirks included. What differs:
 | `similarity` | `normalize_text`, `SequenceMatcher`, `similarity` |
 | `ingest` | reading the replies of each phase |
 | `algorithms` | the merges: roster, frame clusters and coverage (Good-Turing, Chao1), glossary, set covers, the contract |
-| `state` | the blank state, loading with defaults, the state file, `resolve_state_path` |
-| `messages` | the request of each phase, the delivery check, the execution request |
+| `state` | the blank state, loading with defaults, the state file and its `StateCodec`, `resolve_state_path` |
+| `messages` | the request of each phase, the delivery check (`Delivery`, an `Encode`), the execution request |
 | `session` | `Session` and the commands |
 
 ## Tests

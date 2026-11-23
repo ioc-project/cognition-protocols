@@ -16,24 +16,15 @@ use crate::py;
 use crate::pyjson::loads;
 
 /// A reply without the Markdown fence around it: an opening "```" or "```json" and the whitespace after it, and a closing "```".
+///
+/// `re.sub(r"\n?```\s*$", "", re.sub(r"^```(?:json)?\s*\n?", "", text.strip()).strip())`, Python's whitespace.
 pub fn strip_fences(text: &str) -> String {
-    // re.sub(r"^```(?:json)?\s*\n?", "", text.strip())
-    let mut s = py::strip(text);
-    if let Some(rest) = s.strip_prefix("```") {
-        let rest = rest.strip_prefix("json").unwrap_or(rest);
-        s = rest.trim_start_matches(py::is_space);
-    }
-    // re.sub(r"\n?```\s*$", "", stripped.strip()): the text is stripped, so the match can only be its last characters
-    let s = py::strip(s);
-    let s = s.strip_suffix("\n```").or_else(|| s.strip_suffix("```")).unwrap_or(s);
-    s.to_string()
+    ioc_protocol::text::strip_fence(text, "json", py::is_space).to_string()
 }
 
 /// `re.search(r"\{.*\}", text, re.DOTALL)`: from the first `{` to the last `}` after it.
 fn braced(text: &str) -> Option<&str> {
-    let start = text.find('{')?;
-    let end = text.rfind('}')?;
-    (end > start).then(|| &text[start..=end])
+    ioc_protocol::text::outermost(text, '{', '}')
 }
 
 /// The replies that are JSON objects. A string is read as JSON once its fence is stripped, or else from its first `{` to its last `}`,
