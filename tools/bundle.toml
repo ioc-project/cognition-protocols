@@ -22,6 +22,7 @@ modules = ["errors", "xmlutil", "protocol", "schema", "engine", "wire", "store",
 [[library]]
 name = "concord_cli"
 path = "protocols/concord/cli"
+source_only = true                   # a library that is only source: no pyproject.toml, so no version in its block
 uses = ["ioc_concord"]
 
 [[library.target]]

@@ -82,12 +82,14 @@ def test_a_silent_agent_ends_the_run_for_everyone_with_a_cancel():
 
 def test_every_refusal_of_an_answer_says_what_to_do_and_stops_after_three():
     run = scenarios.receiver_errors()
-    answers = [e for e in run.log if e["call"] == "receiver a answer"]
+    answers = [e for e in run.log if e["call"] in ("receiver a answer", "receiver b answer")]
     refused = [e for e in answers if e["rc"] == 2]
     assert refused and all("NEXT:" in e["stdout"] for e in refused)
     stops = [e for e in refused if "Stop. The same refusal came" in e["stdout"]]
     assert [re.search(r"came (\d) times", e["stdout"]).group(1) for e in stops] == ["3", "4"]
-    assert answers[-2]["rc"] == 0 and "STATUS: SEND" in answers[-2]["stdout"]                     # the good answer is taken after them
+    assert not any("This task has been refused" in e["stdout"] for e in refused)                  # the scenario stays under the cap of six
+    taken = [e for e in answers if e["rc"] == 0]
+    assert [e["call"] for e in taken] == ["receiver a answer", "receiver b answer"] and all("STATUS: SEND" in e["stdout"] for e in taken)
 
 
 def test_what_the_schema_does_not_allow_is_refused_and_what_it_allows_is_taken():
