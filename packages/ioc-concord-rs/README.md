@@ -148,7 +148,8 @@ spokes are not, because they are live links: after a restart they connect again,
 
 The state is plain data (`agent.state`, an `AgentState`), saved as JSON through the `Store` after every call that changes it. A `Store`
 is anything with `load()` and `save(&Value)`; `FileStore` writes atomically, and `MemoryStore` keeps the state in memory (a clone shares
-it, which is how a test restarts an agent).
+it, which is how a test restarts an agent). Both are backends of [`ioc-protocol`](../ioc-protocol-rs), and so is every backend of its
+`Store` that keeps a JSON value: it is a `Store` here too.
 
 ### Numbers
 
@@ -193,15 +194,19 @@ the output: the bindings export it as `cli_run`, and the Python package's `ioc-c
 
 ## Modules
 
+What the protocol libraries share is in [`ioc-protocol`](../ioc-protocol-rs): the whitespace, escaping, the root start tag, locating a
+message in a text and its integrity check (`protocol`, `xmlutil` and `wire::locate` use them), and the state backends (`store`). This
+crate keeps the messages, the state and the wording of CONCORD.
+
 | Module | Contents |
 |---|---|
 | `errors` | `ConcordError` and its kinds |
 | `protocol` | the version, the default parameters, the outcomes, and the forms of ids, UUIDs and numbers |
-| `xmlutil` | escaping, and the integrity check of a document (computed on its text) |
+| `xmlutil` | escaping, and the integrity check of a document (computed on its text): `ioc_protocol::xml`'s |
 | `schema` | parse, validate and render a candidate schema; the subset of patterns; check a candidate against it |
 | `engine` | the decision engine: SELECT, ACCEPT, the bottleneck, the outcome, in integer millionths |
 | `wire` | build and read every message, in the layers of the order of checks |
-| `store` | the `Store` trait, an atomic `FileStore` and a `MemoryStore` |
+| `store` | the `Store` trait; the backends `FileStore` (atomic) and `MemoryStore` are `ioc_protocol::store`'s |
 | `state` | the state of an agent and of a run, and the keys of the items a run is made of |
 | `liveness` | the messages an agent is owed and the timers that wait for them |
 | `tasks` | what the model must write now |

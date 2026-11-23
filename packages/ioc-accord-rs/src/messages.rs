@@ -11,14 +11,14 @@
 
 use std::sync::LazyLock;
 
+use ioc_protocol::check::{short_digest, without};
+use ioc_protocol::message::{Encode, MessageError};
 use regex::Regex;
 use serde_json::Value;
-use sha2::{Digest, Sha256};
 
 use crate::errors::{AccordError, Result};
 use crate::py;
 use crate::pyjson::{canonical_json, dumps_pretty};
-use crate::similarity::without_space;
 
 /// The check of a delivery line: `check="<hex>"` in an `<accord-delivery>` start tag (the last one of the tag).
 pub static CHECK_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"<accord-delivery\b[^>]*\bcheck="([0-9a-f]+)""#).unwrap());
@@ -28,32 +28,51 @@ pub fn find_check(text: &str) -> Option<&str> {
     CHECK_RE.captures(text).and_then(|c| c.get(1)).map(|m| m.as_str())
 }
 
-/// Text escaped for an XML attribute or content: `&`, `<`, `>` and `"`.
-pub fn esc(text: &str) -> String {
-    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
-}
+/// Text escaped for an XML attribute or content: `&`, `<`, `>` and `"` (`ioc_protocol::xml::esc_attr`).
+pub use ioc_protocol::xml::esc_attr as esc;
 
 /// The fingerprint of a phase message, blind to whitespace: the first 8 hex digits of the SHA-256 of the text without its whitespace.
 ///
 /// It binds a reply to the message that was actually sent; it does not prove the reply's own body is untouched, which nothing the
 /// initiator holds could establish.
 pub fn reply_check(text: &str) -> String {
-    let digest = Sha256::digest(without_space(text).as_bytes());
-    digest.iter().take(4).map(|b| format!("{b:02x}")).collect()
+    // re.sub(r"\s+", "", text): Python's whitespace
+    short_digest(&without(text, py::is_space))
 }
 
 fn text_of<'a>(st: &'a Value, key: &str) -> Result<&'a str> {
     py::as_str(py::item(st, key)?, "replace")
 }
 
+/// A phase message of a session: the body, and the state id its delivery header names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Delivery<'a> {
+    pub state_id: &'a str,
+    pub body: &'a str,
+}
+
+impl Delivery<'_> {
+    /// The delivery header: the state id and the check of the body.
+    pub fn header(&self) -> String {
+        format!("<accord-delivery state=\"{}\" check=\"{}\"></accord-delivery>", esc(self.state_id), reply_check(self.body))
+    }
+}
+
+/// The text of a phase message: its delivery header, a blank line, then the body it fingerprints.
+impl Encode for Delivery<'_> {
+    fn encode(&self) -> std::result::Result<String, MessageError> {
+        Ok(format!("{}\n\n{}", self.header(), self.body))
+    }
+}
+
 /// The delivery header of a body.
 pub fn header(st: &Value, body: &str) -> Result<String> {
-    Ok(format!("<accord-delivery state=\"{}\" check=\"{}\"></accord-delivery>", esc(text_of(st, "state_id")?), reply_check(body)))
+    Ok(Delivery { state_id: text_of(st, "state_id")?, body }.header())
 }
 
 /// A phase message: its delivery header, then the body it fingerprints.
 pub fn wrap_msg(st: &Value, body: &str) -> Result<String> {
-    Ok(format!("{}\n\n{body}", header(st, body)?))
+    Ok(Delivery { state_id: text_of(st, "state_id")?, body }.encode()?)
 }
 
 /// `", ".join(values)`: every value has to be a string.

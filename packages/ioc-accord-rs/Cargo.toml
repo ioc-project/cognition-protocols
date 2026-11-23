@@ -18,10 +18,11 @@ name = "ioc_accord"
 
 [dependencies]
 indexmap = { version = "2", features = ["serde"] }
+# What the protocol libraries share: the message format (fences, escaping, the check) and the state storage. The version is for crates.io.
+ioc-protocol = { version = "0.1.0", path = "../ioc-protocol-rs" }
 # Without the other speed features, for size, as in ioc-concord. The one pattern is the delivery check of a reply (messages.rs).
 regex = { version = "1", default-features = false, features = ["std", "unicode", "perf-dfa"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-sha2 = "0.10"
-# v4: the id of a session; v5: the isolated path of a state file under a run key (state::resolve_state_path).
-uuid = { version = "1", features = ["v4", "v5"] }
+# v4: the id of a session. (The isolated path of a state file under a run key is ioc_protocol::path::keyed_path.)
+uuid = { version = "1", features = ["v4"] }

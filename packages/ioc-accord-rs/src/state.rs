@@ -8,6 +8,7 @@
 //! check is stored as the agent sent it, a defect can be a string or an object), and a state saved by either implementation has to load
 //! in the other unchanged.
 
+use ioc_protocol::store::Codec;
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -65,43 +66,6 @@ pub fn new_state_id() -> String {
     Uuid::new_v4().simple().to_string()[..8].to_string()
 }
 
-/// A POSIX path as `pathlib.PurePosixPath` reads it: its root (`""`, `"/"`, or `"//"` for exactly two leading slashes) and its parts,
-/// without empty ones and `.`.
-fn split_path(path: &str) -> (&str, Vec<&str>) {
-    let root = if path.starts_with("//") && !path.starts_with("///") {
-        "//"
-    } else if path.starts_with('/') {
-        "/"
-    } else {
-        ""
-    };
-    (root, path.split('/').filter(|p| !p.is_empty() && *p != ".").collect())
-}
-
-fn join_path(root: &str, parts: &[&str]) -> String {
-    let joined = format!("{root}{}", parts.join("/"));
-    if joined.is_empty() {
-        ".".to_string()
-    } else {
-        joined
-    }
-}
-
-/// The suffix and the stem of a file name, as `pathlib` has them since Python 3.14: `"x.json"` is `(".json", "x")`, `".hidden"` is
-/// `("", ".hidden")`, `"x."` is `(".", "x")`.
-fn suffix_and_stem(name: &str) -> (&str, &str) {
-    let trimmed = name.trim_start_matches('.');
-    let suffix = match trimmed.rfind('.') {
-        Some(i) => &trimmed[i..],
-        None => "",
-    };
-    let stem = match name.rfind('.') {
-        Some(i) if !name[..i].trim_start_matches('.').is_empty() => &name[..i],
-        _ => name,
-    };
-    (suffix, stem)
-}
-
 /// The state file of this invocation.
 ///
 /// `path` is the `--state` of the command (or `$ACCORD_STATE`, or `DEFAULT_STATE`), the same on every command of a session. Without a
@@ -112,27 +76,33 @@ fn suffix_and_stem(name: &str) -> (&str, &str) {
 ///
 /// This only computes the path, the way Python's `pathlib` writes it (`a//b/./c` is `a/b/c`); creating the folder is the caller's.
 pub fn resolve_state_path(path: &str, run_key: Option<&str>, state_dir: Option<&str>) -> String {
-    let Some(run_key) = run_key.filter(|k| !k.is_empty()) else {
-        return path.to_string();
-    };
-    let (root, parts) = split_path(path);
-    let name = parts.last().copied().unwrap_or("");
-    let (dir_root, dir_parts) = match state_dir.filter(|d| !d.is_empty()) {
-        Some(dir) => split_path(dir),
-        None => (root, parts[..parts.len().saturating_sub(1)].to_vec()),
-    };
-    let digest = Uuid::new_v5(&Uuid::NAMESPACE_URL, format!("{run_key}:{name}").as_bytes()).simple().to_string();
-    let (suffix, stem) = suffix_and_stem(name);
-    let file = format!("{stem}-{}{suffix}", &digest[..8]);
-    let mut all = dir_parts;
-    all.push(&file);
-    join_path(dir_root, &all)
+    ioc_protocol::path::keyed_path(path, run_key, state_dir)
+}
+
+/// The state file as a `Codec` of `ioc_protocol::store`: the text `dump_state` writes, read back by `load_state` (over the blank state).
+/// A `FileStore<StateCodec>` keeps a state as the script does.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct StateCodec;
+
+impl Codec for StateCodec {
+    type State = Value;
+    const FORMAT: &'static str = "JSON";
+
+    fn encode(&self, st: &Value) -> std::result::Result<String, String> {
+        Ok(dump_state(st))
+    }
+
+    fn decode(&self, text: &str) -> std::result::Result<Value, String> {
+        load_state(text).map_err(|e| e.message().to_string())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::Map;
+    use ioc_protocol::path::suffix_and_stem;
+    use ioc_protocol::store::{conformance, FileStore, MemoryStore, Store};
+    use serde_json::{json, Map};
 
     fn keys(v: &Value) -> Vec<String> {
         v.as_object().map(Map::keys).into_iter().flatten().cloned().collect()
@@ -171,5 +141,33 @@ mod tests {
         assert_eq!(suffix_and_stem(".."), ("", ".."));
         assert_eq!(suffix_and_stem("...a.b"), (".b", "...a"));
         assert_eq!(suffix_and_stem(""), ("", ""));
+    }
+
+    #[test]
+    fn a_state_is_kept_by_either_backend_through_the_store_trait() {
+        let dir = std::env::temp_dir().join(format!("ioc-accord-state-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("state.json");
+        // the file backend writes the script's text and reads a saved state over the blank one
+        let first = with_defaults(json!({"task": "t"})).unwrap();
+        let second = with_defaults(json!({"task": "é", "frame_rounds": 2})).unwrap();
+        let mut file = FileStore::with_codec(&path, StateCodec);
+        assert!(file.load().unwrap_err().is_missing());
+        file.save(&first).unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), dump_state(&first));
+        std::fs::write(&path, "{\"extra\": 1}").unwrap();
+        let loaded = file.load().unwrap();
+        assert_eq!(keys(&loaded).first().map(String::as_str), Some("specialists"));
+        assert_eq!(loaded["extra"], 1);
+        std::fs::write(&path, "[1]").unwrap();
+        assert_eq!(
+            file.load().unwrap_err().message(),
+            format!("state file {} is not valid JSON (TypeError: 'list' object is not a mapping)", path.display())
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let memory = MemoryStore::<Value>::refusing(|st| st["task"] == "refused");
+        conformance::run(|| memory.clone(), first, second, with_defaults(json!({"task": "refused"})).unwrap());
     }
 }

@@ -84,3 +84,21 @@ impl fmt::Display for ConcordError {
 }
 
 impl std::error::Error for ConcordError {}
+
+/// A message that cannot be read or written is an `InvalidMessage`, whatever its kind: the text is what goes into the error.
+impl From<ioc_protocol::MessageError> for ConcordError {
+    fn from(err: ioc_protocol::MessageError) -> Self {
+        ConcordError::InvalidMessage(err.message().to_string())
+    }
+}
+
+/// A store that has nothing saved is `MissingState`; every other failure of a store is `State`.
+impl From<ioc_protocol::StoreError> for ConcordError {
+    fn from(err: ioc_protocol::StoreError) -> Self {
+        if err.is_missing() {
+            ConcordError::MissingState(err.message().to_string())
+        } else {
+            ConcordError::State(err.message().to_string())
+        }
+    }
+}

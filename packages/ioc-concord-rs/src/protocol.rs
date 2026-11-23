@@ -16,21 +16,9 @@ pub const PROTOCOL_VERSION: &str = "0.3.0";
 /// and in reports.
 pub const MILLION: i64 = 1_000_000;
 
-/// Whitespace is these four characters and no other: a text is trimmed of them, and `\s` of a pattern stands for them, so that every
-/// implementation reads the same text, whatever its language. (`str::trim` strips every Unicode space, which is more.)
-pub const WS: [char; 4] = [' ', '\t', '\r', '\n'];
-
-/// `s` without the whitespace (see `WS`) at either end.
-#[must_use]
-pub fn trim_ws(s: &str) -> &str {
-    s.trim_matches(&WS[..])
-}
-
-/// `s` with each run of whitespace (see `WS`) made one space, and none left at either end.
-#[must_use]
-pub fn squeeze(s: &str) -> String {
-    s.split(&WS[..]).filter(|part| !part.is_empty()).collect::<Vec<_>>().join(" ")
-}
+/// Whitespace is these four characters and no other (`WS`): a text is trimmed of them (`trim_ws`) and squeezed (`squeeze`), and `\s`
+/// of a pattern stands for them, so that every implementation reads the same text, whatever its language.
+pub use ioc_protocol::text::{squeeze, trim_ws, WS};
 
 /// The default `satisfaction_threshold` (0.6), in millionths.
 pub const DEFAULT_THRESHOLD: i64 = 600_000;

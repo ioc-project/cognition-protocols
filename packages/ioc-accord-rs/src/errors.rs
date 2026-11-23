@@ -68,6 +68,20 @@ impl fmt::Display for AccordError {
 
 impl std::error::Error for AccordError {}
 
+/// A message that cannot be read or written: an error with its text.
+impl From<ioc_protocol::MessageError> for AccordError {
+    fn from(err: ioc_protocol::MessageError) -> Self {
+        AccordError::new(err.message())
+    }
+}
+
+/// A state that cannot be loaded or saved: an error with its text.
+impl From<ioc_protocol::StoreError> for AccordError {
+    fn from(err: ioc_protocol::StoreError) -> Self {
+        AccordError::new(err.message())
+    }
+}
+
 /// What to do about an error: always a way back onto the path, never just the complaint.
 pub fn hint_for(msg: &str) -> &'static str {
     let m = msg.to_lowercase();
