@@ -174,13 +174,20 @@ def test_messages_that_arrive_at_the_same_time_are_all_recorded():
     assert [e["rc"] for e in run.log if e["call"] == "initiator ini receive"] == [0] * len(agents)
 
 
+def help_words(script, *argv):
+    """(exit code, the help of a script as one line of words): argparse wraps its text to the width of the terminal, which is not the same
+    everywhere, so what is compared is the words, never the lines."""
+    p = subprocess.run([sys.executable, "-I", str(script), *argv], capture_output=True, text=True)
+    return p.returncode, " ".join(p.stdout.split())
+
+
 def test_the_scripts_say_how_to_use_them():
     for script, words in ((INITIATOR, "open the run"), (RECEIVER, "pass your answer")):
-        p = subprocess.run([sys.executable, "-I", str(script), "--help"], capture_output=True, text=True)
-        assert p.returncode == 0 and words in p.stdout
-    p = subprocess.run([sys.executable, "-I", str(INITIATOR), "--me", "x", "start", "--help"], capture_output=True, text=True)
-    assert p.returncode == 0 and "The ids of the agents whose satisfaction counts" in p.stdout        # the wording of the library
-    assert "the slowest turn of any agent" in p.stdout
+        code, text = help_words(script, "--help")
+        assert code == 0 and words in text
+    code, text = help_words(INITIATOR, "--me", "x", "start", "--help")
+    assert code == 0 and "The ids of the agents whose satisfaction counts" in text                   # the wording of the library
+    assert "--timeout SECONDS" in text and "(default 300)" in text                                    # and the timing flags are explained
 
 
 def test_a_command_line_that_is_wrong_is_an_error_that_says_what_to_do():
