@@ -57,9 +57,9 @@ scripts/concord_initiator.py --me <you> start --participants <a,b,...> \
   them; nothing else is accepted. If there is no such list, describe in words what an answer looks like with
   `--format`, and the agents propose their own. Never write the list yourself.
 - **If you take part in the decision yourself**, list yourself in `--participants`, first. `start` then
-  hands you over: load the `concord-receiver` skill and use only its script from then on.
-- Agents that think slowly need a longer `--timeout` (seconds an agent waits before it asks again): it must
-  exceed the slowest turn of any agent, or the run aborts.
+  hands you over: load the `concord-receiver` skill and use only its script from then on. The one exception
+  is the centre of a star (you run `scripts/concord_initiator.py` with `--relay`): it keeps using that script,
+  but only for `forward`, to pass the messages on (see below).
 
 ## Follow the run
 
@@ -71,14 +71,15 @@ next. Do what `NEXT:` says, and nothing else. In short:
 3. Keep time: start `wait` in the background and start it again each time it returns (it returns when
    something is to be sent), or, if you cannot run a command in the background, call `tick` at the
    time `WAKE` gives. Silence is how a lost message is found: without it the run cannot recover.
-4. At `STATUS: DONE`, report what `END` says and nothing more. Then, if messages of the run still
-   arrive, keep passing them to `receive` and send only what it prints: an agent may still ask for a message.
+4. At `STATUS: DONE`, report what `END` says and nothing more (`report` prints it again). Then, if messages of the
+   run still arrive, keep passing them to `receive` and send only what it prints: an agent may still ask for a message.
 
 A run can last as long as the agents need: there is no deadline for the result, so keep listening.
 
 **If you are the centre of a star** (the agents reach each other only through you), add `--relay <a,b,...>`,
 the names of the spokes, before the command on every call. For each message from a spoke, first run
-`forward --from <spoke>` and deliver what it prints to the other spokes, then pass the message to `receive`.
+`forward --from <spoke>` and deliver what it prints to the other spokes, then pass the message to `receive`
+(the receiver script's, if you also take part).
 
 ## Rules
 
@@ -89,4 +90,4 @@ the names of the spokes, before the command on every call. For each message from
 4. Report the result as `END` prints it, and add no commentary of your own.
 
 More detail (commands, the timers, the star, a silent agent, what a note means) is in
-[references/details.md](./references/details.md). You should not need it.
+[references/details.md](./references/details.md).

@@ -1,8 +1,7 @@
 # CONCORD initiator: reference
 
-What the script does not print, for when `NEXT:` is not enough. You do not need it to run a protocol: every output says what to
-do next. The protocol itself is in the
-[specification](https://github.com/ioc-project/cognition-protocols/blob/main/protocols/concord/spec/CONCORD-SPEC.md).
+Every output says what to do next in its `NEXT:` line. This file has the additional information on how to use the CONCORD
+initiator skill.
 
 Paths are relative to the skill directory. `<you>` is your agent id.
 
@@ -21,8 +20,8 @@ each argument of `start`.
 | `report` | | how the run stands or ended |
 | `forward [--from NAME]` | a message | (with `--relay`) what to pass on to the other spokes |
 
-An initiator that takes part in the run uses this script for `start` only, and `concord_receiver.py` for the rest: this script's
-other commands refuse it, and say so.
+An initiator that takes part in the run uses this script for `start` and, if it is the centre of a star, for `forward`, and
+`concord_receiver.py` for the rest: this script's other commands refuse it, and say so.
 
 ## Reading an output
 
@@ -53,8 +52,7 @@ NEXT: what to do now
 
 Every message the run is waiting for has a timer of `timeout` seconds (default 300). When it expires the script asks the author
 again; after `retries` requests (default 3) the author is taken to be missing. So an agent waits at most
-`(retries + 1) × timeout` for one message. `timeout` must exceed the slowest turn of any agent: a model that thinks for minutes
-needs a larger one at `start`, or the run aborts although nobody failed.
+`(retries + 1) × timeout` for one message.
 
 Nothing runs on its own. `wait` blocks until the next timer is due, ticks, and returns what the tick produced (a request, the init
 sent again, or the abort); start it in the background and again each time it returns, or call `tick` at the `WAKE` time. While `wait`
