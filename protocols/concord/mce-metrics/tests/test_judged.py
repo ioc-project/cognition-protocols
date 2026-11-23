@@ -53,10 +53,10 @@ def test_a_score_above_tau_with_reasoning_against_is_a_compromise():
 
 def test_below_tau_needs_no_llm_call():
     metric = jd.ConcordOutcomeSatisfied()
-    prompts = judge_with(metric, [])
-    ctx = fresh(score_a=scores(**{"c1-a": (30, "no"), "c2-b": (90, "mine")}), score_b=scores(**{"c1-a": (30, "no"), "c2-b": (90, "mine")}))
-    result = metric.compute("s", ctx)
-    assert result.value == 0 and result.reasoning.startswith("NOT_SATISFIED") and prompts == []
+    prompts = judge_with(metric, ["1 | FOR"])
+    result = metric.compute("s", fresh(finish="BEST_EFFORT"))  # the winner leaves b at 0.4, below tau 0.7: only a is judged
+    assert result.value == 0 and result.reasoning.startswith("NOT_SATISFIED") and len(prompts) == 1
+    assert '"agent": "b", "raw": 40.0, "norm": 0.4, "tau": 0.7, "direction": null, "label": "NOT_SATISFIED"' in result.reasoning
 
 
 def test_a_judge_that_never_answers_validly_is_unreliable_and_skipped_not_scored_zero():
@@ -82,7 +82,7 @@ def test_satisfaction_metrics_share_one_judge_call():
 
 
 def test_fairness_flags_a_score_against_the_scorers_own_reasoning():
-    # a scored b's c2-b at 20 (LOW) with reasoning that argues FOR it; b scored a's c1-a 85 (HIGH).
+    # a scored b's seed-b at 20 (LOW) with reasoning that argues FOR it; b scored a's seed-a 85 (HIGH).
     metric = jd.ConcordScoreFair()
     prompts = judge_with(metric, ["1 | FOR", "1 | FOR"])  # one question per agent, a then b
     result = metric.compute("s", fresh())
@@ -104,14 +104,8 @@ def test_mixed_reasoning_is_never_unfair():
 
 
 def test_similar_proposals_scored_the_same_are_not_judged():
-    spans = tool_spans(
-        score_a=scores(**{"c1-a": (90, "mine"), "c2-b": (88, "fine too")}),  # a rates b's near-identical option as high as its own
-    )
-    # make the two candidates the same action
-    for s in spans:
-        out = json.loads(s["toolOutput"])
-        out["stdout"] = out["stdout"].replace("enable debug logging", "restart api")
-        s["toolOutput"] = json.dumps(out)
+    # a rates b's near-identical option as high as its own
+    spans = tool_spans(score_a=scores(**{"seed-a": (90, "mine"), "seed-b": (88, "fine too")}), texts=("restart api", "restart api"))
     metric = jd.ConcordUnfairScoreShare()
     prompts = judge_with(metric, ["1 | FOR"])  # only b's score of a's candidate is left to judge
     result = metric.compute("s", fresh(spans=spans))

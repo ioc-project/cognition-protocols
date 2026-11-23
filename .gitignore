@@ -3,8 +3,8 @@
 site/
 .build/
 
-# Python package build output (uv build writes here; CI publishes from it)
-dist/
+# Rust build output
+target/
 
 # Python cache
 __pycache__/

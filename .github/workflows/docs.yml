@@ -6,6 +6,7 @@ on:
     paths:
       - 'docs/**'
       - 'protocols/concord/spec/**'
+      - '!protocols/concord/spec/fixtures/**'
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
   pull_request:
@@ -13,6 +14,7 @@ on:
     paths:
       - 'docs/**'
       - 'protocols/concord/spec/**'
+      - '!protocols/concord/spec/fixtures/**'
       - 'README.md'
       - 'mkdocs.yml'
       - 'lychee.toml'
@@ -39,7 +41,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       - name: Configure Pages
         if: github.event_name != 'pull_request' && github.event_name != 'schedule'
@@ -82,4 +84,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

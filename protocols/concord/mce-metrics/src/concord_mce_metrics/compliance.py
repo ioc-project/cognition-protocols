@@ -6,7 +6,7 @@
 Ported from ``compute_compliance_metrics.py``. Among the sessions that used
 CONCORD (a successful ``init``):
 
-  ConcordReachedEnd        the tool printed ``Phase: Complete`` (COMMIT or BEST_EFFORT)
+  ConcordReachedEnd        the run reached its end (COMMIT or BEST_EFFORT)
   ConcordCommitted         that end was the commit (SUCCESS), not BEST_EFFORT
   ConcordUsedAllCandidates every agent has an accepted score for every candidate of the pool
   ConcordAllSteps          init, anchors, seeds, scores, repairs and completed were all satisfied
@@ -21,7 +21,7 @@ from .base import ConcordMetric
 
 class ConcordReachedEnd(ConcordMetric):
     NAME = "ConcordReachedEnd"
-    DESCRIPTION = "1 if the run reached COMMIT or BEST_EFFORT (the tool printed `Phase: Complete`), else 0."
+    DESCRIPTION = "1 if the run reached COMMIT or BEST_EFFORT (the script printed `RUN COMPLETE`), else 0."
     NEEDS_COMPLETE = False
 
     def facet(self, session_id, s, context):
