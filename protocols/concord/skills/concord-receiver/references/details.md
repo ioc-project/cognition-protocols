@@ -1,8 +1,7 @@
 # CONCORD receiver: reference
 
-What the script does not print, for when `NEXT:` is not enough. You do not need it to take part: every output says what to do next, and
-every task says what it asks and how to answer it. The protocol itself is in the
-[specification](https://github.com/ioc-project/cognition-protocols/blob/main/protocols/concord/spec/CONCORD-SPEC.md).
+Every output says what to do next in its `NEXT:` line, and every task says what it asks and how to answer it. This file has the
+additional information on how to use the CONCORD receiver skill.
 
 Paths are relative to the skill directory. `<you>` is your agent id.
 

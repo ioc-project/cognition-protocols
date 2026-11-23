@@ -10,9 +10,6 @@ anchors — the initiator derives from the task. Receivers need no parameters.
 | Timeout: how long an agent waits for a message it is owed before it asks again, in seconds | `--timeout` | `300` |
 | Retries: how many times an agent asks again before it aborts the run | `--retries` | `3` |
 
-Raise the timeout when the agents are slow to answer: it must be longer than the slowest
-turn of any agent, or the run aborts although nobody failed.
-
 **Persistent — in `AGENTS.md` or `CLAUDE.md`:**
 
 ```markdown

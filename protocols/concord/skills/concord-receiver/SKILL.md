@@ -75,4 +75,4 @@ owe first.
 6. Give the script each message whole: never shorten, summarise or reword it.
 
 More detail (the commands, what a task asks, the timers, what a note means) is in
-[references/details.md](references/details.md). You should not need it.
+[references/details.md](references/details.md).
