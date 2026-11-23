@@ -11,7 +11,8 @@
 //! a state that is the same JSON, byte for byte.
 //!
 //! The library does no I/O: it reads no file and no environment, it never prints or exits, and it takes no lock. The caller loads the
-//! state, runs a command on a `session::Session`, and saves the state when the command succeeded.
+//! state, runs a command on a `session::Session`, and saves the state when the command succeeded. The one exception is the module `cli`
+//! (feature `cli`), which is such a caller: the script's command line, with its state file and its lock.
 //!
 //! Similarity is the script's string similarity only (`difflib.SequenceMatcher` on normalized text, as with `ACCORD_EMBEDDING=off`): the
 //! sentence-transformers embeddings the script can use instead are not ported.
@@ -28,6 +29,7 @@
 //! * `state`: the state of a session, and the path of its file under a run key
 //! * `messages`: the request of each phase, the delivery check, the execution request
 //! * `session`: the commands, self-driving (`init` + `handle`) or phase by phase
+//! * `cli`: the `ioc-accord` command as a function (feature `cli`): the script's command line, its output and its state file
 //!
 //! # Quick start
 //!
@@ -62,6 +64,8 @@
 //! ```
 
 pub mod algorithms;
+#[cfg(feature = "cli")]
+pub mod cli;
 pub mod errors;
 pub mod ingest;
 pub mod messages;

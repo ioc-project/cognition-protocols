@@ -340,6 +340,7 @@ dependencies = [
 name = "ioc-accord"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "indexmap",
  "ioc-protocol",
  "regex",
