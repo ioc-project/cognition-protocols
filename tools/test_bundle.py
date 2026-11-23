@@ -285,10 +285,11 @@ def two(tmp_path, monkeypatch):
     (tmp_path / "pkg/src/lib/a.py").write_text("def f():\n    return 'f'\n\ndef unused():\n    return 'u'\n")
     (tmp_path / "cli/src/cli/c.py").write_text("from lib.a import f\n\ndef run():\n    return f() + '!'\n")
 
-    def sync(uses='uses = ["lib"]', check=False, cli_modules=("c",), lib_uses="", lib_file="script.py"):
+    def sync(uses='uses = ["lib"]', check=False, cli_modules=("c",), lib_uses="", lib_file="script.py", cli_source_only="source_only = true",
+             lib_modules=("a",)):
         (tmp_path / "bundle.toml").write_text(
-            f"[[library]]\nname = 'lib'\npath = 'pkg'\n{lib_uses}\n[[library.target]]\nfile = '{lib_file}'\nmodules = ['a']\n\n"
-            f"[[library]]\nname = 'cli'\npath = 'cli'\n{uses}\n[[library.target]]\nfile = 'script.py'\nmodules = {list(cli_modules)!r}\n")
+            f"[[library]]\nname = 'lib'\npath = 'pkg'\n{lib_uses}\n[[library.target]]\nfile = '{lib_file}'\nmodules = {list(lib_modules)!r}\n\n"
+            f"[[library]]\nname = 'cli'\npath = 'cli'\n{cli_source_only}\n{uses}\n[[library.target]]\nfile = 'script.py'\nmodules = {list(cli_modules)!r}\n")
         return bundle.main(["--config", str(tmp_path / "bundle.toml")] + (["--check"] if check else []))
 
     sync.root = tmp_path
@@ -383,3 +384,93 @@ def test_the_block_of_the_used_library_must_come_first_in_the_script(two, capsys
     assert (two.root / "script.py").read_text() == swapped
     (two.root / "script.py").write_text(TWO)                                  # in order, it is bundled
     assert two() == 0
+
+
+# --- what a library that builds on another takes from it ---------------------------------------------------------------------------
+
+def test_a_module_the_used_library_does_not_carry_in_the_script_is_refused(two, capsys):
+    (two.root / "pkg/src/lib/b.py").write_text("def g():\n    return 'g'\n")
+    (two.root / "cli/src/cli/c.py").write_text("from lib.b import g\n\ndef run():\n    return g()\n")
+    assert two() == 2                                                        # lib is bundled with `a` only
+    assert 'cli.c imports lib.b, which is not in `modules` of lib for this script: add "b"' in capsys.readouterr().err
+    assert (two.root / "script.py").read_text() == TWO
+    assert two(lib_modules=("a", "b")) == 0                                  # carried, it is bundled, and the script runs
+    ns = {}
+    exec(compile((two.root / "script.py").read_text().replace("print(run())", ""), "script.py", "exec"), ns)
+    assert ns["run"]() == "g"
+
+
+def test_a_name_the_used_library_does_not_define_is_refused(two, capsys):
+    (two.root / "cli/src/cli/c.py").write_text("from lib.a import nothere\n\ndef run():\n    return nothere()\n")
+    assert two() == 2
+    assert "cli.c imports nothere from lib.a, which does not define it" in capsys.readouterr().err
+    assert (two.root / "script.py").read_text() == TWO
+
+
+# --- the version -----------------------------------------------------------------------------------------------------------------
+
+def test_a_library_without_a_pyproject_must_say_that_it_is_only_source(two, capsys):
+    assert two(cli_source_only="") == 2
+    err = capsys.readouterr().err
+    assert "cli: no pyproject.toml (cli/pyproject.toml) to take a version from" in err and "source_only = true" in err
+
+
+def test_a_pyproject_without_a_version_or_that_is_not_toml_is_an_error_and_not_a_traceback(two, capsys):
+    (two.root / "pkg/pyproject.toml").write_text('[project]\nname = "lib"\n')
+    assert two() == 2
+    assert "lib: pkg/pyproject.toml has no [project].version" in capsys.readouterr().err
+    (two.root / "pkg/pyproject.toml").write_text("not = [toml")
+    assert two() == 2
+    assert "pkg/pyproject.toml is not valid TOML" in capsys.readouterr().err
+
+
+# --- the markers -----------------------------------------------------------------------------------------------------------------
+
+def test_the_markers_of_a_library_are_not_those_of_one_whose_name_starts_the_same(tmp_path, monkeypatch):
+    monkeypatch.setattr(bundle, "ROOT", tmp_path)
+    for rel, text in {"p1/pyproject.toml": '[project]\nname = "a"\nversion = "1.0.0"\n', "p1/src/a/x.py": "def fx():\n    return 1\n",
+                      "p2/pyproject.toml": '[project]\nname = "ab"\nversion = "2.0.0"\n', "p2/src/a-b/y.py": "def fy():\n    return 2\n"}.items():
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(text)
+    (tmp_path / "script.py").write_text("# >>> BUNDLED a-b\n# <<< END BUNDLED a-b\n\n# >>> BUNDLED a\n# <<< END BUNDLED a\n\nresult = (fx(), fy())\n")
+    (tmp_path / "bundle.toml").write_text(
+        "[[library]]\nname = 'a'\npath = 'p1'\n[[library.target]]\nfile = 'script.py'\nmodules = ['x']\n"
+        "[[library]]\nname = 'a-b'\npath = 'p2'\n[[library.target]]\nfile = 'script.py'\nmodules = ['y']\n")
+    assert bundle.main(["--config", str(tmp_path / "bundle.toml")]) == 0         # the block of `a` is not taken for the one of `a-b`
+    text = (tmp_path / "script.py").read_text()
+    assert text.count("def fx") == 1 and text.count("def fy") == 1
+    assert text.index("# >>> BUNDLED a-b 2.0.0") < text.index("# >>> BUNDLED a 1.0.0")
+    ns = {}
+    exec(compile(text, "script.py", "exec"), ns)
+    assert ns["result"] == (1, 2)
+
+
+# --- a config that is wrong, and a run -----------------------------------------------------------------------------------------------
+
+LIB_OK = "[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nfile = 'script.py'\nmodules = ['a']\n"
+
+
+@pytest.mark.parametrize("toml, why", [
+    ("", "the config has no [[library]]"),
+    ("[[library]]\npath = 'pkg'\n", "a [[library]] has no `name`"),
+    ("[[library]]\nname = 'lib'\n", "lib: no `path`"),
+    ("[[library]]\nname = 'lib'\npath = 'pkg'\n", "lib: no [[library.target]]"),
+    ("[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nmodules = ['a']\n", "lib: a [[library.target]] has no `file`"),
+    ("[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nfile = 'script.py'\n", "the target script.py has no `modules`"),
+    (LIB_OK + LIB_OK, "two [[library]] are called lib"),
+    (LIB_OK.replace("script.py", "nope.py"), "nope.py: no such script (lib is to be bundled into it)"),
+])
+def test_a_config_that_is_wrong_is_an_error_that_says_what_is_missing(two, capsys, toml, why):
+    path = two.root / "wrong.toml"
+    path.write_text(toml)
+    assert bundle.main(["--config", str(path)]) == 2                         # an error, never a traceback
+    assert why in capsys.readouterr().err
+
+
+def test_a_run_reads_each_file_of_a_library_once(two, monkeypatch):
+    reads, real = [], bundle._read_source
+    monkeypatch.setattr(bundle, "_read_source", lambda lib, rel: (reads.append(rel), real(lib, rel))[1])
+    assert two() == 0
+    assert reads and len(reads) == len(set(reads))                           # though every script is rendered more than once
+    assert bundle._READ is None                                              # and nothing is kept after the run
+
