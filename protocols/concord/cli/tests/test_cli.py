@@ -120,7 +120,8 @@ def test_the_message_for_another_agents_run_goes_to_every_other_agent_of_it(cli)
 def test_the_report_of_a_run_that_is_not_over_says_so_and_has_a_timer(cli):
     cli("receive", stdin=init_text())
     code, out = cli("report")
-    assert code == 0 and out.startswith("STATUS: WAIT\n--- END\nThe run is not over") and "--- WAKE" in out
+    assert code == 0 and out.startswith("STATUS: WAIT\n--- NOT OVER\nThe run is not over") and "--- WAKE" in out
+    assert "--- END" not in out
 
 
 def test_wait_returns_what_the_tick_produced_when_the_timer_is_due(cli):
@@ -166,13 +167,20 @@ def _hello(factory):
         return out
 
 
-def test_a_fault_of_the_library_is_printed_as_a_refusal_with_a_way_back(cli):
-    cli("receive", stdin=init_text())
+def test_a_fault_of_the_library_says_what_is_wrong_and_what_to_do_and_does_not_talk_of_answers(cli):
     def broken(factory, args, text):
         from ioc_concord.errors import StateError
         raise StateError("the state is not what was expected")
     code, out = cli("boom", commands=[Command("boom", "x", None, broken, False)])
-    assert code == 2 and out.startswith("STATUS: ERROR\nrefused: the state is not what was expected") and "NEXT:" in out
+    assert code == 2 and out.startswith("STATUS: ERROR\nthe state is not what was expected\nNEXT: Nothing was changed. Fix what")
+    assert "answer" not in out                                           # the advice of a refused answer does not fit a fault of the state
+
+
+def test_a_state_file_that_is_not_json_is_a_fault_with_a_way_back(cli):
+    (cli.dir / "concord-state-a.json").write_text("{not json")
+    code, out = cli("receive", stdin=init_text())
+    assert code == 2 and out.startswith("STATUS: ERROR\nstate file ") and "is not valid JSON" in out
+    assert out.splitlines()[-1].startswith("NEXT: Nothing was changed.") and "already answered" not in out
 
 
 # --- what a script can add: flags before the command, and a guard on its session --------------------------------------------------
@@ -238,3 +246,159 @@ def test_standard_input_is_read_as_utf_8_whatever_the_locale_says(cli, monkeypat
     monkeypatch.setattr("sys.stdin", latin_1)
     code = cli_main("p.py", [Command("c", "x", None, handler, True)], "doc", ["--me", "a", "--state-dir", str(cli.dir), "c"])
     assert code == 0 and got == ["décision → 日本語"]
+
+
+# --- wait ---------------------------------------------------------------------------------------------------------------------------
+
+def joined_but_not_briefed(cli):
+    """The agent `a` has joined a run whose init had a short timeout, and has never been shown the brief of the run."""
+    from ioc_concord.store import FileStore
+    Agent("a", store=FileStore(cli.dir / "concord-state-a.json")).receive(init_text(timeout=1))
+
+
+def test_a_tick_that_does_nothing_does_not_use_up_the_brief(cli, monkeypatch):
+    """`wait` composes the output of a tick only when it returns it: composing marks the run as briefed."""
+    from ioc_concord.agent import Step
+    joined_but_not_briefed(cli)
+    real, calls = Agent.tick, []
+
+    def tick(self, now=None):
+        calls.append(1)
+        return Step(self.clock()) if len(calls) <= 2 else real(self, now)        # two ticks that do nothing, then the real one
+
+    monkeypatch.setattr(Agent, "tick", tick)
+    code, out = cli("wait", extra=("--poll", "0.05"))
+    assert len(calls) >= 3 and code == 0
+    assert out.startswith("STATUS: SEND\n--- BRIEF\n")                         # the brief is in the output that is returned
+
+
+def test_a_tick_that_does_nothing_is_followed_by_a_poll_interval_and_not_by_another_tick_at_once(cli, monkeypatch):
+    from ioc_concord.agent import Step
+    joined_but_not_briefed(cli)
+    real, times = Agent.tick, []
+
+    def tick(self, now=None):
+        times.append(time.time())
+        return Step(self.clock()) if len(times) <= 3 else real(self, now)
+
+    monkeypatch.setattr(Agent, "tick", tick)
+    cli("wait", extra=("--poll", "0.3"))
+    gaps = [b - a for a, b in zip(times, times[1:3])]
+    assert len(gaps) == 2 and all(g >= 0.25 for g in gaps), gaps               # before: 50 ms apart, whatever --poll said
+
+
+# --- the sidecar and the report ---------------------------------------------------------------------------------------------------
+
+def test_what_a_call_that_raises_put_in_the_sidecar_is_not_kept(cli):
+    """A call that raises printed nothing: what it was going to show (a brief) must still be shown by the next one."""
+    with pytest.raises(RuntimeError):
+        with Session("p.py", "a", cli.dir) as s:
+            s.side["briefed"].append("a-run")
+            raise RuntimeError("the call failed")
+    assert not (cli.dir / "concord-script-a.json").exists()
+    with Session("p.py", "a", cli.dir) as s:
+        assert s.side["briefed"] == []
+        s.side["briefed"].append("a-run")
+    assert Session("p.py", "a", cli.dir).side_store.load()["briefed"] == ["a-run"]    # and one that ends well is kept
+
+
+def converge_without_the_result(dir):
+    """Two agents, `a` (the reporter, in memory) and `b` (in `dir`), run a whole negotiation, except that the result of `a` does not reach
+    `b`. Returns the messages that were dropped."""
+    from ioc_concord.store import FileStore
+    reason = "because it fits my role best, with concrete facts"
+    ini = Agent("ini")
+    agents = {"a": Agent("a"), "b": Agent("b", store=FileStore(dir / "concord-state-b.json"))}
+    queue, dropped = [("ini", ini.start(["a", "b"], "pick one", "nothing", "all agree", SPEC).send[0])], []
+    while queue:
+        origin, text = queue.pop(0)
+        for name, agent in agents.items():
+            if name == origin or ("<concord-result" in text and name == "b"):
+                dropped += [text] if "<concord-result" in text and name == "b" else []
+                continue
+            queue += [(name, t) for t in agent.receive(text).send]
+            for task in agent.due():
+                if task["kind"] == "init-reply":
+                    sent = agent.submit_init_reply(task["run_id"], 10, 90, f"option {name}", reason, 80, reason)
+                else:
+                    sent = agent.submit_score(task["run_id"], [(c["id"], 80, reason) for c in task["candidates"]])
+                queue += [(name, t) for t in sent.send]
+    return dropped
+
+
+def test_a_report_in_the_middle_of_a_run_does_not_say_that_it_is_over(cli):
+    """`b` has computed its outcome and waits for the result of the reporter: the run is not over for it, and the end text of the library
+    (which says "the run is over" once an outcome is computed) must not be shown as if it were the result."""
+    (result,) = converge_without_the_result(cli.dir)
+    code, out = cli("report", me="b")
+    assert code == 0 and out.startswith("STATUS: WAIT\n--- NOT OVER\n")
+    assert "You have computed an outcome (SUCCESS)" in out and "do not report it as the result" in out
+    assert "--- END" not in out and "The run is over" not in out
+    code, out = cli("receive", me="b", stdin=result)                                  # the result arrives: now it is over
+    code, out = cli("report", me="b")
+    assert out.startswith("STATUS: DONE\n--- END\nThe run is over.")
+
+
+# --- what `wait` relies on, and a message with no addressee -------------------------------------------------------------------------------
+
+def test_a_tick_never_makes_a_task_due():
+    """`wait` returns for what a tick sent or ended, not for a task that is due. That is right only if a tick never makes a task due: it asks
+    again, or aborts (which removes the tasks), so a task that is due after a tick was due before it, and the model was shown it."""
+    import copy
+    import json
+    reason = "because it fits my role best, with concrete facts"
+    init = Agent("ini").start(["a", "b"], "pick one", "nothing", "all agree", SPEC, params={"timeout": 10, "retries": 1}).send[0]
+    agents = {"a": Agent("a"), "b": Agent("b")}
+
+    def deliver(origin, texts):
+        for text in texts:
+            for name, agent in agents.items():
+                if name != origin:
+                    deliver(name, agent.receive(text).send)
+
+    def due(agent):
+        return json.dumps(agent.due(), sort_keys=True)
+
+    def ticks_change_nothing_that_is_due(state):
+        owed = 0
+        for name, agent in agents.items():
+            before = due(agent)
+            owed += before != "[]"
+            alone = copy.deepcopy(agent)
+            for n in range(1, 5):                                            # past every deadline, until it gives up
+                alone.tick(now=alone.clock() + 1000 * n)
+                after = due(alone)
+                assert after == before or (after == "[]" and alone.status()["status"] == "aborted"), (state, name, n)
+        assert owed, state                                                   # the state did have a task due, or the check shows nothing
+
+    for name, agent in agents.items():
+        agent.receive(init)
+    ticks_change_nothing_that_is_due("first answer due")
+    run_id = agents["a"].state["active"]
+    deliver("a", agents["a"].submit_init_reply(run_id, 10, 90, "option a", reason, 90, reason).send)
+    deliver("b", agents["b"].submit_init_reply(run_id, 10, 90, "option b", reason, 50, reason).send)
+    ticks_change_nothing_that_is_due("ratings due")
+    for name, raw in (("a", 20), ("b", 30)):                                 # both rate the other's seed low: the run needs a repair
+        task = agents[name].due()[0]
+        deliver(name, agents[name].submit_score(run_id, [(c["id"], raw, reason) for c in task["candidates"]]).send)
+    assert any(t["kind"] == "repair" for agent in agents.values() for t in agent.due())
+    ticks_change_nothing_that_is_due("a repair due")
+
+
+def test_a_message_with_no_run_and_no_addressee_falls_back_to_the_run_the_agent_is_in(cli):
+    cli("receive", stdin=init_text(participants=("a", "b", "c")))
+    with Session("prog.py", "a", cli.dir) as s:
+        assert s.recipients("<concord-note version='0.3.0' from='a'/>") == ["b", "c", "ini"]        # the audience is the run it is in
+        assert s.recipients("not a message at all") == ["b", "c", "ini"]
+
+
+def test_a_message_with_no_recipient_that_can_be_worked_out_is_never_printed_for_everyone(cli):
+    with Session("prog.py", "a", cli.dir) as s:                                                      # the agent is in no run
+        with pytest.raises(CliError) as stop:
+            s.recipients("<concord-note version='0.3.0' from='a'/>")
+        assert "no recipient" in str(stop.value) and "Do not send it" in stop.value.hint
+        out = Out("SEND")
+        with pytest.raises(CliError):
+            s.add_sends(out, type("Step", (), {"send": ["<concord-note version='0.3.0' from='a'/>"]})())
+        assert out.sections == []                                                                    # and nothing was added
+

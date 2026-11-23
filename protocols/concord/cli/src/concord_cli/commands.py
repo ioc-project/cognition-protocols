@@ -9,7 +9,6 @@ import time
 from collections import namedtuple
 
 from ioc_concord.errors import ConcordError
-from ioc_concord.guidance import refusal
 from ioc_concord.state import RUN_ACTIVE
 
 from concord_cli.out import EXIT_ERROR, CliError, Out, error_text
@@ -56,15 +55,17 @@ def run_wait(factory, args, text):
                 out.next = (f"No timer runs: do not start `{s.command('wait')}` again until a call prints a WAKE. Pass every message "
                             f"of this run you receive, exactly as received, one per call, to `{s.command('receive')}`.")
                 return out
-            now = s.agent.clock()
-            if wake <= now:
+            delay = wake - s.agent.clock()                              # the clock of the agent, not the time of day
+            if delay <= 0:
                 before = s.before()
                 step = s.agent.tick()
-                out = s.compose(step, before)
-                if step.send or out.status == "DONE":
-                    return out
-                wake = s.agent.next_wakeup() or now + args.poll         # answered meanwhile: look again
-        time.sleep(max(0.05, min(args.poll, wake - time.time())))
+                # It returns for what the tick sent or ended, and not for a task that is due: a tick never makes a task due (it asks again, or
+                # aborts, which removes them), so a task that is due now was due before, and the model was shown it when it became due.
+                # Returning for it would return at once, again and again, for as long as the answer is owed.
+                if step.send or s.agent.status()["status"] != RUN_ACTIVE:
+                    return s.compose(step, before)      # composed only now: it marks the run as briefed, which a discarded output must not
+                delay = args.poll                       # nothing to send (answered meanwhile): look again after a poll interval, not at once
+        time.sleep(max(0.05, min(args.poll, delay)))
 
 
 def _poll_arg(parser):
@@ -127,8 +128,9 @@ def cli_main(prog, commands, doc, argv=None, task_text=None, add_globals=None, s
     except CliError as exc:
         print(error_text(str(exc), exc.hint), end="")
         return EXIT_ERROR
-    except ConcordError as exc:
-        print("STATUS: ERROR\n" + refusal(exc))
+    except ConcordError as exc:                 # not a refused answer (the script handles those): the state or the input is wrong
+        print(error_text(str(exc), "Nothing was changed. Fix what the message says (the file or the argument it names) and run the same "
+                                   "command again. If it keeps failing, stop and say why."), end="")
         return EXIT_ERROR
     print(out.text(), end="")
     return EXIT_ERROR if out.status == "ERROR" else 0

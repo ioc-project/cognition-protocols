@@ -55,6 +55,8 @@ class Session:
         return self
 
     def __exit__(self, kind, exc, trace):
+        # The side is saved when the call ends well only. What a call that raises printed is nothing, so what it put in the side (the brief
+        # it was about to show) must not be kept: the next call shows it.
         try:
             if kind is None and repr(self.side) != self._side_before:
                 self.side_store.save(self.side)
@@ -101,17 +103,23 @@ class Session:
 
     def recipients(self, text):
         """The agents a message of this agent is for: every other agent of its run, the initiator included. For a message about a run the
-        agent does not know (a refusal of an init) the one it is addressed to."""
+        agent does not know (a refusal of an init) the one it is addressed to. Every message that the agent builds has a run id, and an
+        error an addressee; for one that has neither the safe default is the agents of the run the agent is in. Raises CliError when there
+        is no run either: a message must never be printed for an audience that is not known, since a reader takes "no one" for "everyone"."""
         attrs = (peek(text) or {}).get("attrs", {})
         run = self.agent.state["runs"].get(attrs.get("run_id"))
+        if run is None and attrs.get("to"):
+            return [attrs["to"]]
+        run = run or self.run()
         if run is None:
-            return [attrs["to"]] if attrs.get("to") else []
+            raise CliError("a message of the agent has no recipient that can be worked out (it names no run and no addressee, and the "
+                           "agent is in no run): this is a fault of the library", "Do not send it. Report this output as a bug.")
         names = list(run["participants"]) + [run["initiator"]]
         return [n for i, n in enumerate(names) if n != self.me and n not in names[:i]]
 
     def add_sends(self, out, step):
         for text in step.send:
-            out.add(f"SEND to: {', '.join(self.recipients(text)) or 'everyone'}", text.strip())
+            out.add(f"SEND to: {', '.join(self.recipients(text))}", text.strip())
 
     def brief(self, out, run, extra=""):
         """The first time a run is met, its description for the model: once per run."""
@@ -146,11 +154,17 @@ class Session:
         return out
 
     def report_out(self):
-        """The report of the run: its end, or that it is not over."""
+        """The report of the run: how it ended, or that it is not over. Only a run that is over has an END: the end text says that the run
+        is over as soon as an outcome is computed, and an agent that waits for the result of the reporter is not there yet."""
         status = self.need_run()
         over = status["status"] != RUN_ACTIVE
         out = Out("DONE" if over else "WAIT")
-        out.add("END", render_end(self.me, self.agent.report()))
+        if over:
+            out.add("END", render_end(self.me, self.agent.report()))
+        else:
+            out.add("NOT OVER", "The run is not over: nothing is final until a call prints STATUS: DONE."
+                    + (f" You have computed an outcome ({status['outcome']}), but the result of the reporter, which confirms it, has not "
+                       "arrived: do not report it as the result." if status["outcome"] else ""))
         wake = None if over else self.agent.next_wakeup()
         if wake is not None:
             out.add("WAKE", wake_text(wake, self.agent.clock()))
