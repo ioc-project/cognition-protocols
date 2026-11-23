@@ -337,6 +337,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ioc-accord"
+version = "0.1.0"
+dependencies = [
+ "indexmap",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "uuid",
+]
+
+[[package]]
 name = "ioc-concord"
 version = "0.2.0"
 dependencies = [
@@ -599,6 +611,12 @@ checksum = "9c187e0a369471c550af028cba56d4f4fa2a489ad28151ae95a4d340a2a8b782"
 dependencies = [
  "serde_core",
 ]
+
+[[package]]
+name = "sha1_smol"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d"
 
 [[package]]
 name = "sha2"
@@ -892,6 +910,7 @@ checksum = "bed99139f7dac9b5cfe5f17be4d66dc7079a34dee1d74bcc77217119240e267c"
 dependencies = [
  "getrandom",
  "js-sys",
+ "sha1_smol",
  "wasm-bindgen",
 ]
 
