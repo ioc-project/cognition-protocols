@@ -16,6 +16,17 @@ categories = ["algorithms"]
 [lib]
 name = "ioc_accord"
 
+[features]
+# The `ioc-accord` command as a library function (module `cli`): the commands of `accord_initiator.py`, with their arguments, their
+# output and the state file they keep.
+cli = ["dep:clap"]
+
+# Runs the command with the arguments, the environment and the input of the process (the differential test drives it); not shipped.
+[[example]]
+name = "ioc-accord"
+path = "examples/ioc-accord.rs"
+required-features = ["cli"]
+
 [dependencies]
 indexmap = { version = "2", features = ["serde"] }
 # What the protocol libraries share: the message format (fences, escaping, the check) and the state storage. The version is for crates.io.
@@ -26,3 +37,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 # v4: the id of a session. (The isolated path of a state file under a run key is ioc_protocol::path::keyed_path.)
 uuid = { version = "1", features = ["v4"] }
+clap = { version = "4", default-features = false, features = ["std", "derive", "help", "usage", "error-context"], optional = true }

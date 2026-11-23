@@ -64,8 +64,220 @@ pub fn dumps(v: &Value, style: Style) -> String {
 
 /// `json.loads`. Python reads a few things `serde_json` refuses, which a reply never holds on purpose: `NaN` and `Infinity`, a lone
 /// surrogate (`"\ud800"`), and an integer beyond 64 bits (read here as a float). Nesting deeper than 128 levels is refused too.
+///
+/// The error is Python's: `JSONDecodeError: <what> (line, column and index of the character)`, from `decode_error`; `serde_json`'s
+/// text only for what Python reads and `serde_json` refuses.
 pub fn loads(text: &str) -> Result<Value> {
-    serde_json::from_str(text).map_err(|e| AccordError::python("JSONDecodeError", e))
+    serde_json::from_str(text).map_err(|e| AccordError::python("JSONDecodeError", decode_error(text).unwrap_or_else(|| e.to_string())))
+}
+
+/// Why `json.loads` refuses `text`, as Python words it: `Expecting value: line 1 column 1 (char 0)`; None when Python reads it.
+///
+/// A scan of the text the way Python's C scanner (`_json`) goes through it, which stops at the first error: what it expected, and
+/// where, counted in characters. Nothing is decoded.
+pub fn decode_error(text: &str) -> Option<String> {
+    let s: Vec<char> = text.chars().collect();
+    let (msg, pos) = if s.first() == Some(&'\u{feff}') {
+        ("Unexpected UTF-8 BOM (decode using utf-8-sig)".to_string(), 0)
+    } else {
+        let scan = Scanner { s: &s };
+        let start = scan.ws(0);
+        match scan.value(start) {
+            Err(e) => e,
+            Ok(end) => {
+                let end = scan.ws(end);
+                if end == s.len() {
+                    return None;
+                }
+                ("Extra data".to_string(), end)
+            }
+        }
+    };
+    let line = s[..pos].iter().filter(|c| **c == '\n').count() + 1;
+    let column = pos - s[..pos].iter().rposition(|c| *c == '\n').map_or(0, |i| i + 1) + 1;
+    Some(format!("{msg}: line {line} column {column} (char {pos})"))
+}
+
+/// The scanner of `decode_error`: each step returns the index after what it read, or the error and its index.
+struct Scanner<'a> {
+    s: &'a [char],
+}
+
+type Scan = std::result::Result<usize, (String, usize)>;
+
+fn fail(msg: &str, pos: usize) -> Scan {
+    Err((msg.to_string(), pos))
+}
+
+impl Scanner<'_> {
+    fn at(&self, i: usize) -> Option<char> {
+        self.s.get(i).copied()
+    }
+
+    fn ws(&self, mut i: usize) -> usize {
+        while matches!(self.at(i), Some(' ' | '\t' | '\n' | '\r')) {
+            i += 1;
+        }
+        i
+    }
+
+    fn word(&self, i: usize, word: &str) -> bool {
+        word.chars().enumerate().all(|(k, c)| self.at(i + k) == Some(c))
+    }
+
+    fn value(&self, i: usize) -> Scan {
+        match self.at(i) {
+            None => return fail("Expecting value", i),
+            Some('"') => return self.string(i + 1),
+            Some('{') => return self.object(i + 1),
+            Some('[') => return self.array(i + 1),
+            _ => {}
+        }
+        for word in ["null", "true", "false", "NaN", "Infinity", "-Infinity"] {
+            if self.word(i, word) {
+                return Ok(i + word.chars().count());
+            }
+        }
+        self.number(i)
+    }
+
+    fn number(&self, start: usize) -> Scan {
+        let digit = |i: usize| self.at(i).is_some_and(|c| c.is_ascii_digit());
+        let mut i = start;
+        if self.at(i) == Some('-') {
+            i += 1;
+        }
+        match self.at(i) {
+            Some('0') => i += 1,
+            Some('1'..='9') => {
+                while digit(i) {
+                    i += 1;
+                }
+            }
+            _ => return fail("Expecting value", start),
+        }
+        if self.at(i) == Some('.') && digit(i + 1) {
+            i += 2;
+            while digit(i) {
+                i += 1;
+            }
+        }
+        if matches!(self.at(i), Some('e' | 'E')) && i + 1 < self.s.len() {
+            let e = i;
+            i += 1;
+            if matches!(self.at(i), Some('-' | '+')) && i + 1 < self.s.len() {
+                i += 1;
+            }
+            while digit(i) {
+                i += 1;
+            }
+            if !digit(i - 1) {
+                i = e;
+            }
+        }
+        Ok(i)
+    }
+
+    /// A string whose opening quote is before `end`.
+    fn string(&self, end: usize) -> Scan {
+        let begin = end - 1;
+        let len = self.s.len();
+        let mut next = end;
+        loop {
+            while next < len && !matches!(self.s[next], '"' | '\\') {
+                if (self.s[next] as u32) <= 0x1f {
+                    return fail("Invalid control character at", next);
+                }
+                next += 1;
+            }
+            if next == len {
+                return fail("Unterminated string starting at", begin);
+            }
+            if self.s[next] == '"' {
+                return Ok(next + 1);
+            }
+            next += 1; // the backslash
+            if next == len {
+                return fail("Unterminated string starting at", begin);
+            }
+            if self.s[next] != 'u' {
+                if !matches!(self.s[next], '"' | '\\' | '/' | 'b' | 'f' | 'n' | 'r' | 't') {
+                    return fail("Invalid \\escape", next - 1);
+                }
+                next += 1;
+                continue;
+            }
+            // `next` is at the `u`: four hex digits follow, and a second `\u` escape after a high surrogate needs four too
+            let code = self.hex(next)?;
+            next += 5;
+            let pair = (0xd800..=0xdbff).contains(&code) && self.at(next) == Some('\\') && self.at(next + 1) == Some('u');
+            if pair && (0xdc00..=0xdfff).contains(&self.hex(next + 1)?) {
+                next += 6;
+            }
+        }
+    }
+
+    /// The four hex digits after the `u` (at `u`) of a `\u` escape; the error is at the `u`.
+    fn hex(&self, u: usize) -> std::result::Result<u32, (String, usize)> {
+        let mut code = 0;
+        for i in u + 1..u + 5 {
+            match self.at(i).and_then(|c| c.to_digit(16)) {
+                Some(d) => code = code * 16 + d,
+                None => return Err(("Invalid \\uXXXX escape".to_string(), u)),
+            }
+        }
+        Ok(code)
+    }
+
+    /// An object whose `{` is before `i`.
+    fn object(&self, i: usize) -> Scan {
+        let mut i = self.ws(i);
+        if self.at(i) == Some('}') {
+            return Ok(i + 1);
+        }
+        loop {
+            if self.at(i) != Some('"') {
+                return fail("Expecting property name enclosed in double quotes", i);
+            }
+            i = self.ws(self.string(i + 1)?);
+            if self.at(i) != Some(':') {
+                return fail("Expecting ':' delimiter", i);
+            }
+            i = self.ws(i + 1);
+            i = self.ws(self.value(i)?);
+            match self.at(i) {
+                Some('}') => return Ok(i + 1),
+                Some(',') => {}
+                _ => return fail("Expecting ',' delimiter", i),
+            }
+            let comma = i;
+            i = self.ws(i + 1);
+            if self.at(i) == Some('}') {
+                return fail("Illegal trailing comma before end of object", comma);
+            }
+        }
+    }
+
+    /// An array whose `[` is before `i`.
+    fn array(&self, i: usize) -> Scan {
+        let mut i = self.ws(i);
+        if self.at(i) == Some(']') {
+            return Ok(i + 1);
+        }
+        loop {
+            i = self.ws(self.value(i)?);
+            match self.at(i) {
+                Some(']') => return Ok(i + 1),
+                Some(',') => {}
+                _ => return fail("Expecting ',' delimiter", i),
+            }
+            let comma = i;
+            i = self.ws(i + 1);
+            if self.at(i) == Some(']') {
+                return fail("Illegal trailing comma before end of array", comma);
+            }
+        }
+    }
 }
 
 fn newline(out: &mut String, style: Style, level: usize) {
@@ -192,5 +404,30 @@ mod tests {
         let v = loads("{\"a\": 1, \"b\": 2, \"a\": 3}").unwrap();
         assert_eq!(dumps_compact(&v), "{\"a\": 3, \"b\": 2}");
         assert!(loads("[1,").unwrap_err().message().starts_with("JSONDecodeError: "));
+    }
+
+    #[test]
+    fn a_text_that_is_not_json_is_refused_as_python_refuses_it() {
+        let cases = [
+            ("", "Expecting value: line 1 column 1 (char 0)"),
+            ("\n\n  [é, 1]", "Expecting value: line 3 column 4 (char 5)"),
+            ("[1,]", "Illegal trailing comma before end of array: line 1 column 3 (char 2)"),
+            ("{\"a\":1,}", "Illegal trailing comma before end of object: line 1 column 7 (char 6)"),
+            ("{\"a\" 1}", "Expecting ':' delimiter: line 1 column 6 (char 5)"),
+            ("{a}", "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"),
+            ("[1 2]", "Expecting ',' delimiter: line 1 column 4 (char 3)"),
+            ("1 2", "Extra data: line 1 column 3 (char 2)"),
+            ("\"a\u{1}\"", "Invalid control character at: line 1 column 3 (char 2)"),
+            ("\"a\\x\"", "Invalid \\escape: line 1 column 3 (char 2)"),
+            ("[\"\\u12\"]", "Invalid \\uXXXX escape: line 1 column 4 (char 3)"),
+            ("[\"\\ud83d\\u", "Invalid \\uXXXX escape: line 1 column 10 (char 9)"),
+            ("[\"\\u1234", "Unterminated string starting at: line 1 column 2 (char 1)"),
+            ("\u{feff}[]", "Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)"),
+        ];
+        for (text, want) in cases {
+            assert_eq!(decode_error(text).as_deref(), Some(want), "{text:?}");
+            assert_eq!(loads(text).unwrap_err().message(), format!("JSONDecodeError: {want}"));
+        }
+        assert_eq!(decode_error("[1e5, -0, 1.5E-3, \"\\ud83d\\ude00\"]"), None);
     }
 }
