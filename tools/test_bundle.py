@@ -120,6 +120,7 @@ def test_import_cycles_are_refused(repo, capsys):
     ("import lib\n", "from lib.<module> import"),
     ("from lib import a\n", "from lib.<module> import"),
     ("from lib.a import *\n", "import *"),
+    ("from lib.a import f as g\n", "import ... as"),
     ("from __future__ import annotations\n", "__future__"),
 ])
 def test_unsupported_imports_are_refused(repo, capsys, src, why):
@@ -349,6 +350,7 @@ def test_a_script_without_the_block_of_the_user_library_is_told_what_to_add(two,
     assert two() == 2
     err = capsys.readouterr().err
     assert "no markers" in err and "# >>> BUNDLED cli" in err
+    assert "after the block of lib" in err                                   # the order is part of the hint
 
 
 @pytest.mark.parametrize("uses, why", [
@@ -457,6 +459,7 @@ LIB_OK = "[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nfile = 's
     ("[[library]]\nname = 'lib'\npath = 'pkg'\n", "lib: no [[library.target]]"),
     ("[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nmodules = ['a']\n", "lib: a [[library.target]] has no `file`"),
     ("[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nfile = 'script.py'\n", "the target script.py has no `modules`"),
+    (LIB_OK.replace("['a']", "[]"), "a non-empty list of module names"),
     (LIB_OK + LIB_OK, "two [[library]] are called lib"),
     (LIB_OK.replace("script.py", "nope.py"), "nope.py: no such script (lib is to be bundled into it)"),
 ])
@@ -465,6 +468,16 @@ def test_a_config_that_is_wrong_is_an_error_that_says_what_is_missing(two, capsy
     path.write_text(toml)
     assert bundle.main(["--config", str(path)]) == 2                         # an error, never a traceback
     assert why in capsys.readouterr().err
+
+
+def test_nothing_is_written_when_a_later_script_fails_to_render(two, capsys):
+    (two.root / "script2.py").write_text("def f():\n    pass\n\n# >>> BUNDLED lib\n# <<< END BUNDLED lib\n")   # defines a name of lib.a
+    (two.root / "bundle.toml").write_text(
+        "[[library]]\nname = 'lib'\npath = 'pkg'\n[[library.target]]\nfile = 'script.py'\nmodules = ['a']\n"
+        "[[library.target]]\nfile = 'script2.py'\nmodules = ['a']\n")
+    before = (two.root / "script.py").read_text()
+    assert bundle.main(["--config", str(two.root / "bundle.toml")]) == 2
+    assert (two.root / "script.py").read_text() == before
 
 
 def test_a_run_reads_each_file_of_a_library_once(two, monkeypatch):
