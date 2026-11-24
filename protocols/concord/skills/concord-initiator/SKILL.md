@@ -77,7 +77,8 @@ next. Do what `NEXT:` says, and nothing else. In short:
 A run can last as long as the agents need: there is no deadline for the result, so keep listening.
 
 **If you are the centre of a star** (the agents reach each other only through you), add `--relay <a,b,...>`,
-the names of the spokes, before the command on every call. For each message from a spoke, first run
+the names of the spokes, before the command on every call of `concord_initiator.py` (the commands `NEXT:` prints for it carry it; the
+receiver script has no such option). For each message from a spoke, first run
 `forward --from <spoke>` and deliver what it prints to the other spokes, then pass the message to `receive`
 (the receiver script's, if you also take part).
 

@@ -8,7 +8,7 @@ Paths are relative to the skill directory. `<you>` is your agent id.
 ## Commands
 
 Flags before the command: `--me <you>` (required), `--state-dir DIR` (where the state is kept; default the current directory) and
-`--relay a,b,...` (the centre of a star only). `scripts/concord_initiator.py --help` lists the commands, and `start --help` explains
+`--relay a,b,...` (the centre of a star only; `concord_initiator.py` only). `scripts/concord_initiator.py --help` lists the commands, and `start --help` explains
 each argument of `start`.
 
 | Command | Reads | Does |
@@ -89,7 +89,7 @@ outcome and has no winner. An agent whose run had already ended keeps its outcom
 
 ## The centre of a star
 
-When the agents reach each other only through you, add `--relay a,b,...` (the spokes) to every call. A spoke sends to you alone.
+When the agents reach each other only through you, add `--relay a,b,...` (the spokes) to every call of `concord_initiator.py`: the commands `NEXT:` prints for it carry it, and the receiver script has no such option. A spoke sends to you alone.
 For each message from a spoke: first `forward --from <spoke>`, and deliver what it prints (`FORWARD to:`) to the other spokes
 exactly as printed; then pass the message to `receive`. What you send yourself (`SEND to:`) goes to every spoke. If you also take
 part, `forward` is in this script and `receive` in the receiver script. A centre that does not forward leaves the spokes without each
