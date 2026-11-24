@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
+LIBRARY = "ioc_concord"
 
 
 def _bundle_tool():
@@ -25,6 +26,7 @@ def _bundle_tool():
 
 bundle_tool = _bundle_tool()
 CONFIG = tomllib.loads((ROOT / "tools" / "bundle.toml").read_text())
+LIBS = [lib for lib in CONFIG["library"] if lib["name"] == LIBRARY]
 
 
 # The modules of the library that a script can bundle, in dependency order. They are those of the library as it is on disk: not the
@@ -41,7 +43,7 @@ def _bundles():
     shaking), so every name the tests call is there. Scripts that would carry the same block are tested once (under the name of the
     first): running the same code twice would only slow the tests down."""
     out, seen = {}, set()
-    for lib in CONFIG["library"]:
+    for lib in LIBS:
         for target in lib["target"]:
             block = bundle_tool.render({**lib, "ref": bundle_tool.WORKTREE}, {**target, "modules": MODULES},
                                        (ROOT / target["file"]).read_text(), shake=False)
@@ -63,7 +65,7 @@ def bundled(module):
 def implementations(module):
     """{name: the module}: the library, and each distinct bundled block. Built once per module for the whole run."""
     import importlib
-    impls = {"library": importlib.import_module(f"ioc_concord.{module}")}
+    impls = {"library": importlib.import_module(f"{LIBRARY}.{module}")}
     impls.update({Path(f).name: ns for f, ns in bundled(module).items()})
     return impls
 
