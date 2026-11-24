@@ -6,6 +6,7 @@
 import io
 import threading
 import time
+from pathlib import Path
 
 import pytest
 from concord_cli.commands import RECEIVE, REPORT, TICK, WAIT, Command, cli_main
@@ -230,6 +231,12 @@ def test_the_command_line_of_another_script_can_be_printed(cli):
     with Session("one.py", "a", cli.dir) as s:
         assert s.command("go") == f"one.py --me a --state-dir {cli.dir} go"
         assert s.command("go", prog="two.py").startswith("two.py --me a")
+
+
+def test_a_state_dir_spelled_as_the_current_directory_is_not_printed_in_the_commands():
+    for spelling in (".", "./", Path(".")):
+        with Session("one.py", "a", spelling) as s:
+            assert s.command("go") == "one.py --me a go"
 
 
 def test_standard_input_is_read_as_utf_8_whatever_the_locale_says(cli, monkeypatch, capsys):

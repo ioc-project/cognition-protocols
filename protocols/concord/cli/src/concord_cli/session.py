@@ -34,8 +34,8 @@ class Session:
         if not is_agent_id(me):
             raise CliError(f"--me {me!r} is not an agent id: 1 to 64 ASCII letters, digits, _ or -",
                            "Run again with the id you were given for this run.")
-        self.prog, self.me, self.state_dir, self.task_text, self.guard = prog, me, str(state_dir), task_text, guard
         self.dir = Path(state_dir)
+        self.prog, self.me, self.state_dir, self.task_text, self.guard = prog, me, str(self.dir), task_text, guard   # "./" is "."
         self.state_path = self.dir / f"concord-state-{me}.json"
         self.side_store = FileStore(self.dir / f"concord-script-{me}.json")
 
@@ -181,7 +181,7 @@ class Session:
             parts.append(("Then answer" if sent else "Answer") + f" the TASK: write the answer it asks for and pass it to "
                          f"`{self.command('answer')}`. Never write a CONCORD message yourself.")
         if ended_now:
-            parts.append("The run is over: report what END says, and nothing more.")
+            parts.append("The run is over: report what END says, and nothing more about the run.")
         if over:
             parts.append(f"If messages of this run still arrive, pass each one to `{self.command('receive')}` and send only what it "
                          "prints.")
