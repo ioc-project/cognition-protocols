@@ -13,6 +13,7 @@ A transcript changes only when the scripts' behavior does, so a refactor that mu
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -63,6 +64,44 @@ def test_a_star_needs_the_centre_to_pass_the_messages_on():
 def test_a_centre_that_takes_part_ends_the_run_with_the_others():
     run = scenarios.star_centre_takes_part()
     assert all(last(run, f"receiver {a} report").startswith("STATUS: DONE") for a in ("ini", "a", "b"))
+
+
+def printed(out, script):
+    """The commands of `script` that the NEXT line of `out` prints, each between backticks, as the list of its arguments."""
+    return [shlex.split(m.replace("<the spoke>", "<the-spoke>")) for m in re.findall(rf"`({re.escape(script.name)} [^`]*)`", out.split("NEXT:", 1)[1])]
+
+
+def run_printed(run, argv, stdin="", spoke="a"):
+    """Run a command exactly as NEXT printed it, with the spoke filled in for `<the spoke>` and nothing else added: the way an agent runs it."""
+    argv = [spoke if a == "<the-spoke>" else a for a in argv]
+    script = {INITIATOR.name: INITIATOR, RECEIVER.name: RECEIVER}[argv[0]]
+    return subprocess.run([sys.executable, "-I", str(script), *argv[1:]], input=stdin, capture_output=True, text=True, env=run.env,
+                          cwd=run.tmp, timeout=120)
+
+
+def test_the_commands_the_centre_of_a_star_is_told_to_run_work_as_printed():
+    """NEXT carries --relay (the spokes go on every call of the initiator script), so that `forward` and `receive` do what they should."""
+    run = driver.Run()
+    start = run.call("ini", INITIATOR, ["start", "--participants", "a,b", *scenarios.start_args()], before=["--relay", "a,b"])
+    assert start.returncode == 0, start.stdout + start.stderr
+    init = driver.sections(start.stdout, "SEND")[0][1]
+    forward = next(c for c in printed(start.stdout, INITIATOR) if "forward" in c)
+    assert forward[:5] == [INITIATOR.name, "--me", "ini", "--relay", "a,b"]
+    out = run_printed(run, forward, stdin=init)
+    assert out.returncode == 0 and "--- FORWARD to: b" in out.stdout, out.stdout + out.stderr
+    receive = next(c for c in printed(out.stdout, INITIATOR) if c[-1] == "receive")
+    assert "--relay" in receive
+    assert run_printed(run, receive, stdin=init).returncode == 0
+
+
+def test_a_centre_that_takes_part_gives_its_spokes_to_the_initiator_script_and_not_to_the_receiver_script():
+    run = driver.Run()
+    start = run.call("ini", INITIATOR, ["start", "--participants", "ini,a,b", *scenarios.start_args()], before=["--relay", "a,b"])
+    assert start.returncode == 0, start.stdout + start.stderr
+    assert all("--relay" not in c for c in printed(start.stdout, RECEIVER))
+    assert all("--relay" in c for c in printed(start.stdout, INITIATOR))
+    task = next(c for c in printed(start.stdout, RECEIVER) if c[-1] == "task")
+    assert run_printed(run, task).returncode == 0
 
 
 def test_a_participant_is_sent_to_the_receiver_script_by_the_guard():

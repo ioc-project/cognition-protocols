@@ -78,10 +78,14 @@ class Session:
     def check_role(self):
         """Raise a CliError when this script is not the one for the run the agent is in. The base script is for every role."""
 
+    def global_args(self, prog):
+        """The options that go before the command, on every call of this agent with the script `prog`, as a string that starts with a space."""
+        return "" if self.state_dir == DEFAULT_STATE_DIR else f" --state-dir {shlex.quote(self.state_dir)}"
+
     def command(self, name, prog=None):
         """The command line that runs `name` for this agent, as the NEXT lines print it (with another script, when `prog` is given)."""
-        where = "" if self.state_dir == DEFAULT_STATE_DIR else f" --state-dir {shlex.quote(self.state_dir)}"
-        return f"{prog or self.prog} --me {self.me}{where} {name}"
+        prog = prog or self.prog
+        return f"{prog} --me {self.me}{self.global_args(prog)} {name}"
 
     def run(self):
         """The run the agent is in, or the last one it was in; None before the first."""
