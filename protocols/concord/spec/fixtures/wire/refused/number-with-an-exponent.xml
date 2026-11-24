@@ -1,0 +1,10 @@
+<concord-score version="0.3.0" from="cost" run_id="11111111-1111-4111-8111-111111111111" uuid="a0000000-0000-4000-8000-000000000004" check="86c344ac">
+  <score candidate_id="seed-security">
+    <raw>41.5</raw>
+    <reasoning>risky &amp; slow</reasoning>
+  </score>
+  <score candidate_id="r1-security">
+    <raw>1e2</raw>
+    <reasoning>better</reasoning>
+  </score>
+</concord-score>

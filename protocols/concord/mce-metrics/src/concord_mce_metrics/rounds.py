@@ -10,7 +10,7 @@ until every agent clears the satisfaction threshold (COMMIT) or the round budget
 
     rounds in a run = 1 (initial) + repair rounds
 
-A repair round is counted each time the tool starts a ``Repair`` phase. It is
+A repair round is counted each time the engine asks the least-satisfied agent for a repair. It is
 classified by what started it: ``scores`` (the normal case, the incumbent was below
 the threshold) or ``mark-missing`` (the SRE marked an agent MISSING; a run that
 loops through these is usually stuck).

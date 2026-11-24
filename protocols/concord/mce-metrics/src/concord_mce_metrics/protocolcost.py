@@ -12,9 +12,9 @@ when each LLM call ended:
   seeds
   scores           the first scoring round
   repair           every repair round: the repair (new candidates) and the re-scoring after it
-  after_commit     once the tool printed ``Phase: Complete`` (action, final answer)
+  after_commit     once the run is complete (action, final answer)
 
-The phase comes from the ``Phase: X`` line each accepted initiator call prints.
+The phase is the one the run is in after each accepted initiator call, from replaying its replies (see session.py).
 The protocol share is the share of the run's tokens spent from ``init`` to the end
 of the protocol (anchors + seeds + scores + repair). It is a baseline-free
 reference, NOT an overhead: without CONCORD the agents might have behaved
@@ -185,7 +185,7 @@ class ConcordTokensRepair(_PhaseTokens):
 
 class ConcordTokensAfterCommit(_PhaseTokens):
     NAME = "ConcordTokensAfterCommit"
-    DESCRIPTION = "Tokens spent once the tool printed `Phase: Complete` (action, final answer)."
+    DESCRIPTION = "Tokens spent once the run is complete (action, final answer)."
     PHASE = "after_commit"
 
 

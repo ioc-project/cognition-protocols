@@ -1,0 +1,16 @@
+<concord-resend version="0.3.0" from="security" run_id="11111111-1111-4111-8111-111111111111" uuid="a0000000-0000-4000-8000-000000000009" reply_to="a0000000-0000-4000-8000-000000000007">
+<concord-init-reply version="0.3.0" from="security" run_id="11111111-1111-4111-8111-111111111111" uuid="a0000000-0000-4000-8000-000000000003" check="a7b2cd46">
+  <anchors>
+    <raw_reject>0.0</raw_reject>
+    <raw_ideal>100.0</raw_ideal>
+  </anchors>
+  <proposal id="seed-security">
+    <candidate>check every input</candidate>
+    <rationale>the "safe" way</rationale>
+    <score>
+      <raw>40.0</raw>
+      <reasoning>slow</reasoning>
+    </score>
+  </proposal>
+</concord-init-reply>
+</concord-resend>

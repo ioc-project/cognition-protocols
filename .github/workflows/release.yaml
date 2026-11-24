@@ -19,7 +19,7 @@ jobs:
       paths_released: ${{ steps.release.outputs.paths_released }}
       prs: ${{ steps.release.outputs.prs }}
     steps:
-      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      - uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         id: app-token
         with:
           app-id: ${{ vars.IOC_AUTOMATION_BOT_APP_ID }}
@@ -76,7 +76,7 @@ jobs:
       matrix:
         pr: ${{ fromJson(needs.release-please.outputs.prs) }}
     steps:
-      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      - uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         id: app-token
         with:
           app-id: ${{ vars.IOC_AUTOMATION_BOT_APP_ID }}
@@ -112,6 +112,10 @@ jobs:
           changed = False
 
           for skill_path, version in manifest.items():
+              # the manifest also lists the spec, the libraries and the metrics, which have no SKILL.md
+              if "/skills/" not in skill_path:
+                  continue
+
               # only skills released by this PR, i.e. bumped relative to the base branch
               if base_manifest.get(skill_path) == version:
                   continue
@@ -174,7 +178,7 @@ jobs:
       matrix:
         pr: ${{ fromJson(needs.release-please.outputs.prs) }}
     steps:
-      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      - uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         id: app-token
         with:
           app-id: ${{ vars.IOC_AUTOMATION_BOT_APP_ID }}

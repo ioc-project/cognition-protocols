@@ -27,16 +27,16 @@ def test_the_indent_is_the_callers_choice(store, tmp_path):
 def test_loading_a_state_that_is_not_there_says_where(store, tmp_path):
     s = store.FileStore(tmp_path / "nope.json")
     assert not s.exists()
-    with pytest.raises(store.StateError, match="no state file at .*nope.json") as e:
+    with pytest.raises(store.MissingState, match="no state file at .*nope.json") as e:
         s.load()
-    assert e.value.code == "state_error"
+    assert e.value.code == "missing_state" and isinstance(e.value, store.StateError)
 
 
-def test_loading_a_file_that_is_not_json_is_a_state_error(store, tmp_path):
+def test_loading_a_file_that_is_not_json_is_a_state_error_and_not_a_missing_one(store, tmp_path):
     (tmp_path / "bad.json").write_text("{oops")
     with pytest.raises(store.StateError, match="bad.json is not valid JSON") as e:
         store.FileStore(tmp_path / "bad.json").load()
-    assert e.value.code == "state_error"
+    assert e.value.code == "state_error" and not isinstance(e.value, store.MissingState)
 
 
 def test_a_save_replaces_the_state_and_leaves_nothing_behind(store, tmp_path):

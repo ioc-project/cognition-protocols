@@ -11,7 +11,7 @@ version = "0.1.0"
 description = "CONCORD compliance, rounds, satisfaction, fairness and token cost as MCE metric plugins."
 requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
-dependencies = ["ioc-scope-mce-core>=2.0.0", "openai", "python-dotenv"]
+dependencies = ["ioc-concord~=0.1.0", "ioc-scope-mce-core>=2.0.0", "openai", "python-dotenv"]
 
 [project.scripts]
 concord-mce-trace = "concord_mce_metrics.trace_cli:main"
