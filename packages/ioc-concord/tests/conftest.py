@@ -43,7 +43,7 @@ def _bundles():
     shaking), so every name the tests call is there. Scripts that would carry the same block are tested once (under the name of the
     first): running the same code twice would only slow the tests down."""
     out, seen = {}, set()
-    for lib in CONFIG["library"]:
+    for lib in LIBS:
         for target in lib["target"]:
             block = bundle_tool.render({**lib, "ref": bundle_tool.WORKTREE}, {**target, "modules": MODULES},
                                        (ROOT / target["file"]).read_text(), shake=False)
