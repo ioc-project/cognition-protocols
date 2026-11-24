@@ -214,6 +214,8 @@ class Module:
             raise BundleError(f"{self.where}: line {node.lineno}: import a module's names as `from {name}.<module> import <names>`")
         if any(a.name == "*" for a in node.names):
             raise BundleError(f"{self.where}: line {node.lineno}: no `import *`")
+        if any(a.asname for a in node.names):
+            raise BundleError(f"{self.where}: line {node.lineno}: no `import ... as`: the names are not bound again in the script")
         return sub, [a.name for a in node.names]
 
     def _import(self, node, text):
@@ -318,7 +320,8 @@ def render(lib, target, script_text, shake=None):
     name = lib["name"]
     block = marker_re(name).search(script_text)
     if not block:
-        raise BundleError(f"{target['file']}: no markers. Add these two lines where the block goes:\n"
+        after = "".join(f"\n(after the block of {u}, which {name} uses)" for u in lib.get("uses", []))
+        raise BundleError(f"{target['file']}: no markers. Add these two lines where the block goes{after}:\n"
                           f"# >>> BUNDLED {name}\n# <<< END BUNDLED {name}")
     mods = resolve(lib, target["modules"])
     seen = {}
@@ -375,8 +378,8 @@ def check_config(config):
             if not isinstance(target.get("file"), str):
                 raise BundleError(f"{name}: a [[library.target]] has no `file`")
             modules = target.get("modules")
-            if not isinstance(modules, list) or not all(isinstance(m, str) for m in modules):
-                raise BundleError(f"{name}: the target {target['file']} has no `modules`, a list of module names")
+            if not isinstance(modules, list) or not modules or not all(isinstance(m, str) for m in modules):
+                raise BundleError(f"{name}: the target {target['file']} has no `modules`, a non-empty list of module names")
 
 
 def check_uses(config):
@@ -464,6 +467,7 @@ def main(argv=None):
                 raise BundleError(f"{file}: no such script ({targets[0][0]['name']} is to be bundled into it)")
             check_blocks(file, text, targets)
             check_used_imports(file, targets)
+        results = {}                                           # file -> (original, new): nothing is written until every script has rendered
         for file, targets in files.items():
             path = ROOT / file
             original = text = path.read_text()
@@ -482,10 +486,12 @@ def main(argv=None):
             else:
                 raise BundleError(f"{file}: the blocks do not settle after 5 rounds (usually a library whose code refers to names of the block "
                                   "of another one)")
+            results[file] = (original, text)
+        for file, (original, text) in results.items():
             if text != original:
                 drifted.append(file)
                 if not args.check:
-                    path.write_text(text)
+                    (ROOT / file).write_text(text)
     except BundleError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
