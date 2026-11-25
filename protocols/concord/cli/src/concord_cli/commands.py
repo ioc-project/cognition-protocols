@@ -62,7 +62,8 @@ def run_wait(factory, args, text):
                 # It returns for what the tick sent or ended, and not for a task that is due: a tick never makes a task due (it asks again, or
                 # aborts, which removes them), so a task that is due now was due before, and the model was shown it when it became due.
                 # Returning for it would return at once, again and again, for as long as the answer is owed.
-                if step.send or s.agent.status()["status"] != RUN_ACTIVE:
+                status = s.agent.status()
+                if step.send or (status is not None and status["status"] != RUN_ACTIVE):
                     return s.compose(step, before)      # composed only now: it marks the run as briefed, which a discarded output must not
                 delay = args.poll                       # nothing to send (answered meanwhile): look again after a poll interval, not at once
         time.sleep(max(0.05, min(args.poll, delay)))

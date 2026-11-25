@@ -168,7 +168,7 @@ class Session:
         wake = None if over else self.agent.next_wakeup()
         if wake is not None:
             out.add("WAKE", wake_text(wake, self.agent.clock()))
-        out.next = self.next_line(False, False, over, over, wake is not None)
+        out.next = self.next_line(False, False, over, False, wake is not None)
         return out
 
     def next_line(self, sent, task, over, ended_now, timer):
