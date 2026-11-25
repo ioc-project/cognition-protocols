@@ -1,0 +1,148 @@
+=== initiator init (exit 0)
+$ init --specialists telemetry,database --key-terms error_rate,rollback_target --action-tool remediate --task Checkout ⏎
+$ error rate rose after the 14:02 deploy; decide what to roll back
+out| {
+out|   "ok": true,
+out|   "phase": "init",
+out|   "data": {
+out|     "specialists": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "key_terms": [
+out|       "error_rate",
+out|       "rollback_target"
+out|     ],
+out|     "action_tool": "remediate",
+out|     "next_command": "roster",
+out|     "protocol_status": "IN_PROGRESS",
+out|     "locked_contract_exists": false,
+out|     "normal_execution_allowed": false,
+out|     "app_execution_allowed": false,
+out|     "phase": "convene",
+out|     "awaiting": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "messages": {
+out|       "telemetry": "<accord-delivery state=\"87ae70e5\" ⏎
+out| check=\"a5628b06\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nSPECIALISTS: telemetry, database",
+out|       "database": "<accord-delivery state=\"87ae70e5\" ⏎
+out| check=\"a5628b06\"></accord-delivery>\n\nCONVENE_REQUEST\n\nActivate your `accord-receiver` skill and follow its ⏎
+out| CONVENE_REQUEST handler.\n\nTASK: Checkout error rate rose after the 14:02 deploy; decide what to roll ⏎
+out| back\n\nSPECIALISTS: telemetry, database"
+out|     },
+out|     "status": "SEND",
+out|     "hint": "Use `accord_initiator.py handle --agent <id> --reply <text>` for each incoming reply. No separate ⏎
+out| phase commands needed."
+out|   }
+out| }
+out| 
+
+=== handle prose (exit 1)
+$ handle --agent telemetry --reply <accord-delivery state="87ae70e5" check="a5628b06"></accord-delivery>
+
+Telemetry ⏎
+$ confirms the error rate is elevated.
+out| {
+out|   "ok": false,
+out|   "phase": "handle",
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from telemetry is not a JSON object. CONVENE needs an agent card: `agent`, plus ⏎
+out| `roles`, `capabilities`, `access_scopes` and `holdings_summary`. Nothing was recorded.",
+out|   "next": "Fix what the message says and run the same command again. Never work around it by writing a reply or a ⏎
+out| phase artifact yourself."
+out| }
+out| 
+
+=== handle truncated-json (exit 1)
+$ handle --agent telemetry --reply <accord-delivery state="87ae70e5" check="a5628b06"></accord-delivery>
+
+{"agent": ⏎
+$ "telemetry", 
+out| {
+out|   "ok": false,
+out|   "phase": "handle",
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from telemetry is not a JSON object. CONVENE needs an agent card: `agent`, plus ⏎
+out| `roles`, `capabilities`, `access_scopes` and `holdings_summary`. Nothing was recorded.",
+out|   "next": "Fix what the message says and run the same command again. Never work around it by writing a reply or a ⏎
+out| phase artifact yourself."
+out| }
+out| 
+
+=== handle json-but-no-agent (exit 1)
+$ handle --agent telemetry --reply <accord-delivery state="87ae70e5" check="a5628b06"></accord-delivery>
+
+{"roles": ⏎
+$ ["telemetry analyst"], "capabilities": ["query metrics"]}
+out| {
+out|   "ok": false,
+out|   "phase": "handle",
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from telemetry names no agent. CONVENE needs an agent card: `agent`, plus `roles`, ⏎
+out| `capabilities`, `access_scopes` and `holdings_summary`. Nothing was recorded.",
+out|   "next": "Fix what the message says and run the same command again. Never work around it by writing a reply or a ⏎
+out| phase artifact yourself."
+out| }
+out| 
+
+=== handle summary-as-json (exit 1)
+$ handle --agent telemetry --reply <accord-delivery state="87ae70e5" check="a5628b06"></accord-delivery>
+
+{"summary": ⏎
+$ "telemetry sees elevated errors", "agent": "telemetry"}
+out| {
+out|   "ok": false,
+out|   "phase": "handle",
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from telemetry carries none of the agent-card fields. CONVENE needs an agent card: ⏎
+out| `agent`, plus `roles`, `capabilities`, `access_scopes` and `holdings_summary`. Nothing was recorded.",
+out|   "next": "Fix what the message says and run the same command again. Never work around it by writing a reply or a ⏎
+out| phase artifact yourself."
+out| }
+out| 
+
+=== handle prose again (exit 1)
+$ handle --agent telemetry --reply <accord-delivery state="87ae70e5" check="a5628b06"></accord-delivery>
+
+Still just ⏎
+$ prose.
+out| {
+out|   "ok": false,
+out|   "phase": "handle",
+out|   "status": "ERROR",
+out|   "error": "handle: the reply from telemetry is not a JSON object. CONVENE needs an agent card: `agent`, plus ⏎
+out| `roles`, `capabilities`, `access_scopes` and `holdings_summary`. Nothing was recorded.",
+out|   "next": "Fix what the message says and run the same command again. Never work around it by writing a reply or a ⏎
+out| phase artifact yourself."
+out| }
+out| 
+
+=== status (exit 0)
+$ status
+out| {
+out|   "ok": true,
+out|   "phase": "status",
+out|   "data": {
+out|     "specialists": [
+out|       "telemetry",
+out|       "database"
+out|     ],
+out|     "key_terms": [
+out|       "error_rate",
+out|       "rollback_target"
+out|     ],
+out|     "action_tool": "remediate",
+out|     "roster": 0,
+out|     "frame_atoms": 0,
+out|     "frame_rounds": 0,
+out|     "glossary_terms": 0,
+out|     "checks": 0,
+out|     "locked": false
+out|   }
+out| }
+out| 
+
