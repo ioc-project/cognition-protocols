@@ -289,8 +289,8 @@ out| <concord-cancel version="0.3.0" from="ini" run_id="<UUID-1>" uuid="<UUID-4>
 out| --- END
 out| The run was aborted (missing-agent, agent b). There is no outcome to act on: nothing is certified.
 out| NEXT: Broadcast each SEND block to the agents on its `to:` line, exactly as printed and without that line. Never ⏎
-out| write or change a message. The run is over: report what END says, and nothing more. If messages of this run still ⏎
-out| arrive, pass each one to `concord_initiator.py --me ini receive` and send only what it prints.
+out| write or change a message. The run is over: report what END says, and nothing more about the run. If messages of ⏎
+out| this run still arrive, pass each one to `concord_initiator.py --me ini receive` and send only what it prints.
 out| 
 
 === receiver a receive (exit 0)
@@ -302,8 +302,8 @@ out| <concord-cancel version="0.3.0" from="a" run_id="<UUID-1>" uuid="<UUID-5>" 
 out| --- END
 out| The run was aborted (missing-agent, agent b). There is no outcome to act on: nothing is certified.
 out| NEXT: Broadcast each SEND block to the agents on its `to:` line, exactly as printed and without that line. Never ⏎
-out| write or change a message. The run is over: report what END says, and nothing more. If messages of this run still ⏎
-out| arrive, pass each one to `concord_receiver.py --me a receive` and send only what it prints.
+out| write or change a message. The run is over: report what END says, and nothing more about the run. If messages of ⏎
+out| this run still arrive, pass each one to `concord_receiver.py --me a receive` and send only what it prints.
 out| 
 
 === initiator ini receive (exit 0)
@@ -319,8 +319,8 @@ $ --me ini report
 out| STATUS: DONE
 out| --- END
 out| The run was aborted (missing-agent, agent b). There is no outcome to act on: nothing is certified.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_initiator.py --me ini receive` and send only what it prints.
+out| NEXT: If messages of this run still arrive, pass each one to `concord_initiator.py --me ini receive` and send ⏎
+out| only what it prints.
 out| 
 
 === receiver a report (exit 0)
@@ -328,8 +328,8 @@ $ --me a report
 out| STATUS: DONE
 out| --- END
 out| The run was aborted (missing-agent, agent b). There is no outcome to act on: nothing is certified.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_receiver.py --me a receive` and send only what it prints.
+out| NEXT: If messages of this run still arrive, pass each one to `concord_receiver.py --me a receive` and send only ⏎
+out| what it prints.
 out| 
 
 === receiver b report (exit 2)

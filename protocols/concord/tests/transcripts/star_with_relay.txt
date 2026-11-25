@@ -28,11 +28,12 @@ out| --- WAKE
 out| <WAKE>
 out| NEXT: Broadcast each SEND block to the agents on its `to:` line, exactly as printed and without that line. Never ⏎
 out| write or change a message. Pass every message of this run you receive, exactly as received, one per call, to ⏎
-out| `concord_initiator.py --me ini receive`. A timer runs: start `concord_initiator.py --me ini wait` in the ⏎
-out| background (it returns when something is to be sent) and start it again each time it returns, or call ⏎
-out| `concord_initiator.py --me ini tick` at the time under WAKE. You are the centre of a star: for every message that ⏎
-out| comes from a spoke, first run `concord_initiator.py --me ini forward --from <the spoke>` and deliver what it ⏎
-out| prints, then pass the same message to `concord_initiator.py --me ini receive`.
+out| `concord_initiator.py --me ini --relay a,b receive`. A timer runs: start `concord_initiator.py --me ini --relay ⏎
+out| a,b wait` in the background (it returns when something is to be sent) and start it again each time it returns, or ⏎
+out| call `concord_initiator.py --me ini --relay a,b tick` at the time under WAKE. You are the centre of a star: for ⏎
+out| every message that comes from a spoke, first run `concord_initiator.py --me ini --relay a,b forward --from <the ⏎
+out| spoke>` and deliver what it prints, then pass the same message to `concord_initiator.py --me ini --relay a,b ⏎
+out| receive`.
 out| 
 
 === receiver a receive (exit 0)
@@ -478,7 +479,7 @@ out|     </score>
 out|   </proposal>
 out| </concord-init-reply>
 out| NEXT: Deliver each FORWARD block to the spokes named on its `to:` line, exactly as printed and without that line. ⏎
-out| Then pass the same message to `concord_initiator.py --me ini receive`.
+out| Then pass the same message to `concord_initiator.py --me ini --relay a,b receive`.
 out| 
 
 === initiator ini receive (exit 0)
@@ -519,11 +520,11 @@ out| </concord-init-reply>
 out| --- WAKE
 out| <WAKE>
 out| NEXT: Pass every message of this run you receive, exactly as received, one per call, to `concord_initiator.py ⏎
-out| --me ini receive`. A timer runs: start `concord_initiator.py --me ini wait` in the background (it returns when ⏎
-out| something is to be sent) and start it again each time it returns, or call `concord_initiator.py --me ini tick` at ⏎
-out| the time under WAKE. You are the centre of a star: for every message that comes from a spoke, first run ⏎
-out| `concord_initiator.py --me ini forward --from <the spoke>` and deliver what it prints, then pass the same message ⏎
-out| to `concord_initiator.py --me ini receive`.
+out| --me ini --relay a,b receive`. A timer runs: start `concord_initiator.py --me ini --relay a,b wait` in the ⏎
+out| background (it returns when something is to be sent) and start it again each time it returns, or call ⏎
+out| `concord_initiator.py --me ini --relay a,b tick` at the time under WAKE. You are the centre of a star: for every ⏎
+out| message that comes from a spoke, first run `concord_initiator.py --me ini --relay a,b forward --from <the spoke>` ⏎
+out| and deliver what it prints, then pass the same message to `concord_initiator.py --me ini --relay a,b receive`.
 out| 
 
 === initiator ini forward (exit 0)
@@ -559,7 +560,7 @@ out|     </score>
 out|   </proposal>
 out| </concord-init-reply>
 out| NEXT: Deliver each FORWARD block to the spokes named on its `to:` line, exactly as printed and without that line. ⏎
-out| Then pass the same message to `concord_initiator.py --me ini receive`.
+out| Then pass the same message to `concord_initiator.py --me ini --relay a,b receive`.
 out| 
 
 === initiator ini receive (exit 0)
@@ -598,9 +599,9 @@ out|     </score>
 out|   </proposal>
 out| </concord-init-reply>
 out| NEXT: Pass every message of this run you receive, exactly as received, one per call, to `concord_initiator.py ⏎
-out| --me ini receive`. You are the centre of a star: for every message that comes from a spoke, first run ⏎
-out| `concord_initiator.py --me ini forward --from <the spoke>` and deliver what it prints, then pass the same message ⏎
-out| to `concord_initiator.py --me ini receive`.
+out| --me ini --relay a,b receive`. You are the centre of a star: for every message that comes from a spoke, first run ⏎
+out| `concord_initiator.py --me ini --relay a,b forward --from <the spoke>` and deliver what it prints, then pass the ⏎
+out| same message to `concord_initiator.py --me ini --relay a,b receive`.
 out| 
 
 === receiver b receive (exit 0)
@@ -856,7 +857,7 @@ out|     <reasoning>It meets my role criteria on cost, risk and delivery time, a
 out|   </score>
 out| </concord-score>
 out| NEXT: Deliver each FORWARD block to the spokes named on its `to:` line, exactly as printed and without that line. ⏎
-out| Then pass the same message to `concord_initiator.py --me ini receive`.
+out| Then pass the same message to `concord_initiator.py --me ini --relay a,b receive`.
 out| 
 
 === initiator ini receive (exit 0)
@@ -871,9 +872,9 @@ out| STATUS: WAIT
 out| --- NOTE
 out| not used: not for the initiator
 out| NEXT: Pass every message of this run you receive, exactly as received, one per call, to `concord_initiator.py ⏎
-out| --me ini receive`. You are the centre of a star: for every message that comes from a spoke, first run ⏎
-out| `concord_initiator.py --me ini forward --from <the spoke>` and deliver what it prints, then pass the same message ⏎
-out| to `concord_initiator.py --me ini receive`.
+out| --me ini --relay a,b receive`. You are the centre of a star: for every message that comes from a spoke, first run ⏎
+out| `concord_initiator.py --me ini --relay a,b forward --from <the spoke>` and deliver what it prints, then pass the ⏎
+out| same message to `concord_initiator.py --me ini --relay a,b receive`.
 out| 
 
 === initiator ini forward (exit 0)
@@ -893,7 +894,7 @@ out|     <reasoning>It meets my role criteria on cost, risk and delivery time, a
 out|   </score>
 out| </concord-score>
 out| NEXT: Deliver each FORWARD block to the spokes named on its `to:` line, exactly as printed and without that line. ⏎
-out| Then pass the same message to `concord_initiator.py --me ini receive`.
+out| Then pass the same message to `concord_initiator.py --me ini --relay a,b receive`.
 out| 
 
 === initiator ini receive (exit 0)
@@ -908,9 +909,9 @@ out| STATUS: WAIT
 out| --- NOTE
 out| not used: not for the initiator
 out| NEXT: Pass every message of this run you receive, exactly as received, one per call, to `concord_initiator.py ⏎
-out| --me ini receive`. You are the centre of a star: for every message that comes from a spoke, first run ⏎
-out| `concord_initiator.py --me ini forward --from <the spoke>` and deliver what it prints, then pass the same message ⏎
-out| to `concord_initiator.py --me ini receive`.
+out| --me ini --relay a,b receive`. You are the centre of a star: for every message that comes from a spoke, first run ⏎
+out| `concord_initiator.py --me ini --relay a,b forward --from <the spoke>` and deliver what it prints, then pass the ⏎
+out| same message to `concord_initiator.py --me ini --relay a,b receive`.
 out| 
 
 === receiver a receive (exit 0)
@@ -945,8 +946,8 @@ out| Nothing is due from you: do not re-open the decision, do not re-propose, an
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
 out| NEXT: Broadcast each SEND block to the agents on its `to:` line, exactly as printed and without that line. Never ⏎
-out| write or change a message. The run is over: report what END says, and nothing more. If messages of this run still ⏎
-out| arrive, pass each one to `concord_receiver.py --me a receive` and send only what it prints.
+out| write or change a message. The run is over: report what END says, and nothing more about the run. If messages of ⏎
+out| this run still arrive, pass each one to `concord_receiver.py --me a receive` and send only what it prints.
 out| 
 
 === receiver b receive (exit 0)
@@ -989,7 +990,7 @@ out|   <outcome>SUCCESS</outcome>
 out|   <winning_candidate_id>seed-a</winning_candidate_id>
 out| </concord-result>
 out| NEXT: Deliver each FORWARD block to the spokes named on its `to:` line, exactly as printed and without that line. ⏎
-out| Then pass the same message to `concord_initiator.py --me ini receive`.
+out| Then pass the same message to `concord_initiator.py --me ini --relay a,b receive`.
 out| 
 
 === initiator ini receive (exit 0)
@@ -1014,8 +1015,8 @@ out| You have no outcome of your own to compare it with: this is the result of t
 out| Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If ⏎
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_initiator.py --me ini receive` and send only what it prints.
+out| NEXT: The run is over: report what END says, and nothing more about the run. If messages of this run still ⏎
+out| arrive, pass each one to `concord_initiator.py --me ini --relay a,b receive` and send only what it prints.
 out| 
 
 === receiver b receive (exit 0)
@@ -1041,8 +1042,8 @@ out| Status of the run for you: confirmed.
 out| Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If ⏎
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_receiver.py --me b receive` and send only what it prints.
+out| NEXT: The run is over: report what END says, and nothing more about the run. If messages of this run still ⏎
+out| arrive, pass each one to `concord_receiver.py --me b receive` and send only what it prints.
 out| 
 
 === initiator ini report (exit 0)
@@ -1055,8 +1056,8 @@ out| You have no outcome of your own to compare it with: this is the result of t
 out| Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If ⏎
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_initiator.py --me ini receive` and send only what it prints.
+out| NEXT: If messages of this run still arrive, pass each one to `concord_initiator.py --me ini --relay a,b receive` ⏎
+out| and send only what it prints.
 out| 
 
 === receiver a report (exit 0)
@@ -1069,8 +1070,8 @@ out| Status of the run for you: confirmed.
 out| Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If ⏎
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_receiver.py --me a receive` and send only what it prints.
+out| NEXT: If messages of this run still arrive, pass each one to `concord_receiver.py --me a receive` and send only ⏎
+out| what it prints.
 out| 
 
 === receiver b report (exit 0)
@@ -1084,7 +1085,7 @@ out| Status of the run for you: confirmed.
 out| Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If ⏎
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_receiver.py --me b receive` and send only what it prints.
+out| NEXT: If messages of this run still arrive, pass each one to `concord_receiver.py --me b receive` and send only ⏎
+out| what it prints.
 out| 
 

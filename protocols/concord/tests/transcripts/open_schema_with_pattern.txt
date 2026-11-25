@@ -791,8 +791,8 @@ out| Nothing is due from you: do not re-open the decision, do not re-propose, an
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
 out| NEXT: Broadcast each SEND block to the agents on its `to:` line, exactly as printed and without that line. Never ⏎
-out| write or change a message. The run is over: report what END says, and nothing more. If messages of this run still ⏎
-out| arrive, pass each one to `concord_receiver.py --me a receive` and send only what it prints.
+out| write or change a message. The run is over: report what END says, and nothing more about the run. If messages of ⏎
+out| this run still arrive, pass each one to `concord_receiver.py --me a receive` and send only what it prints.
 out| 
 
 === initiator ini receive (exit 0)
@@ -875,8 +875,8 @@ out| Status of the run for you: confirmed.
 out| Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If ⏎
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_receiver.py --me b receive` and send only what it prints.
+out| NEXT: The run is over: report what END says, and nothing more about the run. If messages of this run still ⏎
+out| arrive, pass each one to `concord_receiver.py --me b receive` and send only what it prints.
 out| 
 
 === initiator ini receive (exit 0)
@@ -901,8 +901,8 @@ out| You have no outcome of your own to compare it with: this is the result of t
 out| Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If ⏎
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_initiator.py --me ini receive` and send only what it prints.
+out| NEXT: The run is over: report what END says, and nothing more about the run. If messages of this run still ⏎
+out| arrive, pass each one to `concord_initiator.py --me ini receive` and send only what it prints.
 out| 
 
 === initiator ini report (exit 0)
@@ -915,8 +915,8 @@ out| You have no outcome of your own to compare it with: this is the result of t
 out| Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If ⏎
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_initiator.py --me ini receive` and send only what it prints.
+out| NEXT: If messages of this run still arrive, pass each one to `concord_initiator.py --me ini receive` and send ⏎
+out| only what it prints.
 out| 
 
 === receiver a report (exit 0)
@@ -929,8 +929,8 @@ out| Status of the run for you: confirmed.
 out| Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If ⏎
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_receiver.py --me a receive` and send only what it prints.
+out| NEXT: If messages of this run still arrive, pass each one to `concord_receiver.py --me a receive` and send only ⏎
+out| what it prints.
 out| 
 
 === receiver b report (exit 0)
@@ -944,7 +944,7 @@ out| Status of the run for you: confirmed.
 out| Nothing is due from you: do not re-open the decision, do not re-propose, and do not send an acknowledgement. If ⏎
 out| SUCCESS, proceed with the winning candidate. If BEST_EFFORT, say so when you report, naming the agents below ⏎
 out| their floor.
-out| NEXT: The run is over: report what END says, and nothing more. If messages of this run still arrive, pass each ⏎
-out| one to `concord_receiver.py --me b receive` and send only what it prints.
+out| NEXT: If messages of this run still arrive, pass each one to `concord_receiver.py --me b receive` and send only ⏎
+out| what it prints.
 out| 
 
