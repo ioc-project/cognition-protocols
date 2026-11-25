@@ -75,6 +75,17 @@ without the line is refused the first time and recorded as a defect the second.
 
 ---
 
+## Optional: PRIOR_CONTEXT
+
+A `CONVENE_REQUEST` or `FRAME_REQUEST` may carry a `PRIOR_CONTEXT` line after `TASK`.
+It is notes recalled from earlier sessions, **unverified**, and it may not fit this
+task. Treat it as a hypothesis only, never as a finding or something you observed.
+Report only what your own domain knowledge supports; if you raise an atom because
+of it, type it `assumption`; if it conflicts with what you know, keep what you know.
+Without a `PRIOR_CONTEXT` line, nothing changes.
+
+---
+
 ## Handler: CONVENE_REQUEST
 
 Echo the delivery line, then a blank line, then ONLY the following JSON. No

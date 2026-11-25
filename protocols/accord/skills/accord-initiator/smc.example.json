@@ -1,0 +1,7 @@
+{
+  "base_url": "http://localhost:9004",
+  "workspace_id": "00000000-0000-0000-0000-000000000000",
+  "mas_id": "00000000-0000-0000-0000-000000000000",
+  "retrieval": {"enabled": true, "timeout_s": 15, "max_chars": 1500},
+  "ingest": {"enabled": true, "timeout_s": 300}
+}

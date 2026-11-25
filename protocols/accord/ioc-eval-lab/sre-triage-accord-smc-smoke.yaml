@@ -1,0 +1,58 @@
+#  Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+#  SPDX-License-Identifier: Apache-2.0
+#
+# ACCORD + optional SMC memory on the SRE triage lab.
+#
+# This file belongs in labs/cognitive-protocols/ of an ioc-eval-labs clone, next to
+# the overlays/ and flavours/ folders it refers to (setup.sh copies it there).
+# SMC is switched on by an smc.json in the accord-initiator skill folder; the
+# experiment itself does not change between the SMC and no-SMC arms.
+experiment:
+  name: accord-smc-smoke
+  description: >
+    Three runs of ce-1-signup-flow-rollback with ACCORD enabled, to check the SMC hooks.
+
+  application:
+    app: library-ioc-eval:sre-triage@v2
+
+  dataset:
+    name: sre-triage-challenge-focused
+    locator: library-ioc-eval
+
+  default_flavour: ./flavours/local.yaml
+
+  execution:
+    parallel_scenarios: 1
+    timeout: 600
+    emulation:
+      infra:
+        llm: live
+        tools: live
+      runtime:
+        # Never reuse a stored trace: every invocation runs the MAS for real.
+        # The trace-cache hash ignores smc.json and the skill scripts, so with the
+        # default cache an SMC on/off pair would silently reuse one run.
+        cache: disabled
+    design:
+      mode: coupled
+      couplings:
+        - scenario: accord-enabled
+          items:
+            - ce-1-signup-flow-rollback
+
+  run:
+    # Three sequential runs of the same incident (parallel_scenarios: 1). Each run
+    # retrieves from SMC at init and ingests its locked contract, so run 2 and 3
+    # can see what the earlier runs stored.
+    n_runs: 3
+
+  scenarios:
+    - id: accord-enabled
+      description: Accord Enabled
+      tags: [accord, protocol-enabled]
+      overlays:
+        logic:
+          - ref: overlays/sre-triage-with-accord-protocol.yaml
+          - ref: overlays/sre-triage-raise-context-window.yaml
+        control: []
+        infra: []

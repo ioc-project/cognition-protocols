@@ -1,0 +1,1 @@
+{"base_url":"http://localhost:9004","workspace_id":"2ef47b41-db8c-43b1-a471-50a6fa9b5a80","mas_id":"c8c031e6-5f7d-4e6a-a64f-0c1a84bc5629","retrieval":{"enabled":true,"timeout_s":15,"max_chars":1500},"ingest":{"enabled":true,"timeout_s":300}}

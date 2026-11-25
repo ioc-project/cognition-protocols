@@ -79,6 +79,17 @@ Pass `--required-knowledge` and `--objective-clauses` on the first `handle` call
 that has them (latest: before verify phase). `handle` uses `flock(LOCK_EX)` —
 parallel specialist replies are safe.
 
+### Optional shared memory (SMC)
+
+If `init` returns an `smc` block, shared memory is switched on. A message may then
+carry a `PRIOR_CONTEXT` line after `TASK`: notes recalled from earlier locked
+sessions. Send every message unchanged. `PRIOR_CONTEXT` is **unverified prior
+knowledge**, never a finding: do not quote it as one, and VERIFY must still check it.
+After the lock the contract is saved to memory in the background, and the
+`verify`/`handle` result shows `smc.ingest`. An `smc` status is information only;
+`smc` trouble never makes the protocol fail, so never stop, retry or change
+course because of it. No `smc` block means none of this applies.
+
 ### Step-by-step mode
 
 ```

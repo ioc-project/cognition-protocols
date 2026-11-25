@@ -1,0 +1,2 @@
+infra_refs:
+  - llm-proxy.yaml

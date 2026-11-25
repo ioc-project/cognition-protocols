@@ -51,6 +51,18 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Sequence
 
+try:  # Optional Shared Meaning Curator support; absent module or absent smc.json = off.
+    import smc_client
+except ImportError:  # loaded by path rather than run as a script from scripts/
+    try:
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location("smc_client", Path(__file__).resolve().with_name("smc_client.py"))
+        smc_client = _ilu.module_from_spec(_spec)
+        sys.modules["smc_client"] = smc_client
+        _spec.loader.exec_module(smc_client)
+    except Exception:  # noqa: BLE001
+        smc_client = None
+
 # --------------------------------------------------------------------------
 # Config + similarity
 # --------------------------------------------------------------------------
@@ -613,6 +625,88 @@ def reply_check(text: str) -> str:
     return hashlib.sha256(re.sub(r"\s+", "", text).encode("utf-8")).hexdigest()[:8]
 
 
+# --------------------------------------------------------------------------
+# Shared Meaning Curator (optional; see smc_client.py)
+#
+# Off unless smc.json sits in the skill directory. When off, nothing below adds a
+# key to the state, a line to a message or a field to an output. When on, SMC
+# trouble stays inside the `smc` block: it never turns into ok:false.
+# --------------------------------------------------------------------------
+
+_STATE_PATH: Path | None = None  # set by main(); where the detached ingest leaves its status file
+
+
+def _prior_context_block(st: dict) -> str:
+    """The SMC text added to the mission, or "" (the usual case) so messages stay unchanged."""
+    text = (st.get("prior_context") or "").strip()
+    if not text:
+        return ""
+    return ("PRIOR_CONTEXT (from shared memory; unverified prior knowledge. Treat it as a hypothesis "
+            f"to check, not a finding): {_esc(text)}\n\n")
+
+
+def smc_before_protocol(st: dict, task: str) -> dict | None:
+    """Ask SMC what it knows about the task; keep its final_response as `prior_context`.
+
+    Returns the `smc` block for the init output, or None when SMC is off.
+    """
+    if smc_client is None:
+        return None
+    try:
+        cfg, err = smc_client.load_config()
+        if err:
+            st["smc"] = {"config_error": err}
+            return {"config_error": err}
+        if cfg is None:
+            return None
+        if not cfg["retrieval"]["enabled"]:
+            retrieval: dict = {"status": "disabled"}
+        else:
+            retrieval = smc_client.retrieve(cfg, task)
+            context = retrieval.pop("context", "")
+            if context:
+                st["prior_context"] = context
+        st["smc"] = {"retrieval": retrieval}
+        return {"retrieval": retrieval}
+    except Exception as exc:  # noqa: BLE001 - SMC must never fail the protocol
+        block = {"retrieval": {"status": "error", "injected": False, "error": f"{type(exc).__name__}: {exc}"[:300]}}
+        st["smc"] = block
+        return block
+
+
+def smc_after_lock(st: dict) -> None:
+    """Send the locked contract to SMC, once per session, from a detached process.
+
+    Called from both places the contract is locked. The first call starts the
+    ingest and records it in `st["smc"]["ingest"]`; later calls see that and do nothing.
+    """
+    if smc_client is None or not st.get("locked_contract"):
+        return
+    try:
+        if (st.get("smc") or {}).get("ingest"):
+            return
+        cfg, err = smc_client.load_config()
+        if err:
+            st.setdefault("smc", {})["ingest"] = {"status": "config_error", "error": err}
+            return
+        if cfg is None or not cfg["ingest"]["enabled"]:
+            return
+        if not st.get("task"):
+            record: dict = {"status": "skipped", "reason": "no task in state (step-by-step mode)"}
+        else:
+            base = _STATE_PATH or Path(DEFAULT_STATE)
+            record = smc_client.spawn_ingest(cfg, st["task"], st["locked_contract"], base.parent, base.name)
+        st.setdefault("smc", {})["ingest"] = record
+    except Exception as exc:  # noqa: BLE001
+        st.setdefault("smc", {})["ingest"] = {"status": "error", "error": f"{type(exc).__name__}: {exc}"[:300]}
+
+
+def _smc_ingest_block(st: dict) -> dict:
+    """`{"smc": {"ingest": ...}}` for an output, or {} when SMC is off or never ran."""
+    ingest = (st.get("smc") or {}).get("ingest")
+    return {"smc": {"ingest": ingest}} if ingest else {}
+
+
 def _header(st: dict, body: str = "") -> str:
     return (f'<accord-delivery state="{_esc(st["state_id"])}" check="{reply_check(body)}">'
             "</accord-delivery>")
@@ -629,6 +723,7 @@ def build_convene_msg(st: dict) -> str:
         "CONVENE_REQUEST\n\n"
         "Activate your `accord-receiver` skill and follow its CONVENE_REQUEST handler.\n\n"
         f"TASK: {_esc(st['task'])}\n\n"
+        f"{_prior_context_block(st)}"
         f"SPECIALISTS: {specialists}"
     ))
 
@@ -642,6 +737,7 @@ def build_frame_msg(st: dict, agent: str) -> str:
         "FRAME_REQUEST\n\n",
         "Activate your `accord-receiver` skill and follow its FRAME_REQUEST handler.\n\n",
         f"TASK: {_esc(st['task'])}\n\n",
+        _prior_context_block(st),
         f"CURRENT_FRAME: {current}",
     ]
     if previous:
@@ -914,7 +1010,8 @@ def _run_phase_advance(st: dict, phase_key: str) -> dict:
         st["checks"] = assign_checks(checks_raw, clauses)
         contract = assemble_lock(st)
         st["locked_contract"] = contract
-        return {"locked_intent_contract": contract, "gaps": list(st["uncovered"])}
+        smc_after_lock(st)
+        return {"locked_intent_contract": contract, "gaps": list(st["uncovered"]), **_smc_ingest_block(st)}
 
     return {}
 
@@ -1006,12 +1103,17 @@ def cmd_init(a: argparse.Namespace, st: dict) -> dict:
         st["task"] = task
         st["state_id"] = uuid.uuid4().hex[:8]
     a._state_out = st
+    # Optional shared memory: what SMC already knows about the task, added to the mission
+    # before any specialist is asked anything. Needs the task text, so self-driving mode only.
+    smc = smc_before_protocol(st, task) if task else None
     result: dict = {
         "specialists": st["specialists"],
         "key_terms": st["key_terms"],
         "action_tool": st["action_tool"],
         **protocol_control("roster"),
     }
+    if smc is not None:
+        result["smc"] = smc
     if task:
         action = current_action(st)
         phase_key = action["phase"]
@@ -1144,6 +1246,7 @@ def cmd_verify(a: argparse.Namespace, st: dict) -> dict:
         "unverifiable_clauses": [cl for i, cl in enumerate(clauses) if i not in covered],
         "locked_intent_contract": _store_contract(st),
         "next": _next_step(st),
+        **_smc_ingest_block(st),
     }
 
 
@@ -1170,6 +1273,7 @@ def _next_step(st: dict) -> dict:
 def _store_contract(st: dict) -> dict:
     contract = assemble_lock(st)
     st["locked_contract"] = contract
+    smc_after_lock(st)
     return contract
 
 
@@ -1327,8 +1431,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    global _STATE_PATH
     args = build_parser().parse_args(argv)
     path = Path(resolve_state_path(args.state))
+    _STATE_PATH = path
 
     if args.phase == "handle":
         # handle uses locked_state for concurrent-safe read-modify-write

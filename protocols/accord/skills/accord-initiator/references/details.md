@@ -424,3 +424,48 @@ Phase 3 lock line. After a `FLAGGED` lock, still call the action tool with a low
 Select action parameters from the EXECUTION responses and the locked Glossary. If
 specialists propose conflicting actions, prefer the one most directly supported by
 the highest-support Frame atoms.
+
+---
+
+## Optional — shared memory (SMC)
+
+Off unless `smc.json` sits in the skill directory (next to `SKILL.md`, found
+relative to the scripts, not the working directory). `smc.example.json` shows the
+shape. Without the file the output, messages and state are identical to a run
+without this feature. It needs `init --task` (self-driving mode): retrieval uses
+the task text as its query.
+
+| Field | Default | Meaning |
+|---|---|---|
+| `base_url` | required | SMC gateway, for example `http://localhost:9004` |
+| `workspace_id`, `mas_id` | required | Identify the memory. The graph is named after `mas_id`. |
+| `retrieval.enabled` | `true` | Query SMC at `init` |
+| `retrieval.timeout_s` | `15` | Socket timeout for that query; on expiry the run goes on without context |
+| `retrieval.max_chars` | `1500` | Cap on the text added to the mission |
+| `ingest.enabled` | `true` | Save the locked contract to SMC |
+| `ingest.timeout_s` | `300` | Timeout for the background upload |
+
+**Before the protocol.** `init --task` asks SMC (`/api/knowledge-mgmt/reasoning/evidence`)
+about the task. If SMC answers with `status: sufficient`, its `final_response` text
+is kept in state as `prior_context` and added to the mission: CONVENE and FRAME
+messages carry it as a `PRIOR_CONTEXT (...)` line right after `TASK:`. An empty
+memory ("insufficient") adds nothing. The contract and `task` are not changed.
+
+**After the lock.** Both lock sites (the `verify` branch of `handle`, and
+`verify`/`lock`) call one helper that, the first time only, writes the contract as
+one OTEL-style span and uploads it from a detached process. The tool call does not
+wait: the upload takes tens of seconds. The outcome is written to
+`<state file>.smc_ingest.json` (`status` is `running`, then `ok` or `error`). The
+helper is guarded by `state.smc.ingest`, so `verify` followed by `lock` uploads once.
+Without a task in state (step-by-step mode) the upload is skipped.
+
+**The `smc` block** appears only when `smc.json` exists:
+
+| Where | Content |
+|---|---|
+| `init` result | `smc.retrieval`: `status` (`ok`, `no_evidence`, `timeout`, `error`, `disabled`), `injected`, `evidence_status`, `latency_ms`, `tokens`, `response_id`, `truncated`, `error` |
+| `handle` (lock) and `verify` result | `smc.ingest`: `status` (`started`, `skipped`, `error`), `request_id`, `status_file` |
+| any | `smc.config_error` when `smc.json` is unusable; SMC then stays off |
+
+SMC failures stay inside this block. They never make `ok` false and never touch the
+six-key contract.
