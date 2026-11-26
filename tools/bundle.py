@@ -28,6 +28,15 @@ A module is bundled as it is, minus its docstring, its imports (hoisted to the t
     - import only the standard library, and the library's own modules as `from <library>.<module> import <names>`
     - keep its top-level names unique across the bundled modules and distinct from the script's own top-level names
 
+A library can build on another one that goes into the same script (`uses = ["ioc_concord"]` in its `[[library]]`): its modules may then
+import that library's names as `from ioc_concord.<module> import <names>`. Those imports are not copied: the names come from the other
+library's block in the script. A script marks a block for each library, and the block of the library that is used comes first in the
+script (the order that matters is the one in the script, not in the config). The blocks are written until they stop changing, since
+what one library's block keeps depends on what the other's code uses. All of this is checked before anything is written: `uses` is a list
+of other libraries of the config with no cycle, a script that bundles a library bundles the ones it uses, and their blocks are in order.
+A library takes the version of its block from its pyproject.toml; one that is only source says `source_only = true` in its `[[library]]`,
+and its block carries no version.
+
 Only what the script reaches is copied: a function, class or constant that neither the script nor anything it uses refers to
 is left out, so a script does not carry library code it never runs. A target with `shake = false` gets every module whole.
 Reachability is by name, so a module must not be reached by `globals()` or `getattr` on its own namespace.
@@ -54,9 +63,27 @@ class MissingSource(BundleError):
     """A file that is not in the library (on disk, or at its pinned revision)."""
 
 
+_READ = None       # while main() runs: what read_source has read, so that a file is read once however many times a script is rendered
+
+
 def read_source(lib, rel):
     """The text of `rel`, a path from the repository root, in the revision that `lib` is pinned to (`ref`), or on disk when it is not
-    pinned or its ref is `worktree`. Raises BundleError when the revision or the file is not there."""
+    pinned or its ref is `worktree`. Raises BundleError when the revision or the file is not there. Within one run of `main` a file is
+    read once (a revision is a `git show` each time otherwise)."""
+    if _READ is None:
+        return _read_source(lib, rel)
+    key = (str(ROOT), lib.get("ref") or WORKTREE, rel)
+    if key not in _READ:
+        try:
+            _READ[key] = _read_source(lib, rel)
+        except MissingSource as exc:
+            _READ[key] = exc
+    if isinstance(_READ[key], Exception):
+        raise _READ[key]
+    return _READ[key]
+
+
+def _read_source(lib, rel):
     ref = lib.get("ref")
     if not ref or ref == WORKTREE:
         try:
@@ -74,7 +101,10 @@ def read_source(lib, rel):
 
 
 def marker_re(name):
-    return re.compile(rf"^# >>> BUNDLED {re.escape(name)}\b.*?^# <<< END BUNDLED {re.escape(name)}[^\n]*\n", re.S | re.M)
+    """The block of library `name`, markers included. The name is followed by a blank or the end of the line, so that the markers of `a`
+    are not those of `a-b`."""
+    n = re.escape(name)
+    return re.compile(rf"^# >>> BUNDLED {n}(?=[ \t]|$).*?^# <<< END BUNDLED {n}(?=[ \t]|$)[^\n]*\n", re.S | re.M)
 
 
 def extract_block(text, name):
@@ -129,6 +159,7 @@ class Module:
         self.tree = ast.parse(text, filename=str(self.path))
         self.where = f"{lib['name']}.{name}"
         self.imports, self.deps, self.defined = {}, {}, []   # imports: source -> the names it binds
+        self.external = {}                                   # what it takes from the libraries it uses: {library: {module: [names]}}
         self.units, self.always = [], set()                  # always: names used by statements that cannot be left out
         lines = text.split("\n")
         drop = []
@@ -175,6 +206,18 @@ class Module:
                     lines[n] = None
         return "\n".join(line for line in lines if line is not None).strip("\n") + "\n"
 
+    def _names_of(self, node, name):
+        """The module and the names of `from <name>.<module> import <names>`, `name` being a library: any other way to import from a
+        library is refused."""
+        sub = (node.module or "")[len(name) + 1:]
+        if not sub or "." in sub:
+            raise BundleError(f"{self.where}: line {node.lineno}: import a module's names as `from {name}.<module> import <names>`")
+        if any(a.name == "*" for a in node.names):
+            raise BundleError(f"{self.where}: line {node.lineno}: no `import *`")
+        if any(a.asname for a in node.names):
+            raise BundleError(f"{self.where}: line {node.lineno}: no `import ... as`: the names are not bound again in the script")
+        return sub, [a.name for a in node.names]
+
     def _import(self, node, text):
         lib = self.lib["name"]
         if isinstance(node, ast.ImportFrom):
@@ -184,24 +227,27 @@ class Module:
             if mod == "__future__":
                 raise BundleError(f"{self.where}: `from __future__` (line {node.lineno}) cannot be bundled")
             if mod == lib or mod.startswith(lib + "."):
-                sub = mod[len(lib) + 1:]
-                if not sub or "." in sub:
-                    raise BundleError(f"{self.where}: line {node.lineno}: import a module's names as "
-                                      f"`from {lib}.<module> import <names>`")
-                if any(a.name == "*" for a in node.names):
-                    raise BundleError(f"{self.where}: line {node.lineno}: no `import *`")
-                self.deps.setdefault(sub, []).extend(a.name for a in node.names)
+                sub, names = self._names_of(node, lib)
+                self.deps.setdefault(sub, []).extend(names)
                 return
+            used = next((u for u in self.lib.get("uses", []) if mod == u or mod.startswith(u + ".")), None)
+            if used:
+                sub, names = self._names_of(node, used)
+                self.external.setdefault(used, {}).setdefault(sub, []).extend(names)
+                return                                         # the names are in the block of `used`, in the same script (see check_used_imports)
             roots = [mod.split(".")[0]]
         else:
             roots = [a.name.split(".")[0] for a in node.names]
         for root in roots:
+            if root in self.lib.get("uses", []):
+                raise BundleError(f"{self.where}: line {node.lineno}: import the names of {root} as "
+                                  f"`from {root}.<module> import <names>`")
             if root == lib:
                 raise BundleError(f"{self.where}: line {node.lineno}: import the library's names as "
                                   f"`from {lib}.<module> import <names>`")
             if root not in sys.stdlib_module_names:
                 raise BundleError(f"{self.where}: line {node.lineno}: `{root}` is not in the standard library; a bundled "
-                                  "module is stdlib-only")
+                                  "module is stdlib-only (a library it builds on is named in `uses`)")
         self.imports[ast.get_source_segment(text, node)] = top_level_names(ast.Module([node], []))
 
 
@@ -251,7 +297,22 @@ def reachable(mods, script_names):
 
 
 def version_of(lib):
-    return tomllib.loads(read_source(lib, f"{lib['path']}/pyproject.toml"))["project"]["version"]
+    """The version in the library's pyproject.toml (at its revision). A library that is only source, and says so with `source_only = true`
+    in its `[[library]]`, has none: any other library without a version is an error, so that a version cannot be lost unnoticed."""
+    if lib.get("source_only"):
+        return None
+    rel = f"{lib['path']}/pyproject.toml"
+    try:
+        data = tomllib.loads(read_source(lib, rel))
+    except MissingSource:
+        raise BundleError(f"{lib['name']}: no pyproject.toml ({rel}) to take a version from: add one, or write `source_only = true` for "
+                          "a library that is only source")
+    except tomllib.TOMLDecodeError as exc:
+        raise BundleError(f"{lib['name']}: {rel} is not valid TOML ({exc})")
+    try:
+        return data["project"]["version"]
+    except KeyError:
+        raise BundleError(f"{lib['name']}: {rel} has no [project].version")
 
 
 def render(lib, target, script_text, shake=None):
@@ -259,7 +320,8 @@ def render(lib, target, script_text, shake=None):
     name = lib["name"]
     block = marker_re(name).search(script_text)
     if not block:
-        raise BundleError(f"{target['file']}: no markers. Add these two lines where the block goes:\n"
+        after = "".join(f"\n(after the block of {u}, which {name} uses)" for u in lib.get("uses", []))
+        raise BundleError(f"{target['file']}: no markers. Add these two lines where the block goes{after}:\n"
                           f"# >>> BUNDLED {name}\n# <<< END BUNDLED {name}")
     mods = resolve(lib, target["modules"])
     seen = {}
@@ -287,9 +349,95 @@ def render(lib, target, script_text, shake=None):
     content = "\n".join(parts)
     digest = hashlib.sha256(content.encode()).hexdigest()[:12]
     src = (Path(lib["path"]) / "src" / name).as_posix()
-    head = (f"# >>> BUNDLED {name} {version_of(lib)} [{', '.join(m.name for m in mods)}] sha256:{digest}\n"
+    version = version_of(lib)
+    head = (f"# >>> BUNDLED {name}{' ' + version if version else ''} [{', '.join(m.name for m in mods)}] sha256:{digest}\n"
             f"# GENERATED by tools/bundle.py from {src}. Do not edit it here: edit the library and run `just sync`.\n")
     return head + content + f"\n# <<< END BUNDLED {name}\n"
+
+
+def check_config(config):
+    """The shape of the config, before anything is read or written: every library has a name (each its own), a path and at least one
+    target with a file and a list of modules. A fault is a BundleError, never a traceback."""
+    libs = config.get("library")
+    if not isinstance(libs, list) or not libs:
+        raise BundleError("the config has no [[library]]")
+    seen = set()
+    for lib in libs:
+        name = lib.get("name")
+        if not isinstance(name, str) or not name:
+            raise BundleError("a [[library]] has no `name`")
+        if name in seen:
+            raise BundleError(f"two [[library]] are called {name}")
+        seen.add(name)
+        if not isinstance(lib.get("path"), str):
+            raise BundleError(f"{name}: no `path` (the directory that holds src/{name}/)")
+        targets = lib.get("target")
+        if not isinstance(targets, list) or not targets:
+            raise BundleError(f"{name}: no [[library.target]]: say which script gets which modules")
+        for target in targets:
+            if not isinstance(target.get("file"), str):
+                raise BundleError(f"{name}: a [[library.target]] has no `file`")
+            modules = target.get("modules")
+            if not isinstance(modules, list) or not modules or not all(isinstance(m, str) for m in modules):
+                raise BundleError(f"{name}: the target {target['file']} has no `modules`, a non-empty list of module names")
+
+
+def check_uses(config):
+    """The `uses` of every library, before anything is read or written: a list of the names of other libraries of the config, and no
+    library that uses itself or, through others, uses a library that uses it."""
+    names = [lib["name"] for lib in config["library"]]
+    uses = {}
+    for lib in config["library"]:
+        used = lib.get("uses", [])
+        if not isinstance(used, list) or not all(isinstance(u, str) for u in used):
+            raise BundleError(f"{lib['name']}: `uses` must be a list of library names, like [\"ioc_concord\"]")
+        for u in used:
+            if u == lib["name"]:
+                raise BundleError(f"{lib['name']} lists itself in `uses`")
+            if u not in names:
+                raise BundleError(f"{lib['name']} uses {u}, which is not a library of this config: add it, or take it out of `uses`")
+        uses[lib["name"]] = used
+
+    def visit(name, chain):
+        if name in chain:
+            raise BundleError("libraries that use each other: " + " -> ".join(chain[chain.index(name):] + [name]))
+        for u in uses[name]:
+            visit(u, chain + [name])
+
+    for name in uses:
+        visit(name, [])
+
+
+def check_blocks(file, text, targets):
+    """What a script needs for a library that builds on another: the library it uses is bundled into the same script, and its block
+    comes first (the names of the other are in it). A script that lacks a block is told so by `render`, which needs it."""
+    here = {lib["name"] for lib, _ in targets}
+    for lib, _ in targets:
+        for u in lib.get("uses", []):
+            if u not in here:
+                raise BundleError(f"{file}: {lib['name']} is bundled here and uses {u}, which is not: add a target for {u} in this file")
+            mine, theirs = marker_re(lib["name"]).search(text), marker_re(u).search(text)
+            if mine and theirs and theirs.start() > mine.start():
+                raise BundleError(f"{file}: the block of {u} must come before the block of {lib['name']}, which uses it: swap them")
+
+
+def check_used_imports(file, targets):
+    """What a library that builds on another takes from it must be in the script: the module is among the `modules` of the used library
+    for this script, and defines the name. (`resolve` does the same for the modules of a library's own.) `check_blocks` has seen to it
+    that the used library is bundled into the script."""
+    here = {lib["name"]: (lib, target) for lib, target in targets}
+    for lib, target in targets:
+        for module in target["modules"]:
+            for used, wanted in Module(lib, module).external.items():
+                used_lib, used_target = here[used]
+                for sub, names in wanted.items():
+                    if sub not in used_target["modules"]:
+                        raise BundleError(f"{file}: {lib['name']}.{module} imports {used}.{sub}, which is not in `modules` of {used} for "
+                                          f"this script: add \"{sub}\"")
+                    missing = sorted(set(names) - set(Module(used_lib, sub).defined))
+                    if missing:
+                        raise BundleError(f"{file}: {lib['name']}.{module} imports {', '.join(missing)} from {used}.{sub}, which does "
+                                          "not define it")
 
 
 def main(argv=None):
@@ -303,21 +451,52 @@ def main(argv=None):
         for lib in config["library"]:
             lib["ref"] = args.ref
     drifted = []
+    global _READ
+    _READ = {}
     try:
+        check_config(config)
+        check_uses(config)
+        files = {}                                             # file -> [(lib, target)] in the order of the config
         for lib in config["library"]:
             for target in lib["target"]:
-                path = ROOT / target["file"]
-                text = path.read_text()
-                new = render(lib, target, text)
-                m = marker_re(lib["name"]).search(text)
-                if m.group(0) == new:
-                    continue
-                drifted.append(target["file"])
+                files.setdefault(target["file"], []).append((lib, target))
+        for file, targets in files.items():                    # all of it is checked before the first script is written
+            try:
+                text = (ROOT / file).read_text()
+            except FileNotFoundError:
+                raise BundleError(f"{file}: no such script ({targets[0][0]['name']} is to be bundled into it)")
+            check_blocks(file, text, targets)
+            check_used_imports(file, targets)
+        results = {}                                           # file -> (original, new): nothing is written until every script has rendered
+        for file, targets in files.items():
+            path = ROOT / file
+            original = text = path.read_text()
+            # A block depends on what the other blocks of the script use. The library that is used never refers to the one that uses it
+            # (see check_uses), so the second round can change the block of the first at most, and the third finds nothing to do: five
+            # rounds are a guard against a library that does not settle, and not a number to reach.
+            for _ in range(5):
+                new = text
+                for lib, target in targets:
+                    block = render(lib, target, new)           # raises when the script has no markers for this library
+                    m = marker_re(lib["name"]).search(new)
+                    new = new[:m.start()] + block + new[m.end():]
+                if new == text:
+                    break
+                text = new
+            else:
+                raise BundleError(f"{file}: the blocks do not settle after 5 rounds (usually a library whose code refers to names of the block "
+                                  "of another one)")
+            results[file] = (original, text)
+        for file, (original, text) in results.items():
+            if text != original:
+                drifted.append(file)
                 if not args.check:
-                    path.write_text(text[:m.start()] + new + text[m.end():])
+                    (ROOT / file).write_text(text)
     except BundleError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    finally:
+        _READ = None
     if args.check:
         if drifted:
             print("These scripts differ from the library they bundle:", file=sys.stderr)
