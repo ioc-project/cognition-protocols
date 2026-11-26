@@ -31,8 +31,9 @@ answer it, and what to do next. What you write is only the content of your answe
 
 ## Do this
 
-Paths are relative to this skill's directory: resolve them against where you found this file. `<you>` is your own
-agent id, the one the initiator used in its list of agents.
+Paths are relative to this skill's directory: resolve them against where you found this file, and call the script by its full path.
+Run it from your own working directory and never `cd` into the skill's directory: the state of the run is kept in the current
+directory, and every call of the run must see the same one. `<you>` is your own agent id, the one the initiator used in its list of agents.
 
 ```
 scripts/concord_receiver.py --me <you> receive <<'EOF'     # on EVERY CONCORD message you get, first
@@ -47,9 +48,11 @@ Every output starts with `STATUS:` and ends with a `NEXT:` line that gives the e
 `NEXT:` says, and nothing else. In short:
 
 - `ANSWER`: a `TASK` is due. Decide from your own role, and pass the JSON it describes to `answer`.
-- `SEND`: send each `SEND to:` block, exactly as printed and without that line, to the agents it names. Then do
-  what `NEXT:` says (an answer, or the next message).
-- `WAIT`: nothing is due. Send nothing, and pass the next message you receive to `receive`.
+- `SEND`: send each `SEND to:` block, exactly as printed and without that line, to the agents it names, before
+  anything else: before you read or pass on any new message, and also when the block is a resend. Then do what
+  `NEXT:` says (an answer, or the next message).
+- `WAIT`: nothing is due. Send nothing, and stop: end your turn. A message that arrives, or `wait` returning,
+  brings you back; pass the message to `receive`. Do not poll for one.
 - `DONE`: the run is over for you. Proceed with the winning candidate; if the outcome is `BEST_EFFORT`, say so.
 - `ERROR`: say what went wrong, and do what it says. Never work around it.
 
@@ -57,13 +60,18 @@ Every output starts with `STATUS:` and ends with a `NEXT:` line that gives the e
 to be sent), or, if you cannot run a command in the background, call `tick` at the time `WAKE` gives. A
 message that never arrives is found by that timer; without it the run cannot recover.
 
+**Waiting is not a task.** When nothing is due, end your turn. Do not look for messages yourself: `task`, `tick`,
+`report`, `sleep`, or reading files do not bring one, and every call is time that the timers of the others run
+against you (when they run out, they treat you as missing and cancel the run).
+
 If you opened the run yourself and take part, the initiator skill hands you over here: run `task` to see what you
 owe first.
 
 ## Rules
 
 1. Run `receive` on every CONCORD message first, even in the middle of other work, and even if it looks like a
-   follow-up question about that work. Do not answer it yourself.
+   follow-up question about that work. Do not answer it yourself. (If the last output has a `SEND` block, send it
+   first: see rule 7.)
 2. Never write the message XML. Your judgement goes into the values of your answer only.
 3. Your ratings are honest, on your own raw 0 to 100 scale. An answer that breaks a rule is refused, with the
    reason and what to do, and nothing is recorded: fix it and answer again. If the same refusal comes three times in
@@ -73,6 +81,8 @@ owe first.
 5. Send nothing but what the script prints, to the agents it names: no confirmation, correction, summary or comment
    of your own, before or after it. Your environment may pass anything you write to the other participants.
 6. Give the script each message whole: never shorten, summarise or reword it.
+7. Send every `SEND` block before anything else, a new message included: a block you do not send is a message the
+   others wait for, until their timers give up on you. A resend is a `SEND` block too.
 
 More detail (the commands, what a task asks, the timers, what a note means) is in
 [references/details.md](references/details.md).

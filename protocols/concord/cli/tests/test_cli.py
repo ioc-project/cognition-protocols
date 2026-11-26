@@ -420,3 +420,36 @@ def test_standard_input_that_is_closed_is_an_error_that_says_what_to_do(cli, mon
     out = capsys.readouterr().out
     assert code == 2 and out.startswith("STATUS: ERROR\nreceive reads standard input and there is none\nNEXT: Pipe the text in")
 
+
+
+# --- the state is never kept in the folder of the skill -------------------------------------------------------------------------
+
+def test_a_call_from_inside_the_folder_of_the_skill_is_refused_unless_it_says_where_the_state_goes(tmp_path, monkeypatch, capsys):
+    skill = tmp_path / "skill"
+    (skill / "scripts").mkdir(parents=True)
+    elsewhere = tmp_path / "work"
+    elsewhere.mkdir()
+
+    def call(cwd, *extra):
+        monkeypatch.chdir(cwd)
+        code = cli_main("prog.py", COMMANDS, "doc", ["--me", "a", *extra, "report"], skill_dir=skill)
+        return code, capsys.readouterr().out
+
+    for inside in (skill, skill / "scripts"):
+        code, text = call(inside)
+        assert code == 2 and "is inside the folder of this skill" in text and "--state-dir" in text and "call the script by its full path" in text
+        assert not list(inside.glob("concord-*")), "nothing is written in the skill"
+    code, text = call(skill, "--state-dir", str(elsewhere / "state"))                       # said where: allowed
+    assert "inside the folder" not in text and "there is no run" in text
+    code, text = call(elsewhere)                                                           # from its own folder: allowed
+    assert "inside the folder" not in text and "there is no run" in text
+    sibling = tmp_path / "skill-other"                                                     # a name that only starts like the skill's
+    sibling.mkdir()
+    code, text = call(sibling)
+    assert "inside the folder" not in text
+
+
+def test_without_a_skill_folder_no_call_is_refused_for_where_it_runs(cli, monkeypatch, capsys):
+    monkeypatch.chdir(cli.dir)
+    assert cli_main("prog.py", COMMANDS, "doc", ["--me", "a", "report"]) == 2
+    assert "inside the folder" not in capsys.readouterr().out

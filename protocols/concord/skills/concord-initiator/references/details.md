@@ -113,6 +113,8 @@ other's messages, and the run does not end.
 
 ## Errors you may see
 
+- `the current directory ... is inside the folder of this skill`: you went into the skill's folder. Run from your own working directory and call the
+  script by its full path, or add `--state-dir DIR` to every call.
 - `there is no run for <you>`: nothing has opened the run yet. Run `start`.
 - `<you> is in a run already`: `start` is refused while a run is active; `report` says how it stands. Use another `--me` or
   `--state-dir` for a second run.

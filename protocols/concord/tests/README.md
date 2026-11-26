@@ -46,7 +46,7 @@ the lock (messages that arrive at the same time are all recorded), `--help`, and
 What the scripts are given that is wrong, and that each must answer with a clean error and not a traceback: a model that changes its bad
 answer each time (it is stopped after six refusals of one task, besides the stop at three identical ones), a `--relay` list that leaves
 a participant out, `forward --from` an agent that is not a spoke, a file that is not UTF-8, a text that starts with `@`, a closed
-standard input, and `wait` on a run that is over.
+standard input, `wait` on a run that is over, and a call made from inside the skill's own folder (refused: the state would be kept there).
 
 ## Fixtures (`test_fixtures_scripts.py`)
 

@@ -92,6 +92,8 @@ end you keep your outcome; if messages of the run still arrive, pass them to `re
 
 ## Errors you may see
 
+- `the current directory ... is inside the folder of this skill`: you went into the skill's folder. Run from your own working directory and call the
+  script by its full path, or add `--state-dir DIR` to every call.
 - `there is no run for <you>`: no message has opened it yet. Pass the opening message to `receive`.
 - `refused: ...` under `answer`: see "Your answer".
 - `... got an empty standard input`: pass the message exactly as received.

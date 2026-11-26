@@ -1,0 +1,25 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "concord-slim-agents"
+version = "0.1.0"
+description = "Three LLM agents negotiate a hidden-profile decision with CONCORD over a SLIM group session."
+requires-python = ">=3.11,<3.14"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "ioc-concord",
+    "slim-bindings>=3.3.9",
+    "anthropic>=0.40",
+    "pyyaml>=6",
+]
+
+[tool.uv.sources]
+ioc-concord = { path = "../../packages/ioc-concord", editable = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["concord_slim_agents"]
