@@ -3421,8 +3421,7 @@ def add_start_args(parser):
                              "neither --option nor --format says what you need")
     parser.add_argument("--satisfaction-threshold", dest="threshold", metavar="T", help=START_PARAMS["satisfaction_threshold"])
     parser.add_argument("--timeout", metavar="SECONDS", type=int,
-                        help="how long an agent waits for a message it is owed before it asks again (default 300). It must be longer than "
-                             "the slowest turn of any agent: raise it when the agents are slow to answer, or they will abort the run")
+                        help="how long an agent waits for a message it is owed before it asks again (default 300).")
     parser.add_argument("--retries", metavar="N", type=int, help="how many times an agent asks again before it aborts the run (default 3)")
     parser.add_argument("--budget", metavar="B", type=int, help="the most repair rounds before the run ends BEST_EFFORT (default 8)")
 

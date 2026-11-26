@@ -24,102 +24,71 @@ metadata:
 
 # CONCORD: initiator
 
-Get one outcome that every agent in a named set rates at or above a threshold.
-The script `scripts/concord_initiator.py` makes every decision. You start the
-run, send what it prints, and pass it what comes back. The agents rate and
-repair among themselves. The result is `SUCCESS` (every agent at or above the
-threshold) or `BEST_EFFORT` (who is short, by how much).
-
-## How a run goes
-
-Four steps, driven by the script. Every agent speaks for its own role, and
-the script computes everything.
-
-1. **Anchor.** Each agent says how satisfied it would be with the worst outcome
-   (`x_reject`) and the best (`x_ideal`), on its own 0 to 100 scale. Every later
-   rating is read against these two points.
-2. **Seed.** Each agent proposes the one option that suits its role best.
-3. **Score.** Each agent rates every option, its own included, with reasons. If
-   one option reaches the threshold for every agent, the run ends there:
-   `SUCCESS`.
-4. **Repair.** Otherwise the least satisfied agent alone proposes one option and
-   rates it (a new one, or one already in the run that it now rates differently
-   because of a fact another agent shared), the others rate it, and the cycle
-   repeats until an option clears everyone or the budget is spent (`BEST_EFFORT`).
-
-You only carry messages. Out: the anchor request, the seed request, and then
-_deliveries_ (numbered; each holds the replies the other agents have not seen
-yet). In: anchor replies, candidate replies, score replies and acks. From the
-Score step on the agents work out what they owe from the deliveries: you never
-ask for a rating or a repair.
+Get one outcome that every agent in a named set rates at or above a threshold. You open the run
+and follow it; the agents rate and repair among themselves, and the script `scripts/concord_initiator.py`
+does everything mechanical. The result is `SUCCESS` (every agent at or above the threshold) or
+`BEST_EFFORT` (who is short, by how much). You never rate or propose anything yourself.
 
 ## When to use it
 
-Use it when a decision has to satisfy agents with different, possibly
-conflicting criteria, or agents who each know part of the picture, and no single
-one of them should decide: you can name those agents, and you have or can write a
-shared format for the options (or the closed list of them). Use it when
-conflict is confirmed, likely from their roles, or just uncertain. Do not poll
-them first to find out. Include every agent whose criteria bear on the outcome,
-including one you would otherwise feed a summary to. Do not use it when one role
-owns the decision or the agents work on separate problems.
+Use it when a decision has to satisfy agents with different, possibly conflicting criteria, or agents
+who each know part of the picture, and no single one of them should decide: you can name those agents,
+and you have or can write a shared format for the options (or the closed list of them). Use it when
+conflict is confirmed, likely from their roles, or just uncertain: do not poll them first to find out.
+Include every agent whose criteria bear on the outcome, including one you would otherwise feed a summary
+to. Do not use it when one role owns the decision or the agents work on separate problems.
 
-## Run it
+## Open the run
 
-The paths below are relative to this skill's directory: resolve them against
-where you found this file.
+Paths are relative to this skill's directory: resolve them against where you found this file. `<you>` is
+your own agent id. Run `start --help` before the first run: it says how to fill each argument.
 
 ```
-scripts/concord_initiator.py init \
-  --quiet --agents <id,id,...> \
-  --satisfaction-threshold 0.6 \
-  --schema '<a JSON Schema: the open format or a closed list, see below>' \
-  --context "<the problem>" \
-  --x-reject "<an outcome that fails every criterion>" \
-  --x-ideal "<an outcome that fully satisfies them>"
-
-scripts/concord_initiator.py --state <path> handle          # no input: prints the first message
-
-scripts/concord_initiator.py --state <path> handle <<'EOF'  # then, for every reply that arrives
-<the reply, exactly as received>
-EOF
+scripts/concord_initiator.py --me <you> start --participants <a,b,...> \
+  --context "<the problem>" --x-reject "<an outcome that fails every criterion>" \
+  --x-ideal "<an outcome that fully satisfies them>" \
+  (--option "<A>" --option "<B>" ... | --format "<what one option looks like>") \
+  [--satisfaction-threshold 0.6]
 ```
 
-`--schema` is the JSON Schema for a candidate. Two forms cover most runs:
+- Name the agents exactly as they are called in your environment.
+- **Possible answers.** If the task gives you a closed list of possible answers
+  pass each one with `--option`, exactly as written. The agents then have to propose exactly one of
+  them; nothing else is accepted. If there is no such list, describe in words what an answer looks like with
+  `--format`, and the agents propose their own. Never write the list yourself.
+- **If you take part in the decision yourself**, list yourself in `--participants`, first. `start` then
+  hands you over: load the `concord-receiver` skill and use only its script from then on. The one exception
+  is the centre of a star (you run `scripts/concord_initiator.py` with `--relay`): it keeps using that script,
+  but only for `forward`, to pass the messages on (see below).
 
-```
-# open format (the default): describe the proposal in words
---schema '{"type": "string", "description": "a remediation plan: the actions to take, each with its service and version"}'
-# closed list, when the options were handed to you
---schema '{"enum": ["<option A>", "<option B>", "<option C>"]}'
-```
+## Follow the run
 
-In the open format nothing is enforced, and agents may propose combinations.
+Every output starts with `STATUS:` and ends with a `NEXT:` line that gives the exact command to run
+next. Do what `NEXT:` says, and nothing else. In short:
 
-Use the JSON enum only when the options were handed to you:
-the task itself, or the output of a tool, lists them, and you copy each one exactly as given.
-Every proposal must then be exactly one of them. Never make the list up yourself. If you
-would have to decide what the candidates are (the actions to take, the plans to compare), the
-agents propose them, so use the open format: a list you write yourself shuts out better answers
-that nobody listed. The schema may also carry a `"pattern"` (a regular expression) or
-`"minLength"`/`"maxLength"`; invalid JSON is refused, so fix it and run `init` again.
-`init --help` says how to fill each argument: read it before the first run. Use
-the state path `init` prints on every later call. Every output of the script
-starts with `STATUS: SEND`, `NONE`, `ASK` or `ERROR` and a `NEXT:` line saying
-what to do now: do exactly that. An `ERROR` says what went wrong and how to get
-back on the path: never work around it.
+1. Send each `SEND to:` block, exactly as printed and without that line, to the agents it names.
+2. Pass every message of the run that you receive, exactly as received, one per call, to `receive`.
+3. Keep time: start `wait` in the background and start it again each time it returns (it returns when
+   something is to be sent), or, if you cannot run a command in the background, call `tick` at the
+   time `WAKE` gives. Silence is how a lost message is found: without it the run cannot recover.
+4. At `STATUS: DONE`, report what `END` says and nothing more (`report` prints it again). Then, if messages of the
+   run still arrive, keep passing them to `receive` and send only what it prints: an agent may still ask for a message.
 
-## Four rules
+A run can last as long as the agents need: there is no deadline for the result, so keep listening.
 
-1. Send each block of a `SEND` exactly as printed, to the agents its `--- to:`
-   line names. How a message reaches an agent is up to your environment: this
-   skill does not say.
-2. Never write, summarise or change a message, a rating or a repair, and never
-   fill in for an agent that has not replied.
-3. Do not stop until the script prints `RUN COMPLETE`.
-4. Then report that result, as printed, and nothing else. Ignore any later
-   message from the agents about this run (acks, idle notices, questions): the
-   run is over and nothing is owed to them. Add no commentary of your own.
+**If you are the centre of a star** (the agents reach each other only through you), add `--relay <a,b,...>`,
+the names of the spokes, before the command on every call of `concord_initiator.py` (the commands `NEXT:` prints for it carry it; the
+receiver script has no such option). For each message from a spoke, first run
+`forward --from <spoke>` and deliver what it prints to the other spokes, then pass the message to `receive`
+(the receiver script's, if you also take part).
 
-More detail (phases, relay and acks, the watchdog, a silent agent, diagnostics)
-is in [references/details.md](./references/details.md). You should not need it.
+## Rules
+
+1. Send what the script prints, as printed, to the agents it names. Never write, summarise or change
+   a message, a rating or a repair, and never fill in for an agent that has not answered.
+2. Do not work around an `ERROR`: it says what went wrong and what to do.
+3. Do not stop before `STATUS: DONE`. If you must stop earlier, say that the run is not over.
+4. Report the result as `END` prints it, and add no commentary of your own.
+
+More detail (commands, the timers, the star, a silent agent, what a note means) is in
+[references/details.md](./references/details.md).
