@@ -29,12 +29,16 @@ test-bundler:
 test-lib:
     uv run --directory packages/ioc-concord pytest -q -p no:cacheprovider
 
+# Test the shared command-line library of the skill scripts, as it is on disk
+test-cli:
+    uv run --no-project --with pytest python -m pytest protocols/concord/cli/tests -q -p no:cacheprovider
+
 # Test the skill scripts as they are checked in
 test-scripts:
     uv run --no-project --with pytest python -m pytest protocols/concord/tests -q -p no:cacheprovider
 
 # Run all the CONCORD tests (not the sync check: that is `just check-sync`)
-test-concord: test-bundler test-lib test-scripts
+test-concord: test-bundler test-lib test-cli test-scripts
 
 # Run the ACCORD tests: the initiator script, against the recorded transcripts
 test-accord:

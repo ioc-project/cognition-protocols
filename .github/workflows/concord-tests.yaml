@@ -1,8 +1,9 @@
 name: concord-tests
 
-# Three jobs that run side by side, so that a failure in one does not hide the others:
+# Four jobs that run side by side, so that a failure in one does not hide the others:
 #   concord-bundler  the bundler's own tests
 #   concord-library  the ioc-concord library as it is on disk, as imported and as bundled
+#   concord-cli      the command line that the two skill scripts share (protocols/concord/cli), as it is on disk
 #   concord-scripts  the skill scripts as they are checked in
 # That the scripts carry the library revision they are pinned to is `check-sync` (validate-skills.yaml).
 
@@ -10,6 +11,7 @@ on:
   pull_request:
     paths:
       - "protocols/concord/skills/**"
+      - "protocols/concord/cli/**"
       - "protocols/concord/tests/**"
       - "packages/ioc-concord/**"
       - "protocols/concord/spec/fixtures/**"
@@ -59,6 +61,25 @@ jobs:
       - name: Library, as imported and as bundled
         run: python -m pytest packages/ioc-concord/tests -q
 
+  concord-cli:
+    name: concord-cli
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      # The tests put the library and the command line on the path themselves: they test both as they are on disk.
+      - name: Shared command line
+        run: python -m pytest protocols/concord/cli/tests -q
+
   concord-scripts:
     name: concord-scripts
     runs-on: ubuntu-latest
@@ -71,8 +92,9 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install pytest and the library
-        run: pip install pytest ./packages/ioc-concord
+      # Only pytest: the scripts carry what they use of the library, and must run without it installed.
+      - name: Install pytest
+        run: pip install pytest
 
       - name: Scripts
         run: python -m pytest protocols/concord/tests -q
