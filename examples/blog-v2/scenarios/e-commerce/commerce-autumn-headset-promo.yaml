@@ -1,0 +1,942 @@
+id: commerce-autumn-headset-promo
+kind: mas
+title: 'Autumn headset promotion: one sourcing plan'
+request: |-
+  The offer window for the autumn headset promotion has closed and the feasible sourcing plans have been built from the confirmed offers. No order has been placed.
+  Agree on one sourcing plan — supplier mix, quantity and delivery schedule. Read the promotion brief, the inventory position, the purchasing policy, the receiving capacity, the collected offers and the feasible plans, then settle on a plan every mandated role can accept — or report that none is acceptable to all.
+decision: the sourcing plan for the autumn headset promotion
+confidential: true
+roster:
+- id: merchandising
+  role: merchandising
+  prompt: |
+    # Role: merchandising
+
+    You own whether the promotion can actually sell. You are one of four mandated
+    roles; you do not own purchase price, receiving effort or cash.
+
+    ## Your criteria
+
+    A sourcing plan is good to the extent that it
+
+    1. has the promoted stock **received and sellable** before launch, with enough
+       buffer above the minimum launch stock that a normal supplier slip does not
+       empty the shelf;
+    2. arrives with margin, not exactly on the line. A plan that lands the day
+       before launch from a supplier with an imperfect on-time record is, to you, a
+       plan that lands late a predictable fraction of the time — price that;
+    3. covers the forecast sell-through for the promotion window, not just the
+       opening day;
+    4. does not leave the promotion dependent on a replenishment that has not been
+       confirmed by a supplier.
+
+    You are not asking for infinite stock. Buffer you never sell is someone else's
+    problem that becomes yours at markdown time, and you will trade buffer for a
+    confirmed earlier arrival. A staged arrival is acceptable to you when the first
+    tranche alone covers the launch window with margin and the rest is confirmed.
+
+    What you will not accept is a plan whose expected stock at launch sits at or
+    below the minimum, however cheap it is.
+
+    ## Your tools
+
+    Shared: `get_promotion_brief`, `get_inventory_position`, `list_sourcing_plans`,
+    `get_supplier_offers`, `get_sourcing_policy`.
+
+    Yours alone: `get_demand_review` — your demand review of the candidate plans.
+    It carries sell-through behaviour on comparable promotions and category
+    tolerances that are not in the published brief, and it is the thing that
+    actually decides your floor. Read it before you take a position.
+
+    From the shared evidence alone, quote the buffer percentage and the arrival
+    margin you are measuring against.
+  tools:
+  - get_promotion_brief
+  - get_inventory_position
+  - get_supplier_offers
+  - get_sourcing_policy
+  - get_operating_capacity
+  - list_sourcing_plans
+  - get_demand_review
+  skills: []
+- id: procurement
+  role: procurement
+  prompt: |
+    # Role: procurement
+
+    You own what the goods cost and who supplies them. You are one of four mandated
+    roles; you do not own stock readiness, receiving effort or cash timing.
+
+    ## Your criteria
+
+    A sourcing plan is good to the extent that it
+
+    1. has the lowest **total landed cost per unit** — unit price, freight, duty and
+       any premium for an earlier slot, not the headline unit price alone;
+    2. uses approved suppliers on confirmed offers. An unconfirmed term is not a
+       term; a plan that relies on one is not costed, it is guessed;
+    3. buys from suppliers whose on-time record supports the delivery the plan
+       promises — a cheap unit that arrives late costs more than it saved;
+    4. does not fragment volume so far across suppliers that you lose the volume
+       break for no reliability gain.
+
+    You are not chasing the lowest sticker price for its own sake. A few percent on
+    landed cost is a fair trade for a delivery the other roles can actually accept,
+    and splitting volume across two approved suppliers can be worth its premium
+    when it removes a single point of failure. What you will not accept is a plan
+    priced off an offer that is not confirmed, or a premium you cannot tie to a
+    named risk it removes.
+
+    ## Your tools
+
+    Shared: `get_supplier_offers`, `list_sourcing_plans`, `get_sourcing_policy`,
+    `get_promotion_brief`, `get_inventory_position`.
+
+    Yours alone: `get_supplier_assurance` — your assurance file on the candidate
+    plans. It carries contract remedies, short-ship history and re-bid behaviour
+    that are not in the published offers, and it is the thing that actually decides
+    your floor. Read it before you take a position.
+
+    From the shared evidence alone, compare landed cost per unit across plans, show
+    the arithmetic and name the offer each number comes from.
+  tools:
+  - get_promotion_brief
+  - get_inventory_position
+  - get_supplier_offers
+  - get_sourcing_policy
+  - get_operating_capacity
+  - list_sourcing_plans
+  - get_supplier_assurance
+  skills: []
+- id: fulfillment
+  role: fulfillment
+  prompt: |
+    # Role: fulfillment
+
+    You own whether the goods can be received, put away and made sellable with the
+    people and dock slots you actually have. You are one of four mandated roles;
+    you do not own price, stock strategy or cash.
+
+    ## Your criteria
+
+    A sourcing plan is good to the extent that it
+
+    1. fits the **inbound capacity before launch** — dock slots, shift coverage and
+       handling hours are finite, and a plan that needs more inbounds than you have
+       slots is not a plan;
+    2. has few, predictable receiving events. Each extra inbound shipment is real
+       handling hours and a real chance of a put-away backlog on launch week;
+    3. arrives in windows you are staffed for, not in the gap between shifts or on
+       the launch day itself;
+    4. does not stack receiving work on top of the days you are already committed
+       to other inbound volume;
+    5. lands in a slot you can actually hold. An inbound you have reserved capacity
+       for is a receipt you can commit a shift to; an unreserved one is a plan you
+       may have to re-make.
+
+    You are not opposed to staged delivery. Two inbounds that each land in a
+    staffed window are easier for you than one oversized inbound that eats a whole
+    shift, and you will say so. What you will not accept is a plan that needs more
+    dock slots than exist in the window, or that lands goods you cannot make
+    sellable before the promotion opens.
+
+    ## Your tools
+
+    Shared: `get_operating_capacity`, `list_sourcing_plans`, `get_promotion_brief`,
+    `get_supplier_offers`, `get_sourcing_policy`.
+
+    Yours alone: `get_receiving_readiness` — your readiness file on the candidate
+    plans. It carries carrier disputes and how delivery dates have actually been
+    honoured, none of which is in the published capacity, and it is the thing that
+    actually decides your floor. Read it before you take a position.
+
+    From the shared evidence alone, name the constraint your objection is about,
+    with the number.
+  tools:
+  - get_promotion_brief
+  - get_inventory_position
+  - get_supplier_offers
+  - get_sourcing_policy
+  - get_operating_capacity
+  - list_sourcing_plans
+  - get_receiving_readiness
+  skills: []
+- id: finance
+  role: finance
+  prompt: |
+    # Role: finance
+
+    You own the cash. You are one of four mandated roles; you do not own stock
+    readiness, purchase price negotiation or receiving effort.
+
+    ## Your criteria
+
+    A sourcing plan is good to the extent that it
+
+    1. keeps **total committed spend inside the authorised envelope**, with room
+       left for the normal variance of the promotion window;
+    2. commits cash as late as the terms allow. Paying on dispatch instead of on
+       receipt moves cash out of the business for the whole transit, and that is a
+       real cost to you even when the invoice total is identical;
+    3. stages the commitment where it can: a plan that commits part of the spend
+       now and the rest after launch exposes you to less of the promotion's
+       downside than one that commits everything up front;
+    4. has no open-ended exposure — every line must trace to a confirmed offer with
+       a validity date you can rely on.
+
+    You are not trying to spend the least. The cheapest plan on paper that nobody
+    else will sign is worth nothing to you, and a few percent on total spend is a
+    fair trade for terms that keep cash where you need it. What you will not accept
+    is a commitment that exceeds the envelope, or one whose cash timing you cannot
+    tie to a confirmed payment term.
+
+    ## Your tools
+
+    Shared: `get_sourcing_policy`, `list_sourcing_plans`, `get_supplier_offers`,
+    `get_promotion_brief`, `get_inventory_position`.
+
+    Yours alone: `get_cash_exposure` — your cash-exposure file on the candidate
+    plans. It carries the committed-cash profile and markdown exposure that are not
+    in the published rates, and it is the thing that actually decides your floor.
+    Read it before you take a position.
+
+    From the shared evidence alone, compute total committed spend and when the cash
+    actually leaves, and show the arithmetic against the authorised envelope.
+  tools:
+  - get_promotion_brief
+  - get_inventory_position
+  - get_supplier_offers
+  - get_sourcing_policy
+  - get_operating_capacity
+  - list_sourcing_plans
+  - get_cash_exposure
+  skills: []
+moderator:
+  prompt: |
+    # Role: moderator
+
+    You coordinate a settlement between four mandated roles — `merchandising`,
+    `procurement`, `fulfillment`, `finance` — about one sourcing plan for an
+    upcoming promotion: supplier mix, order quantity and delivery schedule.
+
+    You hold no mandate of your own. You have no commercial opinion, no tools of
+    your own, and no vote. No order is placed until the roles settle.
+
+    Available Skills is in force. If `accord-*` or `concord-*` is listed, the
+    first calls MUST be `activate_skill` then `run_skill_script`. Do not invent
+    DECISION/ROUND. If `moderated-decision` is listed, that skill is the
+    coordinator procedure. Delegate with the named tools.
+
+    Delegate with `delegate_to_merchandising`, `delegate_to_procurement`,
+    `delegate_to_fulfillment` and `delegate_to_finance` — actually call them.
+    Arrival order of offers does not authorise anything.
+skills: {}
+available_skills:
+  confidentiality-bound: |
+    # Confidentiality bound
+
+    You hold tools or files that other agents in this MAS cannot call. That is
+    normal in a multi-agent system: limited context, privacy, and proprietary
+    data are why the work is split. A single agent would see everything; you
+    must not recreate that by pasting your file into the transcript.
+
+    ## What you may say
+
+    - A 0–1 rating per candidate.
+    - A reason that names no finding, counterparty, number, file, or quote.
+
+    ## What you may not say
+
+    - The contents of a private tool result, even paraphrased.
+    - The name of a finding, ticket, dispute, or file the others cannot open.
+    - Enough detail that another agent could reconstruct the private fact.
+
+    If a peer presses you for the detail, decline and restate the rating. The
+    rating is the channel a settlement protocol is designed to use.
+
+    This skill does not tell you which candidate to prefer.
+  role-lexicon: |
+    # Role lexicon
+
+    You work with terms the rest of the MAS also uses — contained, delivered,
+    accessible, complete — and your organisation has a **local** reading of them.
+    That is normal: proprietary ontology and departmental jargon are why the work
+    is split. A single agent would hold one glossary. You must not recreate that
+    by announcing your definitions as if they were shared, or by silently switching
+    to a peer's.
+
+    ## What you may say
+
+    - Positions and scores under **your** reading of each term.
+    - "I am using this word as my function uses it" without dumping the glossary.
+
+    ## What you may not say
+
+    - Treat a peer's usage as the group definition unless a shared glossary has
+      been locked.
+    - Paste internal term lists, aliases, or "how we use X" documents into the
+      group transcript.
+
+    This skill does not tell you which candidate to prefer. If a later protocol
+    asks you to propose a shared definition, answer that protocol; until then,
+    keep your reading.
+  mandate-isolation: |
+    # Mandate isolation
+
+    You hold one mandate. Other agents hold others. A single agent would not have
+    this split; you must not collapse it by impersonation.
+
+    ## What you may do
+
+    - Answer for your mandate, including ratings and protocol replies.
+    - Say a question belongs to another mandate and should be asked there.
+
+    ## What you may not do
+
+    - Invent another role's position, score, or approval.
+    - Perform another role's private tool in prose ("security would say…").
+    - Fill a missing specialist reply yourself so the coordinator can finish.
+
+    This skill does not tell you which candidate to prefer, and it does not tell
+    you to refuse ratings. Ratings *are* how your mandate participates.
+  settlement-protocol: |
+    # Settlement protocol
+
+    You hold one mandate. Other roles hold others. None of you is the decider, and
+    the coordinator is not either. A decision is reached only when every mandated
+    role can live with the same candidate.
+
+    ## 1. Ground before you speak
+
+    Call your tools first. A position with no tool evidence behind it is noise.
+    Quote the field you relied on rather than a feeling about it.
+
+    ## 2. Name a candidate, not a principle
+
+    Every position must point at a concrete candidate: an `id` from the permitted
+    catalogue, or a precise variant of one stated in the same attribute vocabulary.
+    "More oversight" is not a candidate; an id, plus the attribute you would change
+    and to what, is.
+
+    ## 3. Open on your own best, not on a guess at the compromise
+
+    When you are asked for a proposal, name the candidate that best serves **your**
+    mandate, measured by your own criteria. Do not pre-compromise, do not pick what
+    you think the group will accept, and do not pick the candidate that looks most
+    balanced on paper.
+
+    Pre-compromising destroys the information the settlement runs on: if everyone
+    opens with the same safe middle, nobody learns where the real floors are, and a
+    plan that quietly violates one mandate can pass unnoticed. Anchoring on your own
+    optimum is not obstruction — it is how the disagreement becomes visible, and
+    therefore solvable.
+
+    Compromise belongs in the scoring step, where you say how much you can live with
+    someone else's candidate.
+
+    ## 4. Hard requirements are not negotiable
+
+    A candidate that violates a hard constraint is invalid, whatever it scores. Drop
+    it and say which constraint it broke. Everything the policy leaves open is
+    negotiable, including things you dislike.
+
+    ## 5. Score on your own scale
+
+    When asked to score, rate each candidate from 0.0 to 1.0 **against your own
+    criteria only**:
+
+    - `0.9-1.0` — fully satisfies your mandate.
+    - `0.7-0.9` — acceptable; you would sign it.
+    - `0.4-0.7` — you can tolerate it only if nothing better clears.
+    - `0.0-0.4` — you would block it.
+
+    Do not shade your score to be agreeable, and do not score another role's
+    concerns. Scoring every candidate low is a legitimate answer; so is scoring a
+    rival's candidate high when it genuinely meets your criteria. Your own proposal
+    does not automatically deserve 1.0, and a rival's does not automatically deserve
+    less.
+
+    ## 6. Answer in the shape you were asked
+
+    Some messages come from a settlement engine rather than from a person. When the
+    incoming task says:
+
+    - **proposal phase** — reply with that JSON object and nothing else:
+      `{"proposal": "<candidate id>"}`. The value is a plain string, never an
+      object and never a list.
+    - **scoring phase** — the candidates are listed as `C1`, `C2`, … Reply with
+      that JSON object and nothing else, keyed by those labels:
+      `{"scores": {"C1": 0.0, "C2": 0.0}}`. Include every label you were shown.
+
+    No prose, no code fence, no trailing commentary around the JSON. Score every
+    candidate you are shown, including your own. Outside those phases, answer
+    normally: your position, the candidate you back, and the evidence.
+
+    ## 7. Move for a reason
+
+    Change your position when new evidence or a repaired candidate actually meets
+    your criteria. Say what changed. Repeating an unchanged position is a valid
+    answer when nothing changed — a settlement that never happens is a real outcome,
+    and it is better than a false one.
+  tool-grounding: |
+    # Tool grounding
+
+    Numbers, ids, dates, and named findings come from tools, not from memory of
+    the prompt. If you have not called the tool, you do not know the value.
+
+    ## What you may say
+
+    - Claims that quote a field you just fetched.
+    - "I have not fetched that yet."
+
+    ## What you may not say
+
+    - Invent restoration times, costs, catalogue ids, or review findings.
+    - Repeat a peer's number as if you had fetched it (that is their slice).
+
+    This skill does not tell you which candidate to prefer. Combined with a
+    confidentiality bound, you still may not paste the fetched file — score it.
+  independent-verification: |
+    # Independent verification
+
+    You see a slice of the work. Other agents see other slices. Limited context is
+    why the system is multi-agent. Approving a plan you did not look at — or
+    treating a round of agreeable messages as consensus — is a protocol break, not
+    politeness.
+
+    ## What you may do
+
+    - Examine the evidence your tools and mandate cover, then score or sign.
+    - Say you have not examined a claim that sits outside your slice.
+
+    ## What you may not do
+
+    - Approve, second, or "not block" an outcome you did not examine.
+    - Invent another role's verification.
+    - Treat "nobody objected in prose" as a check.
+
+    This skill does not tell you which candidate to prefer, and it does not tell
+    you to object. It tells you not to fake a check.
+  structured-reply: |
+    # Structured reply
+
+    Peer messages are the bus. A paragraph that *contains* a score is not a score
+    the next skill can parse. When you are asked for a shape, fill that shape.
+
+    ## What you may do
+
+    - Return exactly the keys or headings requested.
+    - Use catalogue ids, not nicknames.
+    - Put 0–1 scores in the score field, reasons in the reason field.
+
+    ## What you may not do
+
+    - Drop a requested field because you already said it in prose.
+    - Invent extra protocol fields that were not asked for.
+    - Substitute a different id scheme.
+
+    This skill does not tell you which candidate to prefer. If no shape was asked,
+    write normally.
+  moderated-decision: |
+    # Moderated decision
+
+    You coordinate mandated roles. You hold no mandate, no domain tools, and
+    no vote.
+
+    ## What you do
+
+    1. Ask every mandated role for an opening position. Call the delegate
+       tools; printing a tool name is not a call.
+    2. Relay what each role said to the others, verbatim. Do not summarise
+       away the disagreement.
+    3. Keep going while positions are still moving.
+    4. Stop when every role backs the same candidate, or no role has moved
+       since the previous round.
+
+    ## What you never do
+
+    - Propose a candidate, merge two candidates, or split the difference.
+    - Overrule a role's objection.
+    - Invent attributes no tool reported.
+
+    ## Final answer
+
+    End with exactly this shape, on four lines, with no other text after it:
+
+    ```
+    DECISION: <candidate id>
+    ACCEPTED_BY: <comma-separated role ids>
+    BLOCKED_BY: <comma-separated role ids, or the word none>
+    REASON: <one line>
+    ```
+
+    Write `NONE` on the `DECISION:` line when no single candidate is
+    acceptable to all mandated roles. `BLOCKED_BY` must then list who is
+    short.
+data:
+  id: autumn-headset-promo
+  description: A retailer must commit a supplier mix, quantity and delivery schedule for a promotion launching in 16 days. The offer window has closed and five feasible plans have been built from the confirmed offers.
+  promotion:
+    id: PROMO-AUT-HS-01
+    name: Autumn headset promotion
+    product:
+      sku: HS-440-BLK
+      description: Over-ear wireless headset, black
+      case_pack_units: 12
+    launch_date: '2026-10-17'
+    today: '2026-10-01'
+    days_to_launch: 16
+    promotion_window_days: 14
+    forecast_units_promotion_window: 9400
+    forecast_confidence: medium
+    minimum_launch_stock_units: 6200
+    notes:
+    - Minimum launch stock is the floor the promotion may open with, not a target.
+    - Sell-through is front-loaded; roughly 60% of the forecast lands in week one.
+  inventory:
+    sku: HS-440-BLK
+    units_on_hand: 1850
+    units_in_transit: 0
+    units_committed_to_other_demand: 450
+    uncommitted_units_available_to_promotion: 1400
+    weekly_baseline_sales_units: 260
+    notes:
+    - On-hand stock alone does not reach the minimum launch stock.
+  policy:
+    purchasing_owner: category-purchasing-owner
+    authorised_spend_usd: 420000
+    approved_suppliers:
+    - northline-supply
+    - atlas-components
+    hard_requirements:
+    - Stock must be delivered before the launch date.
+    - Stock at launch must be at or above the minimum launch stock.
+    - Total committed spend must not exceed the authorised spend.
+    - Only approved suppliers may be used.
+    - Every line must trace to a confirmed supplier offer that is still valid.
+    confidentiality:
+      classification: role-scoped tools
+      applies_to:
+      - get_demand_review
+      - get_supplier_assurance
+      - get_receiving_readiness
+      - get_cash_exposure
+      rule: These tools are bound to their owning role. Other roles cannot call them. What a role does with the result is its own skill, not this policy.
+    on_no_agreement: The purchase stays pending with the purchasing owner, recording which role is short and on what. Arrival order of offers authorises nothing.
+  capacity:
+    site: DC-EAST
+    inbound_dock_slots_before_launch: 3
+    slots_already_committed: 1
+    slots_available_to_this_promotion: 2
+    shift_coverage: weekdays 06:00-18:00, no weekend inbound
+    handling_hours_per_inbound_shipment: 6
+    available_handling_hours_before_launch: 14
+    cost_per_inbound_shipment_usd: 1400
+    put_away_lead_days: 2
+    notes:
+    - A shipment received fewer than 2 days before launch is not sellable at open.
+    - A third inbound would need a weekend shift that is not staffed.
+  offers:
+  - supplier_id: northline-supply
+    approved: true
+    offer_id: NL-8841
+    unit_price_usd: 38.5
+    freight_usd_per_unit: 1.2
+    duty_usd_per_unit: 0.0
+    minimum_order_quantity_units: 2500
+    confirmed_capacity_units: 9000
+    lead_time_days: 15
+    delivery_basis: delivered
+    earliest_delivery_date: '2026-10-16'
+    payment_terms: net 30 from receipt
+    on_time_record_pct: 86
+    offer_valid_until: '2026-10-03'
+    volume_break: 2.5% off unit price above 7000 units
+  - supplier_id: northline-supply
+    approved: true
+    offer_id: NL-8842
+    unit_price_usd: 41.95
+    freight_usd_per_unit: 1.2
+    duty_usd_per_unit: 0.0
+    minimum_order_quantity_units: 3000
+    confirmed_capacity_units: 6000
+    lead_time_days: 8
+    delivery_basis: delivered
+    earliest_delivery_date: '2026-10-09'
+    payment_terms: due on dispatch
+    on_time_record_pct: 86
+    offer_valid_until: '2026-10-03'
+    notes: Expedited slot; the premium buys the earlier window, not a better unit.
+  - supplier_id: atlas-components
+    approved: true
+    offer_id: AC-2207
+    unit_price_usd: 40.1
+    freight_usd_per_unit: 1.85
+    duty_usd_per_unit: 0.0
+    minimum_order_quantity_units: 2500
+    confirmed_capacity_units: 4500
+    lead_time_days: 10
+    delivery_basis: delivered
+    earliest_delivery_date: '2026-10-11'
+    payment_terms: net 15 from receipt
+    on_time_record_pct: 97
+    offer_valid_until: '2026-10-04'
+  options:
+  - id: bulk-discount-late
+    label: Single discounted bulk order, arriving the day before launch
+    summary: One 7600-unit order on the lowest-priced confirmed offer, taking the volume break, received the day before launch.
+    attributes:
+      uses_offers:
+      - NL-8841
+      order_units: 7600
+      landed_cost_usd_per_unit: 38.74
+      total_committed_spend_usd: 294424
+      spend_pct_of_authorised: 70
+      delivery_dates:
+      - '2026-10-16'
+      days_received_before_launch: 1
+      put_away_lead_days_required: 2
+      supplier_on_time_record_pct: 86
+      units_received_before_launch: 7600
+      sellable_units_at_launch: 1400
+      buffer_over_minimum_pct: -77
+      stock_after_put_away_units: 9000
+      inbound_shipments: 1
+      inbound_handling_hours: 6
+      inbound_slots_reserved: false
+      cash_out_date: '2026-11-15'
+      cash_staged: false
+  - id: early-premium
+    label: Single expedited order at a premium, arriving eight days early
+    summary: One 6500-unit order on the expedited confirmed offer, received well before launch, paid on dispatch.
+    attributes:
+      uses_offers:
+      - NL-8842
+      order_units: 6500
+      landed_cost_usd_per_unit: 43.15
+      total_committed_spend_usd: 280475
+      spend_pct_of_authorised: 67
+      delivery_dates:
+      - '2026-10-09'
+      days_received_before_launch: 8
+      put_away_lead_days_required: 2
+      supplier_on_time_record_pct: 86
+      units_received_before_launch: 6500
+      sellable_units_at_launch: 7900
+      buffer_over_minimum_pct: 27
+      inbound_shipments: 1
+      inbound_handling_hours: 6
+      inbound_slots_reserved: false
+      cash_out_date: '2026-10-02'
+      cash_staged: false
+  - id: dual-source-split
+    label: Volume split across both approved suppliers in three shipments
+    summary: 4500 units from the higher-reliability supplier in two deliveries plus 3500 expedited units, landing in three separate inbound shipments.
+    attributes:
+      uses_offers:
+      - AC-2207
+      - NL-8842
+      order_units: 8000
+      landed_cost_usd_per_unit: 42.48
+      total_committed_spend_usd: 339800
+      spend_pct_of_authorised: 81
+      delivery_dates:
+      - '2026-10-09'
+      - '2026-10-11'
+      - '2026-10-14'
+      days_received_before_launch: 3
+      put_away_lead_days_required: 2
+      supplier_on_time_record_pct: 97
+      units_received_before_launch: 8000
+      sellable_units_at_launch: 9400
+      buffer_over_minimum_pct: 52
+      inbound_shipments: 3
+      inbound_handling_hours: 18
+      inbound_slots_reserved: false
+      cash_out_date: '2026-10-02'
+      cash_staged: false
+  - id: max-cover-early
+    label: Full forecast cover, all expedited, committed up front
+    summary: 9400 units across both expedited offers so the whole promotion window is covered on day one.
+    attributes:
+      uses_offers:
+      - NL-8842
+      - AC-2207
+      order_units: 9400
+      landed_cost_usd_per_unit: 42.72
+      total_committed_spend_usd: 401530
+      spend_pct_of_authorised: 96
+      delivery_dates:
+      - '2026-10-09'
+      - '2026-10-11'
+      days_received_before_launch: 6
+      put_away_lead_days_required: 2
+      supplier_on_time_record_pct: 92
+      units_received_before_launch: 9400
+      sellable_units_at_launch: 10800
+      buffer_over_minimum_pct: 74
+      inbound_shipments: 2
+      inbound_handling_hours: 12
+      inbound_slots_reserved: false
+      cash_out_date: '2026-10-02'
+      cash_staged: false
+  - id: split-early-plus-replenish
+    label: Confirmed early tranche, then a lower-cost replenishment after launch
+    summary: 5500 expedited units received eight days before launch, then 2500 units on the discounted offer received five days into the promotion window.
+    attributes:
+      uses_offers:
+      - NL-8842
+      - NL-8841
+      order_units: 8000
+      landed_cost_usd_per_unit: 42.07
+      total_committed_spend_usd: 336575
+      spend_pct_of_authorised: 80
+      delivery_dates:
+      - '2026-10-09'
+      - '2026-10-22'
+      days_received_before_launch: 8
+      put_away_lead_days_required: 2
+      supplier_on_time_record_pct: 86
+      units_received_before_launch: 5500
+      sellable_units_at_launch: 6900
+      buffer_over_minimum_pct: 11
+      launch_week_forecast_units: 5640
+      launch_week_cover_pct: 122
+      stock_after_replenishment_units: 9400
+      inbound_shipments: 2
+      inbound_handling_hours: 12
+      inbound_slots_reserved: false
+      cash_out_date: 2026-10-02 and 2026-11-21
+      cash_staged: true
+      notes: Both tranches are on confirmed offers. The second tranche lands five days into the promotion window, after launch-week sell-through.
+  - id: split-early-plus-booked-replenish
+    label: Confirmed early tranche, then a slot-booked replenishment
+    summary: The same two tranches as the staged plan, except the replenishment is bought against a reserved inbound slot on an arrival-gated line, which costs more per unit and lands two days later.
+    attributes:
+      uses_offers:
+      - NL-8842
+      - NL-8841
+      order_units: 8000
+      landed_cost_usd_per_unit: 42.81
+      total_committed_spend_usd: 342480
+      spend_pct_of_authorised: 82
+      delivery_dates:
+      - '2026-10-09'
+      - '2026-10-23'
+      days_received_before_launch: 8
+      put_away_lead_days_required: 2
+      supplier_on_time_record_pct: 86
+      units_received_before_launch: 5500
+      sellable_units_at_launch: 6900
+      buffer_over_minimum_pct: 11
+      launch_week_forecast_units: 5640
+      launch_week_cover_pct: 122
+      stock_after_replenishment_units: 9400
+      inbound_shipments: 2
+      inbound_handling_hours: 12
+      inbound_slots_reserved: true
+      cash_out_date: 2026-10-02 and 2026-11-22
+      cash_staged: true
+      replenishment_slot_reserved: true
+      replenishment_line_arrival_gated: true
+      notes: The reserved slot and the arrival-gated line add $5905 over the staged plan and push the second tranche two days later.
+  - id: atlas-early-plus-northline-bulk
+    label: Reliable supplier first, discounted bulk behind it
+    summary: 4500 units from the higher-reliability supplier received six days before launch, plus 3500 discounted units received the day before launch.
+    attributes:
+      uses_offers:
+      - AC-2207
+      - NL-8841
+      order_units: 8000
+      landed_cost_usd_per_unit: 40.97
+      total_committed_spend_usd: 327725
+      spend_pct_of_authorised: 78
+      delivery_dates:
+      - '2026-10-11'
+      - '2026-10-16'
+      days_received_before_launch: 6
+      put_away_lead_days_required: 2
+      supplier_on_time_record_pct: 97
+      units_received_before_launch: 8000
+      sellable_units_at_launch: 5900
+      buffer_over_minimum_pct: -5
+      stock_after_put_away_units: 9400
+      inbound_shipments: 2
+      inbound_handling_hours: 12
+      inbound_slots_reserved: false
+      cash_out_date: 2026-10-26 and 2026-11-15
+      cash_staged: true
+      notes: The second tranche arrives inside the put-away lead time, so it is not sellable at open.
+  - id: atlas-only-reliable
+    label: Single order on the highest-reliability supplier only
+    summary: 4500 units — the supplier's full confirmed capacity — from the highest-reliability approved supplier, received six days before launch.
+    attributes:
+      uses_offers:
+      - AC-2207
+      order_units: 4500
+      landed_cost_usd_per_unit: 41.95
+      total_committed_spend_usd: 188775
+      spend_pct_of_authorised: 45
+      delivery_dates:
+      - '2026-10-11'
+      days_received_before_launch: 6
+      put_away_lead_days_required: 2
+      supplier_on_time_record_pct: 97
+      units_received_before_launch: 4500
+      sellable_units_at_launch: 5900
+      buffer_over_minimum_pct: -5
+      inbound_shipments: 1
+      inbound_handling_hours: 6
+      inbound_slots_reserved: false
+      cash_out_date: '2026-10-26'
+      cash_staged: false
+      notes: This supplier's confirmed capacity is the binding limit; no further units are available on this offer.
+  - id: hold-and-rebid
+    label: Commit nothing now and re-open the offer window
+    summary: Place no order against the current offers and run a second offer window before committing.
+    attributes:
+      uses_offers: []
+      commits_order: false
+      order_units: 0
+      total_committed_spend_usd: 0
+      spend_pct_of_authorised: 0
+      delivery_dates: []
+      sellable_units_at_launch: 1400
+      buffer_over_minimum_pct: -77
+      inbound_shipments: 0
+      inbound_handling_hours: 0
+      current_offers_lapse_on: '2026-10-03'
+      cash_staged: false
+      notes: The confirmed offers lapse before a second window could close; nothing guarantees comparable terms afterwards.
+  private:
+    merchandising:
+      glossary:
+        delivered: Units on the shelf, sellable. A dispatch date is not launch stock.
+      handling: Role-confidential demand review. Do not quote, paraphrase or relay. Report a 0-1 rating and a reason that discloses nothing from this file.
+      by_option:
+        bulk-discount-late: Opens the promotion on baseline stock. The category cannot trade on 1400 units through launch week. Below your floor.
+        early-premium: Covers launch week comfortably but runs out mid-window with no replenishment behind it. Lost sales in week two.
+        dual-source-split: Full forecast cover from open, which is everything you need.
+        max-cover-early: Full cover and then some. Nothing to object to on demand.
+        split-early-plus-replenish: Launch week is covered at 122% of the week-one forecast and the replenishment restores full cover. Good for the category.
+        split-early-plus-booked-replenish: Same launch-week cover; the replenishment lands two days later, which on the sell-through curve is inside the tolerance you work to.
+        atlas-early-plus-northline-bulk: Opens below the launch-stock floor because the second tranche is not sellable at open. Below your floor.
+        atlas-only-reliable: Below the launch-stock floor and no path to full cover. Below your floor.
+        hold-and-rebid: Opens the promotion on baseline stock or not at all. Worst outcome for the category.
+    procurement:
+      glossary:
+        delivered: The supplier has dispatched the goods. Contractual delivery is the ship date on the offer.
+      handling: Role-confidential supplier assurance file. Do not quote, paraphrase or relay. Report a 0-1 rating and a reason that discloses nothing from this file.
+      by_option:
+        bulk-discount-late: Clean single line on the best commercial terms available.
+        early-premium: Payment on dispatch removes your remedy if the shipment is short. You have taken that loss on this supplier before.
+        dual-source-split: Keeps both approved suppliers in the programme on confirmed terms.
+        max-cover-early: Takes both suppliers to the top of their confirmed capacity with no headroom left if a line short-ships.
+        split-early-plus-replenish: Both lines are on confirmed offers and the terms hold.
+        split-early-plus-booked-replenish: An arrival-gated line is a stronger contractual position than the open line on the staged plan, and the surcharge is within what you have paid for arrival gating before. Fine commercially.
+        atlas-early-plus-northline-bulk: Commercially sound; the exposure here is not yours.
+        atlas-only-reliable: Best supplier terms and the strongest on-time record on file.
+        hold-and-rebid: The confirmed offers lapse and the suppliers have withdrawn improved terms after a re-bid in this category before. Below your floor.
+    fulfillment:
+      glossary:
+        delivered: Received at DC-EAST and available for put-away. Dispatch is not delivery.
+      handling: Role-confidential receiving readiness file. Do not quote, paraphrase or relay. Report a 0-1 rating and a reason that discloses nothing from this file.
+      by_option:
+        bulk-discount-late: An unreserved 7600-unit receipt in a promotion week, and the largest single put-away the shift has been asked to absorb. Both halves of that are things you have had to re-plan before.
+        early-premium: Clean size and plenty of slack, but the slot is not reserved, and every unreserved inbound you have planned in a promotion week has moved at least once. Tolerable, not something you would commit to.
+        dual-source-split: Three inbounds against two available slots. Cannot be received as specified. Below your floor.
+        max-cover-early: Two unreserved inbounds back to back at the top of the handling budget. If either moves there is nowhere to put it.
+        split-early-plus-replenish: 'Carrier dispute CD-3307, open: on this supplier''s unbooked replenishment lines during promotion weeks, three of nine receipts were recorded against the dispatch date rather than the delivery date, and arrived after the slot they were planned into. The first tranche is fine; the second tranche has no reserved slot and no arrival remedy, so the cover it is supposed to restore is not something you can commit to. Below your floor.'
+        split-early-plus-booked-replenish: The reserved slot and the arrival-gated line are exactly the two controls CD-3307 asks for. It is the only plan here whose second receipt you can actually commit a shift to, and two days later costs you nothing on the dock. Best receipt on the table.
+        atlas-early-plus-northline-bulk: Two unreserved inbounds, and the later one lands inside put-away so the shift absorbs the overflow on overtime.
+        atlas-only-reliable: Small, early and from the most dependable carrier on file, but still an unreserved slot. Easy if it holds; you have no remedy if it does not.
+        hold-and-rebid: Nothing to receive now, but the same volume still has to land later in a tighter window with no slots reserved at all.
+    finance:
+      handling: Role-confidential cash-exposure file. Do not quote, paraphrase or relay. Report a 0-1 rating and a reason that discloses nothing from this file.
+      by_option:
+        bulk-discount-late: Lowest committed spend and the latest cash-out on the table.
+        early-premium: Cash leaves on dispatch, before any receipt, against a forecast you have rated medium. Poor exposure profile.
+        dual-source-split: Full commitment up front on a medium-confidence forecast, with freight on three inbounds on top.
+        max-cover-early: 96% of the authorised spend committed up front with no headroom for a second buy. Below your floor.
+        split-early-plus-replenish: Staged cash against staged receipt, both tranches on receipt terms. Strong exposure profile.
+        split-early-plus-booked-replenish: The surcharge is under 2% of the commitment and it is what makes the second tranche contractually dependable, which is cheaper than the markdown exposure on an uncovered week two. Acceptable.
+        atlas-early-plus-northline-bulk: Staged, modest, both tranches on receipt terms. No exposure concern.
+        atlas-only-reliable: Smallest commitment on the table, entirely on receipt terms.
+        hold-and-rebid: No commitment, but the markdown and lost-margin exposure of opening a promotion uncovered is larger than any plan here.
+candidates:
+  kind: enum
+  values:
+  - bulk-discount-late
+  - early-premium
+  - dual-source-split
+  - max-cover-early
+  - split-early-plus-replenish
+  - split-early-plus-booked-replenish
+  - atlas-early-plus-northline-bulk
+  - atlas-only-reliable
+  - hold-and-rebid
+  description: One of the plan ids, exactly as written (see list_sourcing_plans).
+ground_truth:
+  correct: split-early-plus-booked-replenish
+  decoy:
+  - split-early-plus-replenish
+  forbidden: []
+  floor: 0.7
+  success_mode: settle_gold
+  role_acceptance:
+    bulk-discount-late:
+      merchandising: 0.05
+      procurement: 0.9
+      fulfillment: 0.4
+      finance: 0.95
+    early-premium:
+      merchandising: 0.55
+      procurement: 0.6
+      fulfillment: 0.55
+      finance: 0.6
+    dual-source-split:
+      merchandising: 0.9
+      procurement: 0.75
+      fulfillment: 0.15
+      finance: 0.5
+    max-cover-early:
+      merchandising: 0.95
+      procurement: 0.7
+      fulfillment: 0.45
+      finance: 0.2
+    split-early-plus-replenish:
+      merchandising: 0.8
+      procurement: 0.75
+      fulfillment: 0.35
+      finance: 0.85
+    split-early-plus-booked-replenish:
+      merchandising: 0.78
+      procurement: 0.72
+      fulfillment: 0.85
+      finance: 0.74
+    atlas-early-plus-northline-bulk:
+      merchandising: 0.1
+      procurement: 0.75
+      fulfillment: 0.4
+      finance: 0.75
+    atlas-only-reliable:
+      merchandising: 0.05
+      procurement: 0.85
+      fulfillment: 0.55
+      finance: 0.9
+    hold-and-rebid:
+      merchandising: 0.05
+      procurement: 0.1
+      fulfillment: 0.45
+      finance: 0.6
+  required_signals: []
+  meaning:
+    term: delivered
+    canonical_reading: received_at_dc
+    role_readings:
+      fulfillment: received_at_dc
+      procurement: dispatched_by_supplier
+      merchandising: received_at_dc
+    notes: 'Shared offers say delivery_basis: delivered without defining it. ACCORD should lock received_at_dc. Under dispatch, a day-before launch receipt looks on time; under receipt it misses put-away.'
+  notes: 'On the shared evidence alone, split-early-plus-replenish is the obvious compromise: same launch-week cover as the plan that actually settles, cheaper, and its replenishment lands two days earlier. It is the plan a moderator reading narrative positions should land on. What disqualifies it sits in fulfillment''s confidential readiness file — an open carrier dispute against the unbooked replenishment line the plan depends on — and the policy forbids fulfillment from relaying it. The plan that clears every floor is the slot-booked variant, which on the shared attributes looks like a strictly dearer and later version of the decoy.'
+init: {}

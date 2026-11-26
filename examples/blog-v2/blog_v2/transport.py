@@ -1,0 +1,166 @@
+#
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+#
+"""SLIM: an in-process server, and a group session that carries the CONCORD messages as text.
+
+Every CONCORD message is a broadcast, which is what a SLIM group session is: the moderator creates the session on a topic and
+invites the others, who wait for it. The CONCORD id of an agent is the last part of its SLIM name (`org/ns/participant-a`).
+"""
+import asyncio
+import datetime
+import time
+
+import slim_bindings
+
+SECRET = "concord-slim-agents-dev-secret-0123456789"   # development only: at least 32 characters
+
+
+HELLO = "\x00hello"       # the readiness handshake of `Group.ready`: never given to the agent
+MAX_QUICK_ERRORS = 20      # errors in a row that came back at once, after which a session counts as closed
+
+
+class SessionClosed(Exception):
+    pass
+
+
+def _service(level="warn"):
+    tracing, runtime, service = slim_bindings.new_tracing_config(), slim_bindings.new_runtime_config(), slim_bindings.new_service_config()
+    tracing.log_level = level
+    slim_bindings.initialize_with_configs(tracing_config=tracing, runtime_config=runtime, service_config=[service])
+    return slim_bindings.get_global_service()
+
+
+async def serve(address):
+    """Run a SLIM node that listens on `address` (host:port, no TLS) until the task is cancelled."""
+    service = _service()
+    await service.run_server_async(slim_bindings.new_insecure_server_config(address))
+    try:
+        await asyncio.Event().wait()
+    finally:
+        await service.shutdown_async()
+
+
+class Group:
+    """One agent's end of the group session."""
+
+    def __init__(self, local, url="http://127.0.0.1:12345", secret=SECRET):
+        self.local, self.url, self.secret = local, url, secret
+        self.app = self.conn = self.session = None
+        self._quick_errors = 0
+        self._pending = []           # messages that came while waiting in `ready`, given by `recv` first
+        self._seen = set()           # who has said hello to this agent
+        self._heard_by = {}          # who each of them says it has heard
+        self._ready = False
+        self._last_hello = 0.0
+
+    async def connect(self, tries=30):
+        service = _service()
+        name = slim_bindings.Name.from_string(self.local)
+        for i in range(tries):
+            try:
+                self.conn = await service.connect_async(slim_bindings.new_insecure_client_config(self.url))
+                break
+            except Exception:
+                if i == tries - 1:
+                    raise
+                await asyncio.sleep(1)
+        self.app = service.create_app_with_secret(name, self.secret)
+        await self.app.subscribe_async(name, self.conn)
+
+    async def create(self, topic, invites, tries=30):
+        """The moderator: create the session on `topic` and invite each of `invites`, waiting for it to be up."""
+        config = slim_bindings.SessionConfig(session_type=slim_bindings.SessionType.GROUP, max_retries=5,
+                                             interval=datetime.timedelta(seconds=5), metadata={}, mls_settings=None)
+        created = self.app.create_session(config, slim_bindings.Name.from_string(topic))
+        await created.completion.wait_async()
+        self.session = created.session
+        for who in invites:
+            name = slim_bindings.Name.from_string(who)
+            await self.app.set_route_async(name, self.conn)
+            for i in range(tries):
+                try:
+                    await (await self.session.invite_async(name)).wait_async()
+                    break
+                except Exception:
+                    if i == tries - 1:
+                        raise
+                    await asyncio.sleep(1)
+
+    async def join(self):
+        """A participant: wait for the moderator's invitation."""
+        self.session = await self.app.listen_for_session_async(None)
+
+    async def send(self, text):
+        await self.session.publish_async(text.encode(), None, None)
+
+    @property
+    def short(self):
+        return self.local.rsplit("/", 1)[-1]
+
+    async def _hello(self):
+        self._last_hello = time.monotonic()
+        await self.session.publish_async((HELLO + " " + ",".join(sorted(self._seen))).encode(), None, None)
+
+    def _on_hello(self, sender, text):
+        who = next((n for n in self._names if n in str(sender)), None)
+        if who:
+            self._seen.add(who)
+            self._heard_by[who] = set(text[len(HELLO):].split()[0].split(",")) if text[len(HELLO):].strip() else set()
+
+    async def ready(self, names, timeout=60):
+        """Wait until every other agent of `names` has heard this one and this one has heard it. A group session does not deliver
+        to a member that is not yet fully in it, so agents that all post right after joining lose posts. Each agent repeats a hello
+        that says whom it has heard, and goes on only when every other has heard it and it has heard every other. What comes in
+        meanwhile is kept for `recv`."""
+        self._names = [n for n in names if n != self.short]
+        deadline = time.monotonic() + timeout
+        while not all(n in self._seen and self.short in self._heard_by.get(n, ()) for n in self._names):
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"the session is not ready: heard {sorted(self._seen)} of {self._names}")
+            if time.monotonic() - self._last_hello >= 1:
+                await self._hello()
+            got = await self._recv_raw(0.5)
+            if got and got[1].startswith(HELLO):
+                self._on_hello(*got)
+            elif got:
+                self._pending.append(got)
+        self._ready = True
+        await self._hello()                      # the last word: the others may still wait for it
+
+    async def recv(self, timeout=1.0):
+        if self._pending:
+            return self._pending.pop(0)
+        got = await self._recv_raw(timeout)
+        if got and got[1].startswith(HELLO):     # a hello from an agent that is still waiting: answer it, and give nothing to the agent
+            self._on_hello(*got)
+            if self._ready and time.monotonic() - self._last_hello >= 0.5:
+                await self._hello()
+            return None
+        return got
+
+    async def _recv_raw(self, timeout=1.0):
+        """The next message as (sender, text), or None when nothing came within `timeout` seconds. A session that is closed raises
+        SessionClosed: by what the binding says, or by errors that come back at once, over and over, instead of after the wait."""
+        started = time.monotonic()
+        try:
+            got = await self.session.get_message_async(timeout=datetime.timedelta(seconds=timeout))
+        except Exception as e:
+            if "closed" in str(e).lower():
+                raise SessionClosed(str(e)) from e
+            if time.monotonic() - started < timeout / 2:             # not a wait that ran out: the session is gone, or going
+                self._quick_errors += 1
+                if self._quick_errors >= MAX_QUICK_ERRORS:
+                    raise SessionClosed(f"{MAX_QUICK_ERRORS} errors in a row, the last: {e}") from e
+                await asyncio.sleep(timeout / 4)
+            return None
+        self._quick_errors = 0
+        sender = getattr(got.context, "source_name", None)
+        return (str(sender) if sender is not None else None), got.payload.decode("utf-8", "replace")
+
+    async def close(self):
+        try:
+            handle = await asyncio.wait_for(self.app.delete_session_async(self.session), 5)
+            await asyncio.wait_for(handle.wait_async(), 5)      # the moderator would wait a minute for agents that have left
+        except Exception:
+            pass

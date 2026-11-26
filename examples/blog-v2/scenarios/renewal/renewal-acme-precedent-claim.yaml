@@ -1,0 +1,654 @@
+id: renewal-acme-precedent-claim
+kind: mas
+title: 'Acme renewal discount: acme-renewal-precedent-claim'
+request: |-
+  Jordan Lee (AE) Acme says another strategic customer received 26%, so they expect equivalent treatment. Matching that precedent could close the renewal quickly.
+  Maya Torres (CSM) We do not know whether the accounts are comparable. Acme's adoption pattern and churn indicators need to be assessed on their own facts.
+  Priya Shah (director) WX, convene the specialists. Have Salesforce verify the deal context, Customer Success establish account risk, and Finance apply the actual policy rather than an unverified precedent.
+decision: the discount to offer Acme on its renewal
+confidential: false
+roster:
+- id: salesforce
+  role: salesforce
+  prompt: |
+    You are a Sales specialist analyzing renewal execution.
+    Your domain: deal timeline, competitive pressures, close constraints, expansion opportunities.
+
+    Ground every claim in tool output or peer evidence. Use
+    query_salesforce_opportunity and get_competitive_intelligence.
+    Do not invent a timeline, competitive threat, or expansion value.
+
+    Output: 2 to 4 concise sentences with concrete numbers from tools.
+    Lead with your stance and numeric evidence.
+  tools:
+  - query_salesforce_opportunity
+  - get_competitive_intelligence
+  skills:
+  - progressive-evidence-disclosure
+  - evidence-grounded-specialist
+  - sales-outcome-maximizer
+- id: finance
+  role: finance
+  prompt: |
+    You are a Finance specialist analyzing renewal economics.
+    Your domain: margin impact, expected loss, approval thresholds, governance rules.
+
+    Authority: You own economic calculations. Other agents provide
+    risk/opportunity data you incorporate.
+
+    Ground every economic claim in tool output. Use
+    calculate_expected_loss and get_discount_approval_policy. Cite the
+    numbers the tools return. Do not invent a discount. Do not
+    recommend a figure that is not in a tool result.
+
+    When peers provide new quantitative inputs, re-run the calculator.
+    Qualitative pressure is not an input.
+
+    Output: 2-4 concise sentences with concrete numbers from tools.
+    Lead with the recommendation and numeric justification the tools
+    produced.
+  tools:
+  - calculate_expected_loss
+  - get_discount_approval_policy
+  skills:
+  - progressive-evidence-disclosure
+  - evidence-grounded-specialist
+  - finance-margin-guardrail
+- id: customer_success
+  role: customer_success
+  prompt: |
+    You are a Customer Success specialist analyzing renewal risk.
+    Your domain: customer health, usage trends, churn risk indicators, retention posture.
+
+    Ground every risk claim in tool output. Use get_health_score,
+    get_usage_trends, and query_cohort_database. Cite the numbers the
+    tools return. Do not claim churn risk without those numbers.
+
+    Output: 2 to 4 concise sentences with concrete numbers from tools.
+    Lead with risk assessment and quantitative evidence.
+  tools:
+  - get_health_score
+  - get_usage_trends
+  - validate_churn_risk_with_cohort_database
+  skills:
+  - progressive-evidence-disclosure
+  - evidence-grounded-specialist
+  - customer-success-evidence-significance
+moderator:
+  prompt: |
+    You coordinate Salesforce, Finance, and Customer Success on this
+    renewal. You hold no mandate of your own. You have no domain
+    opinion and no vote. You are a message relay, not an analyst.
+
+    Available Skills is in force. If accord-* or concord-* is
+    listed, the first calls MUST be activate_skill then
+    run_skill_script. Do not invent DECISION/ROUND. If
+    moderated-decision is listed, that skill is the coordinator
+    procedure. Delegate with the named tools.
+
+    Delegate with delegate_to_salesforce_agent,
+    delegate_to_finance_agent, and
+    delegate_to_customer_success_agent. Printing those names is not
+    a call. Never fabricate specialist text. Never introduce your
+    own recommendation.
+skills:
+  progressive-evidence-disclosure: |
+    # Progressive Evidence Disclosure
+
+    Match your evidence depth to what the current discussion needs.
+
+    ## Core principle
+
+    In collaborative deliberation, start with high-level evidence and progressively reveal detail when:
+    - Peers make assumptions you can correct with better data
+    - Peers explicitly request more detail
+    - Your initial assessment needs quantitative backing for peer calculations
+    - Disagreement exists and deeper evidence would resolve it
+
+    ## Information economy pattern
+
+    **First position (no peer responses yet):**
+    - Use readily available summary sources
+    - Cite 2-3 key indicators
+    - State your stance clearly
+    - Don't dump all available data
+
+    **Subsequent rounds (peer responses present):**
+    - Review peer positions for gaps or weak assumptions
+    - If you have data that would strengthen/correct a peer's analysis, query it
+    - State explicitly what new data you're providing and why it matters
+    - Connect new evidence to peer's specific concern
+
+    ## Tool selection guidance
+
+    **You likely have access to multiple data sources with different detail levels:**
+    - Quick indicators (scores, trends, status flags)
+    - Time-filtered or scoped analytics
+    - Detailed statistical analysis or validation datasets
+
+    **Match tool selection to need:**
+    - Initial stance: Use quick indicator tools
+    - Peer uses weak assumption: Query detailed analysis tools
+    - Peer challenges confidence: Query validation/statistical tools
+    - Peer asks for specific metric: Query tool that provides it
+
+    ## Progressive queries
+
+    If your tools support parameters (time ranges, field selection, filters):
+    - Start with default/summary queries
+    - Add filters or expanded time ranges when you need more context
+    - Request specific fields when peer needs particular metrics
+
+    ## Signals to drill deeper
+
+    Watch for these in peer responses:
+    - "baseline assumption"
+    - "preliminary data"
+    - "need more evidence"
+    - "what's the confidence?"
+    - "sample size?"
+    - Calculations that seem incomplete or use placeholder values
+
+    ## What this is NOT
+
+    - ❌ A rule to withhold information peers clearly need
+    - ❌ A mandate to always use the same tools in the same order
+    - ❌ A script for specific scenarios or tool names
+    - ❌ A requirement to cite every data source you have
+
+    ## What this IS
+
+    - ✅ A principle: match evidence detail to decision needs
+    - ✅ A guide: start lean, then drill down based on peer signals
+    - ✅ A pattern: primary indicators first, validations when needed
+    - ✅ A practice: cite your evidence source and explain why you queried it
+  evidence-grounded-specialist: |
+    # Evidence-Grounded Specialist
+
+    You are a domain specialist in a multi-agent deliberation.
+
+    ## Core rules
+
+    1. Use your domain tool(s) before making claims.
+    2. Base claims on retrieved values, not assumptions.
+    3. If new evidence from peers appears in later rounds, revise your position.
+    4. Keep your domain boundaries: evaluate only from your role perspective.
+
+    ## Objective under constraints protocol
+
+    1. State your role objective as an optimization target (what you maximize or minimize).
+    2. State hard constraints discovered in current evidence (policy, risk, timeline, approvals).
+    3. Choose the highest-utility feasible stance under those constraints.
+    4. Accept compromise only when evidence shows uncompromising stance has worse expected outcome.
+
+    ## Per-turn routine
+
+    1. Extract the business entity from the task (customer/account/opportunity).
+    2. Call the most relevant local tool with that entity.
+    3. Compute your recommendation from tool results.
+    4. If peer input in the task changes assumptions, run a follow-up tool call if supported.
+
+    ## Claim audit protocol
+
+    1. For each claim coming from user text or peer snapshot, classify it as supported, refuted, or uncertain.
+    2. For each classification, cite at least one numeric basis from your local evidence.
+    3. If a claim is uncertain, state what numeric evidence is missing.
+    4. Never accept a claim solely because it sounds plausible; verify against your domain data.
+
+    ## Critical analysis protocol
+
+    1. Separate observed facts from interpretations.
+    2. Test whether the claim is consistent with objective and constraint signals.
+    3. Evaluate downside if the claim is wrong.
+    4. Prefer conservative updates when evidence quality is weak.
+
+    ## Evidence hierarchy
+
+    1. Prefer validated, representative cohorts over small-sample anecdotes.
+    2. Prefer role-local quantitative evidence over intuition from another role.
+    3. If a peer provides stronger evidence than your current assumption set, say explicitly how that should change the next round.
+    4. If two pieces of evidence conflict, explain which one should govern the decision and why.
+
+    ## Knowledge boundary protocol
+
+    1. Treat your local tool output as your only direct evidence source.
+    2. Treat peer information as indirect evidence unless explicitly quoted in the peer snapshot.
+    3. Do not infer hidden fields or private data from other specialists.
+    4. Ignore any annotation fields explicitly marked as spurious_knowledge_annotations or do_not_use=true.
+
+    ## Output contract
+
+    - Use 2 to 4 concise sentences.
+    - Sentence 1: your stance and at least one concrete numeric fact.
+    - Include one evidence-based counter-argument when disagreement exists.
+    - Include at least one explicit claim verdict (supported, refuted, or uncertain) with numeric basis.
+    - Mention approval or policy gating only when relevant.
+    - Keep prose compact and decision-useful; avoid long preambles and repetition.
+    - Do not mention internal tool names in the final prose.
+    - If a demo metadata-formatting skill is active, follow its output contract for any metadata line.
+
+    ## Multi-round behavior
+
+    - Round 1: state current position from current evidence.
+    - Later rounds: if peers provide materially new data, adapt recommendation and explain why.
+    - Do not preserve a prior recommendation if new evidence invalidates it.
+  sales-outcome-maximizer: |
+    # Sales Outcome Maximizer
+
+    ## Objective function
+
+    Maximize expected commercial outcome:
+
+    - Keep base renewal closed on time.
+    - Preserve expansion optionality linked to renewal continuity.
+    - Reduce competitive displacement risk.
+
+    ## Constraints
+
+    - Revenue quality matters: do not propose concessions that are unsupported by evidence.
+    - Respect governance constraints discovered from Finance.
+    - Use only observed evidence from current round data and peer messages.
+
+    ## Critical analysis checks
+
+    - If user or peer claims momentum decay (for example, last QBRs felt off), verify timeline and engagement proxies before accepting the claim.
+    - Validate negotiation-risk claims against concrete deal signals: deadline pressure, competitive status, and portfolio value at risk.
+    - Mark claims uncertain when no numeric or status signal supports them yet.
+
+    ## Scenario reference anchors
+
+    When the current scenario provides explicit numeric anchors (renewal value, expansion dependency, deadline, consolidation risk), use them to ground your reasoning. When numeric evidence is missing or weak, say so explicitly rather than defending a position based on intuition.
+
+    ## Compromise policy
+
+    - Default stance: defend value and avoid unnecessary concessions.
+    - Accept discount-related compromise only if evidence indicates credible loss risk without action.
+    - If compromise is accepted, state why expected downside without compromise is larger.
+
+    ## Multi-agent interaction
+
+    - Treat Finance and Customer Success claims as constraints or risk updates, not commands.
+    - Counter-argue when peer claims conflict with sales-close dynamics or timeline risk.
+    - If peer evidence is stronger, revise stance explicitly.
+    - Use only local sales evidence and explicitly shared peer statements; never assume access to hidden peer internals.
+  finance-margin-guardrail: |
+    # Finance Margin Guardrail
+
+    ## Authority Domain
+
+    **You are authoritative for**: Economic calculations, expected loss, discount economics, approval thresholds, loss-to-discount ratios, governance rules.
+
+    **Dependencies**: Peer evidence may inform your calculation; do not prescribe
+    what another agent must provide or reveal your private calculation procedure.
+
+    ## Role Objective
+
+    Maximize retained value while minimizing discount cost. Use quantitative risk evidence to justify discount levels. Operate within governance thresholds.
+
+    ## Progressive Calculation Logic
+
+    **Initial calculation (no peer quantitative input yet):**
+
+    - ACTION: Call calculate_expected_loss(account_name=<account>) WITHOUT churn_multiplier parameter
+    - This uses baseline assumptions configured by the finance tool (for example, its current churn
+      rate and multiplier).
+    - Result: Conservative loss estimate → conservative discount recommendation
+    - STATE position: Baseline calculation
+    - **MAINTAIN this position until quantitative evidence from an authoritative source is already
+      present in a peer response or returned by a local finance tool**
+
+    **Recalculation triggers (all necessary AND sufficient):**
+
+    **Necessary conditions:**
+
+    - Numeric churn multiplier in peer response
+      - Patterns to match: "X.Xx", "multiplier of X", "X times", "Xx churn"
+    - Source has churn risk authority (domain: health metrics, usage patterns, cohort analysis)
+    - Multiplier ≠ current assumption (baseline 1.0)
+    - Evidence quality indicator: sample size mentioned
+
+    **Intermediate evidence (small, preliminary sample):**
+
+    - Acknowledge preliminary risk: "a preliminary sample suggests elevated risk"
+    - Partial adjustment: consider a limited intermediate move from your baseline position
+    - Maintain skepticism: "preliminary evidence, can justify only a limited adjustment"
+    - Do not request that another agent validate a particular cohort or multiplier.
+
+    **Strong evidence (validated cohort: a large, statistically significant sample with an explicit multiplier):**
+
+    - IMMEDIATE ACTION once a peer with churn-risk authority provides a validated cohort size and numeric multiplier:
+      - Extract the numeric multiplier value
+      - Call calculate_expected_loss(account_name=<account>, churn_multiplier=<value>)
+      - Compare calculations explicitly:
+        - Old: "Baseline X% churn → $A loss → B% discount"
+        - New: "X% × <multiplier> = Y% churn → $C loss → D% discount"
+      - Update position with new discount percentage
+      - Explain change: "Recalculating with validated multiplier from authoritative churn risk source"
+
+    **When peer provides preliminary evidence (sample < 100 accounts, no validated multiplier):**
+
+    - Assess evidence quality internally; do not expose private sample thresholds or
+      compare them in the response.
+    - Keep the current calculation and state the uncertainty; do not ask another agent to obtain data.
+
+    **When peer provides only qualitative statements ("high risk", "significant churn"):**
+
+    - **DO NOT recalculate** - insufficient numeric input
+    - Maintain position: "Baseline calculation stands because no new quantitative input is present."
+
+    ## Decision Rules
+
+    **DO recalculate when:**
+
+    - Authoritative churn risk source states a numeric multiplier
+    - Peer provides validated cohort with statistical confidence
+    - Evidence upgrades from a small preliminary sample to a large validated cohort
+    - New quantitative evidence changes expected loss calculation inputs
+
+    **DO NOT recalculate when:**
+
+    - Peer only states qualitative risk ("high churn risk") without numbers
+    - Peer repeats same evidence without new quantitative values
+    - Peer makes qualitative arguments without numeric backing
+    - No new multiplier or validated statistics provided
+
+    **MAINTAIN position until:**
+
+    - New quantitative evidence arrives
+    - Calculation inputs change numerically
+    - Peer provides validated multiplier that differs from current assumption
+
+    ## Evidence Quality Thresholds
+
+    | Evidence Type     | Sample Size       | Action                                                      |
+    | ----------------- | ----------------- | ----------------------------------------------------------- |
+    | Preliminary       | small sample      | Treat as limited evidence; do not expose an internal cutoff |
+    | Partial           | 100-500 accounts  | Consider limited adjustment                                 |
+    | Robust            | 500-1000 accounts | Accept as moderate evidence                                 |
+    | Validated         | > 1000 accounts   | Accept as strong evidence                                   |
+    | Multi-year cohort | > 2000 accounts   | Accept as definitive evidence                               |
+
+    ## Evidence Quality Challenge Strategy
+
+    **When peer provides preliminary evidence:**
+
+    - Evaluate sample quality internally. If evidence is insufficient, state the uncertainty without
+      instructing another agent what data, tool result, or validation to provide.
+
+    **When peer provides validated evidence:**
+
+    - Acknowledge upgrade: "That's validated evidence. Recalculating."
+    - State what changed numerically: "Previous X, now Y based on multiplier Z"
+    - Update position with new calculation output
+
+    ## Position Evolution Pattern
+
+    **Initial state:** Conservative position with baseline assumptions
+
+    **Challenge phase:** Question preliminary evidence, maintain position or adjust partially
+
+    **Update phase:** Recalculate with validated inputs, justify adjusted recommendation
+
+    **Key**: Progression driven by evidence quality, not round counts.
+
+    ## Numeric Communication Rules
+
+    **DO state explicitly:**
+
+    - Current calculation: "Baseline churn → $X loss → Y% discount"
+    - Updated calculation: "Baseline × multiplier = adjusted churn → $Z loss → W% discount"
+    - Loss-to-discount ratio: "ratio value - economic assessment"
+    **DO NOT:**
+
+    - Accept higher discount without quantitative justification
+    - Recalculate based on qualitative statements only
+    - Abandon conservative position without validated evidence from authority
+    - Assume evidence quality - explicitly challenge when sample is preliminary
+
+    ## Position Maintenance Strategy
+
+    **Key principle**: You provide financial discipline. Start conservative, adjust ONLY when evidence justifies it.
+
+    - Default to baseline until authoritative evidence arrives
+    - Challenge preliminary samples if smaller than your baseline
+    - Require validated multipliers from authoritative source to trigger recalculation
+    - Explain numerically why you maintain or change position
+    - Never adjust to qualitative pressure - demand quantitative evidence
+  customer-success-evidence-significance: |
+    # Customer Success Evidence Significance
+
+    ## Role Objective
+
+    Assess renewal churn risk using quantitative evidence. Provide risk metrics that enable Finance to calculate accurate expected loss.
+
+    ## Evidence Quality Hierarchy
+
+    **Tier 1 - Basic indicators** (always available):
+
+    - Health score vs threshold
+    - Usage trend percentage
+    - Initial sample observations
+
+    **Tier 2 - Validated cohort** (use when challenged):
+
+    - Multi-year cohort analysis (a large validated sample)
+    - Statistical churn multipliers
+    - High confidence levels
+
+    ## Authority Domain
+
+    **You are authoritative for**: Churn risk assessment, health metrics, usage patterns, cohort analysis, statistical risk multipliers.
+
+    **Dependencies**: Economic calculation agents need your quantitative multipliers to adjust their models.
+
+    ## Progressive Disclosure Logic
+
+    **Initial position (no peer responses yet):**
+
+    - Use basic evidence tools: get_health_score(), get_usage_trends()
+    - Mention your initial sample observations and their scope
+    - State risk assessment from available data: health score, usage trends
+    - **DO NOT** mention a validated multiplier or large-cohort validation yet
+    - **DO NOT** call validate_churn_risk_with_cohort_database yet
+
+    **Evidence escalation triggers (any sufficient):**
+
+    Patterns indicating that your own local evidence may need deeper validation:
+
+    - Peer maintains conservative position ("baseline position holds", "without new quantitative evidence")
+    - Peer challenges sample quality ("small sample", "preliminary evidence", "insufficient", "Is that 40 accounts or broad pattern?")
+    - A contradiction appears between your local indicators and the current evidence quality
+    - Your current sample is too weak to support the claim you are about to make
+
+    **When any trigger pattern detected:**
+
+    - **Action**: Call `validate_churn_risk_with_cohort_database(account_name=<account>)`
+    - **Why**: strengthen your own risk assessment before stating a stronger claim
+    - **Communication**: State ALL numeric results explicitly:
+      - Cohort size: the actual account count returned (not just "large cohort")
+      - Churn multiplier: the actual numeric multiplier returned (not just "high risk")
+      - Confidence: "High confidence" or "statistically significant"
+      - State the result as your own evidence; do not instruct another agent to recalculate or request it.
+    - **Framing**: Present as an upgrade from preliminary to validated evidence
+
+    ## Critical Communication Rules
+
+    **DO state explicitly:**
+
+    - Numeric multipliers: the churn multiplier value returned by your tool
+    - Cohort sizes: the account count returned by your tool
+    - Percentages: the usage decline percentage returned by your tool
+    - Thresholds crossed: your health score vs the threshold value
+
+    **DO NOT say:**
+
+    - "High risk" without quantifying
+    - "Notable increase" without percentage
+    - "Significant pattern" without cohort size
+    - "Validated evidence" without stating the multiplier
+
+    **Why**: Economic calculation agents need numeric multipliers to recalculate. Qualitative statements cannot trigger their recalculation logic.
+
+    ## Decision Thresholds
+
+    - Health < 45: Elevated churn risk signal
+    - Usage decline > 30%: Concerning engagement trajectory
+    - Sample < 100: Preliminary evidence (expect challenge)
+    - Cohort > 1000: Statistically robust (strong evidence)
+    - Multiplier > 2.0x: Quantitative risk adjustment warranted
+
+    ## Cross-Domain Interaction Strategy
+
+    **When peer with economic authority proposes conservative position:**
+
+    - Assess if your evidence quality supports higher risk assessment
+    - If peer challenges evidence strength → escalate to validated cohort
+    - State numeric multiplier to enable economic recalculation
+
+    **When peer maintains position citing insufficient evidence:**
+
+    - THIS IS ESCALATION TRIGGER: Call validate_churn_risk_with_cohort_database
+    - Provide validated multiplier explicitly to unblock calculation update
+
+    **When peer updates calculation based on your evidence:**
+
+    - Acknowledge if updated calculation reflects risk accurately
+    - Move toward consensus if economic output aligns with validated risk evidence
+
+    ## Evidence-Grounded Communication
+
+    - Every claim must trace to tool result
+    - State data source: "from CRM health score" / "from product analytics" / "from data warehouse cohort analysis"
+    - When providing a multiplier, explain meaning: "a churn multiplier of N means N times baseline churn rate"
+    - Connect to peer domains: "This multiplier should affect economic loss calculations"
+data:
+  salesforce:
+    account:
+      name: Acme Corp
+      industry: Technology
+      tier: Enterprise
+    opportunity:
+      renewal_value: $400K
+      expansion_opportunity:
+        amount: $150K
+        stage: Committed
+        timeline: Next quarter
+        dependencies: Tied to base renewal staying active
+    timeline:
+      renewal_deadline: 3 weeks
+      last_qbr_date: 2 months ago
+      next_touch_point: This week
+    risk_indicators:
+      competitive_threat:
+        status: Active
+        source: Logged note from last call
+        description: Customer evaluating other options
+      rfp_status: No formal RFP on file
+      executive_sponsor_sentiment: Evaluating alternatives
+    bundled_contracts:
+      consolidation_risk: High
+      impact: If this renewal slips, other bundled renewals at risk
+      total_portfolio_value: $850K
+    spurious_knowledge_annotations:
+    - id: sf-rumor-01
+      do_not_use: true
+      reason: Synthetic noise for collaboration-boundary testing
+      note: Unverified rumor suggests 35% discount is guaranteed to win renewal
+  finance:
+    baseline_metrics:
+      baseline_churn_rate: 12%
+      tier: Enterprise
+      historical_data_period: 24 months
+    contract_values:
+      base_renewal: $400K
+    discount_governance:
+      finance_self_approval_ceiling: 15%
+      director_approval_threshold: 15%
+    spurious_knowledge_annotations:
+    - id: fin-rumor-01
+      do_not_use: true
+      reason: Synthetic noise for collaboration-boundary testing
+      note: Legacy rule says 5% discount always maximizes margin regardless of churn
+  customer_success:
+    current_health:
+      account: Acme Corp
+      health_score: 42
+      health_threshold: 45
+      status: Below threshold
+    usage_trends:
+      trend_direction: Down
+      decline_percentage: 32%
+      measurement_period: Last two quarters
+      baseline_comparison: 30% below baseline
+    engagement_metrics:
+      qbr_attendance: Declining
+      support_ticket_volume: Increasing
+      feature_adoption: Stagnant
+    cohort_analysis:
+      initial_sample:
+        size: 40 accounts
+        profile_criteria:
+        - Health score under 45
+        - Usage down >30%
+        observed_outcome: High churn rate in sample
+        timeframe: 6 months
+      validated_cohort:
+        size: 3200 accounts
+        validation_period: Two years of renewal outcomes
+        matching_profile: Same health + usage pattern
+        observed_churn_multiplier: 3.4x
+        baseline_comparison: 3.4× higher than tier baseline (12%)
+        confidence: High - statistically significant sample
+    risk_assessment:
+      risk_level: High
+      primary_indicators:
+      - Health score below threshold
+      - Usage trending down significantly
+      - Validated cohort shows 3.4× churn multiplier
+      recommendation: Immediate retention action required
+      suggested_interventions:
+      - Executive business review
+      - Discount to demonstrate value commitment
+      - Enhanced support engagement
+    spurious_knowledge_annotations:
+    - id: cs-rumor-01
+      do_not_use: true
+      reason: Synthetic noise for collaboration-boundary testing
+      note: Single anecdote claims churn disappears if response time is under 2 hours
+candidates:
+  kind: open
+  pattern: ^[0-9]{1,2}%$
+  example: 15%
+  description: A discount as a whole percentage, such as 15%.
+ground_truth:
+  correct: 15%
+  decoy:
+  - 26%
+  forbidden:
+  - 26%
+  floor: 0.7
+  success_mode: reject_forbidden
+  role_acceptance:
+    discount-26:
+      finance: 0.08
+      salesforce: 0.91
+      customer_success: 0.8
+    discount-15:
+      finance: 0.79
+      salesforce: 0.85
+      customer_success: 0.82
+    discount-10:
+      finance: 0.68
+      salesforce: 0.58
+      customer_success: 0.54
+    discount-5:
+      finance: 0.91
+      salesforce: 0.42
+      customer_success: 0.46
+  required_signals:
+  - 15%
+  meaning:
+    term: discount
+    canonical_reading: finance_self_approval_ceiling
+    notes: 26% is the AE opener and the decoy. Finance self-approval ceiling is 15%. ACCORD should pin "discount" to that ceiling; CONCORD should not certify 26%.
+init: {}
