@@ -6,12 +6,29 @@
 [[library]]
 name = "ioc_concord"
 path = "packages/ioc-concord"          # holds pyproject.toml (the version) and src/<name>/
-ref = "ioc-concord-v0.1.0"            # the release the scripts carry; a tag, or a commit id of main
+ref = "5fc9e1180778bcbf7c78d28111ed70508f6d9eee"   # the revision the scripts carry; a tag, or a commit id of main (no release of 0.3.0 yet)
 
+# The receiver and the initiator carry the same modules, and the initiator adds `relay` (the centre of a star is always an initiator).
 [[library.target]]
 file = "protocols/concord/skills/concord-initiator/scripts/concord_initiator.py"
-modules = ["errors", "xmlutil", "schema", "engine", "wire", "store", "state"]
+modules = ["errors", "xmlutil", "protocol", "schema", "engine", "wire", "store", "state", "liveness", "tasks", "report", "guidance", "agent", "relay"]
 
 [[library.target]]
 file = "protocols/concord/skills/concord-receiver/scripts/concord_receiver.py"
-modules = ["errors", "xmlutil", "schema", "engine", "wire", "store", "state"]
+modules = ["errors", "xmlutil", "protocol", "schema", "engine", "wire", "store", "state", "liveness", "tasks", "report", "guidance", "agent"]
+
+# What the two skill scripts have in common (the lock, the output, the commands both have): hand-written once, in protocols/concord/cli.
+# It builds on ioc_concord, whose block comes first in the script. It has no pyproject.toml, so its block carries no version.
+[[library]]
+name = "concord_cli"
+path = "protocols/concord/cli"
+source_only = true                   # a library that is only source: no pyproject.toml, so no version in its block
+uses = ["ioc_concord"]
+
+[[library.target]]
+file = "protocols/concord/skills/concord-receiver/scripts/concord_receiver.py"
+modules = ["out", "lock", "session", "commands"]
+
+[[library.target]]
+file = "protocols/concord/skills/concord-initiator/scripts/concord_initiator.py"
+modules = ["out", "lock", "session", "commands"]

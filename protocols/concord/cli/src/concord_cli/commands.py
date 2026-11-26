@@ -48,7 +48,13 @@ def run_wait(factory, args, text):
         with factory() as s:
             status = s.need_run()
             if status["status"] != RUN_ACTIVE:
-                return s.report_out()
+                # Not the END again: it was printed when the run ended, and `report` prints it on demand. A model that starts `wait` again
+                # each time it returns must be told to stop, and not be given a result to report once more.
+                out = Out("DONE")
+                out.next = (f"The run is over, so there is nothing to wait for: do not start `{s.command('wait')}` again. `{s.command('report')}` "
+                            f"prints the result again. If messages of this run still arrive, pass each one to `{s.command('receive')}` and "
+                            "send only what it prints.")
+                return out
             wake = s.agent.next_wakeup()
             if wake is None:
                 out = Out("WAIT")
@@ -80,7 +86,7 @@ REPORT = Command("report", "how the run stands or ended", None, run_report, Fals
 
 
 def read_stdin(command):
-    if sys.stdin.isatty():
+    if sys.stdin is None or sys.stdin.isatty():              # None: standard input is closed
         raise CliError(f"{command} reads standard input and there is none", "Pipe the text in, or use a here-document.")
     text = sys.stdin.read()
     if not text.strip():
