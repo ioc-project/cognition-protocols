@@ -26,20 +26,20 @@ metadata:
 You are one of the agents of a group that must choose a single outcome. A run has been opened, by another agent or
 by you (an initiator that takes part is a participant like the others). You rate options honestly against _your own
 role's criteria_, and, when the script says it is your turn, propose a better option. The script
-`scripts/concord_receiver.py` keeps the picture of the run and tells you what is due: it prints the task, how to
+`uvx ioc-concord receiver` keeps the picture of the run and tells you what is due: it prints the task, how to
 answer it, and what to do next. What you write is only the content of your answers.
 
 ## Do this
 
-Paths are relative to this skill's directory: resolve them against where you found this file, and call the script by its full path.
-Run it from your own working directory and never `cd` into the skill's directory: the state of the run is kept in the current
-directory, and every call of the run must see the same one. `<you>` is your own agent id, the one the initiator used in its list of agents.
+The script is the command `uvx ioc-concord receiver` (it needs `uv`, nothing else installed). Run it from your own working
+directory and never `cd` into the skill's directory: the state of the run is kept in the current directory, and every call of the run
+must see the same one. `<you>` is your own agent id, the one the initiator used in its list of agents.
 
 ```
-scripts/concord_receiver.py --me <you> receive <<'EOF'     # on EVERY CONCORD message you get, first
+uvx ioc-concord receiver --me <you> receive <<'EOF'     # on EVERY CONCORD message you get, first
 <the message, exactly as received>
 EOF
-scripts/concord_receiver.py --me <you> answer <<'EOF'      # only when the output has a TASK
+uvx ioc-concord receiver --me <you> answer <<'EOF'      # only when the output has a TASK
 <your answer: the JSON the task asks for>
 EOF
 ```

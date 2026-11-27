@@ -1,25 +1,32 @@
 # Script tests
 
-Tests of `concord_initiator.py` and `concord_receiver.py` as they are checked in, at the level of what a model does with them: it
-reads what a script prints, and calls the next command. (The library has its own tests, in `packages/ioc-concord/tests`, and the
-shared command line has its own, in `protocols/concord/cli/tests`.)
+Tests of the `ioc-concord` command (`ioc-concord initiator` and `ioc-concord receiver`, the command of the Rust crate
+[`packages/ioc-concord-rs`](../../../packages/ioc-concord-rs), installed by the wheel of
+[`packages/ioc-concord-python`](../../../packages/ioc-concord-python)) at the level of what a model does with it: it reads what a call
+prints, and makes the next call. The command replaces the skill scripts `concord_initiator.py` and `concord_receiver.py`, and these tests
+were written for them: the transcripts were recorded with the scripts, and the command must print what they printed. The crate replays
+the same transcripts through its own function (`packages/ioc-concord-rs/tests/transcripts.rs`).
 
-    just test-concord          # the bundler, the library, the shared command line, and these
-    just test-scripts          # these only
+    just wheel && just test-transcripts      # these, with the command of the wheel, in an environment with nothing else
+    just test-concord                        # the crate, the wheel, and these
+    CONCORD_COMMAND="..." python3 -m pytest protocols/concord/tests      # with another command (split as a shell splits it)
+
+The command prints its own name (`uvx ioc-concord initiator`) where a script printed its file name: what is recorded writes it as the
+name of the script (`concord_initiator.py`), so the transcripts are those of the scripts, byte for byte.
 
 ## Transcripts (`test_scripts.py`, `scenarios.py`, `driver.py`)
 
-Scripted runs through the real scripts. The driver is the transport and the model: it delivers each message to the agents the `SEND`
+Scripted runs through the command. The driver is the transport and the model: it delivers each message to the agents the `SEND`
 (or `FORWARD`) section names, reads the `TASK` a script printed, and answers it from a fixed policy (tables of anchors, seeds, scores
 and repairs). Every call is recorded (arguments, stdin, exit code, stdout, stderr) as text, one block per call, with each stream line
 prefixed (`in|`, `out|`, `err|`) and wrapped to 120 columns. A line ending in `⏎` was wrapped for display only and continues on the next
 line.
 
-What a run holds that changes from one execution to the next is normalised in the transcript, never in what the scripts pass to each
+What a run holds that changes from one execution to the next is normalised in the transcript, never in what the calls pass to each
 other: every UUID becomes `<UUID-n>` in the order it first appears, every `check` becomes `<CHECK>`, a time to come back becomes
 `<WAKE>`, and the directory `<TMP>`. So the transcripts are byte-stable.
 
-    UPDATE_TRANSCRIPTS=1 uv run --no-project --with pytest python -m pytest protocols/concord/tests    # re-record; review the diff
+    UPDATE_TRANSCRIPTS=1 CONCORD_COMMAND=... uv run --no-project --with pytest python -m pytest protocols/concord/tests    # re-record; review the diff
 
 A refactor that must not change behavior leaves every transcript untouched. A behavior change updates only the transcripts it affects,
 and the diff shows exactly what changed. A change of the wording in `guidance` changes every transcript that prints it: that is the point,
@@ -41,17 +48,18 @@ and the diff is where to read it. Do not re-record to make a test pass.
 adds what a transcript cannot show: a negative control for the star (the same run, with a centre that does not `forward`, never ends),
 the lock (messages that arrive at the same time are all recorded), `--help`, and a wrong command line.
 
-## Inputs the scripts do not expect (`test_scripts_inputs.py`)
+## Inputs the command does not expect (`test_scripts_inputs.py`)
 
-What the scripts are given that is wrong, and that each must answer with a clean error and not a traceback: a model that changes its bad
+What the command is given that is wrong, and that it must answer with a clean error and not a traceback: a model that changes its bad
 answer each time (it is stopped after six refusals of one task, besides the stop at three identical ones), a `--relay` list that leaves
 a participant out, `forward --from` an agent that is not a spoke, a file that is not UTF-8, a text that starts with `@`, a closed
-standard input, `wait` on a run that is over, and a call made from inside the skill's own folder (refused: the state would be kept there).
+standard input, and `wait` on a run that is over. (The scripts also refused a call made from inside their skill's folder; the command
+has no such folder.)
 
 ## Fixtures (`test_fixtures_scripts.py`)
 
 The files of `protocols/concord/spec/fixtures` say what every implementation must do with a message; the library is tested against them as
-imported and as bundled. Here each is handed to `receive`, to see what the library tests cannot: that a script reads any message from
+imported. Here each is handed to `receive`, to see what the library tests cannot: that the command reads any message from
 standard input and never crashes on it; that a message that breaks a rule of the spec changes nothing (the state file is byte for
 byte the same) and is not answered, except an invalid init, which is answered with an error; that a valid message is never taken for a
 wrong one; and that a message with a character reference, a quoted `from=`, or a no-break space comes out as it went in, under any

@@ -3,12 +3,12 @@
 Every output says what to do next in its `NEXT:` line, and every task says what it asks and how to answer it. This file has the
 additional information on how to use the CONCORD receiver skill.
 
-Paths are relative to the skill directory. `<you>` is your agent id.
+`<you>` is your agent id.
 
 ## Commands
 
 Flags before the command: `--me <you>` (required) and `--state-dir DIR` (where the state is kept; default the current directory).
-`scripts/concord_receiver.py --help` lists the commands.
+`uvx ioc-concord receiver --help` lists the commands.
 
 | Command | Reads | Does |
 |---|---|---|

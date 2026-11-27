@@ -14,19 +14,6 @@ build:
 run:
     {{mkdocs}} serve
 
-# `just sync --ref worktree` bundles the files on disk instead of the pinned revision (it does not apply to ioc_concord: its source is no longer on main)
-# Copy the library, at the revision it is pinned to in tools/bundle.toml, into the scripts that bundle it
-sync *args:
-    python3 tools/bundle.py {{args}}
-
-# Fail if a script differs from the library revision it is pinned to
-check-sync *args:
-    python3 tools/bundle.py --check {{args}}
-
-# Test the bundler itself
-test-bundler:
-    uv run --no-project --with pytest python -m pytest tools -q -p no:cacheprovider
-
 rust := "packages/ioc-concord-rs"
 python := "packages/ioc-concord-python"
 
@@ -79,16 +66,12 @@ wheel-test:
 wheel-smoke:
     cd {{python}} && uv run --no-project --isolated --with dist/*.whl python -I tests/smoke.py
 
-# Test the shared command-line library of the skill scripts, as it is on disk (on the last release of the pure-Python library)
-test-cli:
-    uv run --no-project --with pytest --with ioc-concord==0.2.0 python -m pytest protocols/concord/cli/tests -q -p no:cacheprovider
+# ioc-concord, Python: the command of the wheel, in a new environment, against the transcripts and tests of the skill scripts (protocols/concord/tests)
+test-transcripts:
+    uv run --no-project --isolated --with pytest --with {{python}}/dist/*.whl python -I -m pytest protocols/concord/tests -q -p no:cacheprovider
 
-# Test the skill scripts as they are checked in
-test-scripts:
-    uv run --no-project --with pytest python -m pytest protocols/concord/tests -q -p no:cacheprovider
-
-# Run all the CONCORD tests (not the sync check: that is `just check-sync`)
-test-concord: test-bundler rust-test wheel wheel-test wheel-smoke test-cli test-scripts
+# Test the ioc-concord library: the Rust crate, the Python package built from it, and its command against the transcripts of the scripts
+test-concord: rust-test wheel wheel-test wheel-smoke test-transcripts
 
 # Run the ACCORD tests: the initiator script, against the recorded transcripts
 test-accord:
