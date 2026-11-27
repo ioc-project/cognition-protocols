@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.3.0](https://github.com/ioc-project/cognition-protocols/compare/concord-initiator-v0.2.0...concord-initiator-v0.3.0) (2026-11-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **concord:** rewrite SKILL.md and details.md for the new scripts ([#146](https://github.com/ioc-project/cognition-protocols/issues/146))
+* **concord:** rewrite the skill scripts ([#144](https://github.com/ioc-project/cognition-protocols/issues/144))
+
+### Features
+
+* **concord:** rewrite the skill scripts ([#144](https://github.com/ioc-project/cognition-protocols/issues/144)) ([1b1e3d1](https://github.com/ioc-project/cognition-protocols/commit/1b1e3d13d9be6b5ef1e582fb14078011d7e26170))
+
+
+### Bug Fixes
+
+* better handle the state folder ([#155](https://github.com/ioc-project/cognition-protocols/issues/155)) ([b4601bf](https://github.com/ioc-project/cognition-protocols/commit/b4601bfdd8852b50d7f3c6b7cf0a2bd1f8aeaaae))
+
+
+### Documentation
+
+* **concord:** rewrite SKILL.md and details.md for the new scripts ([#146](https://github.com/ioc-project/cognition-protocols/issues/146)) ([f021ff3](https://github.com/ioc-project/cognition-protocols/commit/f021ff3f47535b2136109b4f4cc424e579bffc49))
+
 ## [0.2.0](https://github.com/ioc-project/cognition-protocols/compare/concord-initiator-v0.1.0...concord-initiator-v0.2.0) (2026-11-05)
 
 
