@@ -1,5 +1,5 @@
 {
-    "bump-patch-for-minor-pre-major": true,
+    "bump-minor-pre-major": true,
     "separate-pull-requests": true,
     "sequential-calls": true,
     "include-component-in-tag": true,
