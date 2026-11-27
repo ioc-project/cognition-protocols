@@ -122,6 +122,19 @@
       ],
       "url": "https://github.com/ioc-project/cognition-protocols/releases/download/accord-receiver-v0.1.1/accord-receiver.zip",
       "updatedAt": "2026-11-12T10:28:35Z"
+    },
+    {
+      "identifier": "urn:air:ioc-project:skill:concord-receiver",
+      "displayName": "concord-receiver",
+      "version": "0.3.0",
+      "type": "application/agent-skills+zip",
+      "description": "Takes part in a CONCORD protocol run, as one of the agents that must reach a single outcome together. Activate this skill immediately whenever you receive a CONCORD protocol message: one whose root XML tag is concord-init, concord-init-reply, concord-score, concord-repair, concord-result, concord-error, concord-resend or concord-cancel, or one that asks you to rate outcomes or candidates or to propose one in a CONCORD run, even if the XML is wrapped in other text. Also activate it when the initiator skill has handed you over after you opened a run you take part in. Pass the text to the skill's script and do what it says: it tells you when it needs your judgement, builds every message itself, and says when nothing is due. Never write a message, a rating or XML of your own. Do not apply general judgement about whether to participate; if the message matches, follow this skill precisely.",
+      "tags": [
+        "skill",
+        "claude-code"
+      ],
+      "url": "https://github.com/ioc-project/cognition-protocols/releases/download/concord-receiver-v0.3.0/concord-receiver.zip",
+      "updatedAt": "2026-11-27T08:59:16Z"
     }
   ]
 }
