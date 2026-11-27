@@ -56,9 +56,9 @@
                 }
             ]
         },
-        "packages/ioc-concord": {
+        "packages/ioc-concord-rs": {
             "package-name": "ioc-concord",
-            "release-type": "python"
+            "release-type": "rust"
         },
         "protocols/concord/mce-metrics": {
             "package-name": "ioc-concord-mce-metrics",

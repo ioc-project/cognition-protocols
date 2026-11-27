@@ -1,10 +1,10 @@
 name: concord-tests
 
-# Four jobs that run side by side, so that a failure in one does not hide the others:
+# Three jobs that run side by side, so that a failure in one does not hide the others:
 #   concord-bundler  the bundler's own tests
-#   concord-library  the ioc-concord library as it is on disk, as imported and as bundled
 #   concord-cli      the command line that the two skill scripts share (protocols/concord/cli), as it is on disk
 #   concord-scripts  the skill scripts as they are checked in
+# The library itself is tested by concord-rust-tests.yaml and concord-python.yaml.
 # That the scripts carry the library revision they are pinned to is `check-sync` (validate-skills.yaml).
 
 on:
@@ -13,7 +13,6 @@ on:
       - "protocols/concord/skills/**"
       - "protocols/concord/cli/**"
       - "protocols/concord/tests/**"
-      - "packages/ioc-concord/**"
       - "protocols/concord/spec/fixtures/**"
       - "tools/**"
       - ".github/workflows/concord-tests.yaml"
@@ -33,7 +32,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
 
@@ -43,24 +42,6 @@ jobs:
       - name: Bundler
         run: python -m pytest tools -q
 
-  concord-library:
-    name: concord-library
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest and the library
-        run: pip install pytest ./packages/ioc-concord
-
-      - name: Library, as imported and as bundled
-        run: python -m pytest packages/ioc-concord/tests -q
-
   concord-cli:
     name: concord-cli
     runs-on: ubuntu-latest
@@ -69,14 +50,15 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
 
-      - name: Install pytest
-        run: pip install pytest
+      # The pure-Python library the scripts bundle is no longer on main: the tests take its last release from PyPI.
+      - name: Install pytest and the pure-Python library
+        run: pip install pytest "ioc-concord==0.2.0"
 
-      # The tests put the library and the command line on the path themselves: they test both as they are on disk.
+      # The tests put the command line on the path themselves: they test it as it is on disk.
       - name: Shared command line
         run: python -m pytest protocols/concord/cli/tests -q
 
@@ -88,7 +70,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
 

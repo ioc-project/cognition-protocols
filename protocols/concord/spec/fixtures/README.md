@@ -1,8 +1,7 @@
 # CONCORD fixtures
 
 Fixed inputs and the results every implementation of [CONCORD](../CONCORD-SPEC.md) must give for them. They are language neutral: the
-Rust crate (`packages/ioc-concord-rs/tests/fixtures.rs`) makes and reads them, the Python library
-(`packages/ioc-concord/tests/test_fixtures.py`) reads them, and so can any other implementation. When two implementations agree on these
+Rust crate (`packages/ioc-concord-rs/tests/fixtures.rs`) makes and reads them, and so can any other implementation. When two implementations agree on these
 files, they read each other's messages the same way.
 
 | Path | What it holds | What an implementation checks |

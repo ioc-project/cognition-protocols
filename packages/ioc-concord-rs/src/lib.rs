@@ -24,6 +24,7 @@
 //! * `guidance`: what the agent's model reads: the wording of the run and of each task, the messages of the others, the end, a refusal
 //! * `event`: the events an agent reports, typed
 //! * `agent`: the node: receive messages in the order of checks, ask again, give up, build what it sends
+//! * `ffi`: the API for other languages (feature `uniffi`)
 //!
 //! # Quick start
 //!
@@ -78,6 +79,8 @@ pub mod agent;
 pub mod engine;
 pub mod errors;
 pub mod event;
+#[cfg(feature = "uniffi")]
+pub mod ffi;
 pub mod guidance;
 pub mod liveness;
 pub mod protocol;
@@ -94,3 +97,6 @@ pub use errors::{ConcordError, Result};
 
 /// The version of the library, as `Cargo.toml` has it.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[cfg(feature = "uniffi")]
+uniffi::setup_scaffolding!("ioc_concord");

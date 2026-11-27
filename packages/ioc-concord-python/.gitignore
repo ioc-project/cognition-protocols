@@ -1,0 +1,6 @@
+.venv/
+dist/
+uv.lock
+*.so
+*.dylib
+*.pyd

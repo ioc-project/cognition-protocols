@@ -1,0 +1,34 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and its affiliates
+# SPDX-License-Identifier: Apache-2.0
+
+[build-system]
+requires = ["maturin>=1.9,<2"]
+build-backend = "maturin"
+
+[project]
+name = "ioc-concord"
+# the version is the crate's (maturin reads it from Cargo.toml)
+dynamic = ["version"]
+description = "CONCORD protocol library."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest"]
+
+# The package is the crate in ../ioc-concord-rs, built with its feature `uniffi`, with the Python bindings UniFFI generates for it.
+[tool.maturin]
+manifest-path = "../ioc-concord-rs/Cargo.toml"
+bindings = "uniffi"
+module-name = "ioc_concord"
+# `uniffi-cli` is `uniffi` and the `uniffi-bindgen` binary of the crate, which maturin runs to generate the bindings
+features = ["uniffi-cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# what maturin needs to link with zig (`--zig`), for the Linux wheels: not a requirement of building the package on another platform
+[tool.uv.extra-build-dependencies]
+ioc-concord = ["ziglang; sys_platform == 'linux'"]
