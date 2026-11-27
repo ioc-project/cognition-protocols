@@ -1,5 +1,10 @@
 name: release
 
+# Two releases, each started by a push to main: release-please, for the skills, the spec and the Python metrics packages; release-plz, for the
+# Rust crates (release-plz.toml), which it publishes to crates.io with trusted publishing (it gets its own token, thanks to `id-token: write`).
+# The tag that release-plz creates starts publish-packages.yaml, which publishes the Python package built from the crate. release-plz uses a
+# token of the GitHub App, so that its tag and its PR start workflows (the token of the workflow does not).
+
 on:
   push:
     branches:
@@ -212,3 +217,68 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -s -m "chore(concord): regenerate CONCORD-SPEC.html"
           git push
+
+  # `release` tags and releases a crate whose release PR has been merged; `release-pr` then opens or updates the release PR of what changed
+  release-plz-release:
+    name: release-plz release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        id: app-token
+        with:
+          app-id: ${{ vars.IOC_AUTOMATION_BOT_APP_ID }}
+          private-key: ${{ secrets.IOC_AUTOMATION_BOT_PRIVATE_KEY }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache: false
+
+      - name: Run release-plz
+        id: release-plz
+        uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
+        with:
+          command: release
+          manifest_path: ./Cargo.toml
+          config: ./release-plz.toml
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+  release-plz-pr:
+    name: release-plz release-pr
+    needs: release-plz-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        id: app-token
+        with:
+          app-id: ${{ vars.IOC_AUTOMATION_BOT_APP_ID }}
+          private-key: ${{ secrets.IOC_AUTOMATION_BOT_PRIVATE_KEY }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache: false
+
+      - name: Run release-plz
+        id: release-plz
+        uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
+        with:
+          command: release-pr
+          manifest_path: ./Cargo.toml
+          config: ./release-plz.toml
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
