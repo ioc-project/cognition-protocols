@@ -30,8 +30,8 @@ from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
 from pathlib import Path
 
-import show
-import verify
+from tools import show
+from tools import verify
 from blog_v2.common import NO_DECISION, ORCH
 from blog_v2.scenario import AGENTS, DEFAULT_SCENARIO, SCENARIOS as SCENARIOS_DIR, Scenario, scenario_files, set_roster
 
@@ -412,7 +412,7 @@ def main():
     excluded = [r for r in rows if r["valid"] is False]
     if excluded:
         print("\nexcluded, failed verification: " + "; ".join(f"{r['run']} ({','.join(r['failed_checks'])})" for r in excluded)
-              + "\n  run `uv run python verify.py <run folder>` for the detail")
+              + "\n  run `uv run python -m tools.verify <run folder>` for the detail")
     left_out = [r for r in rows if r["valid"] is None]
     if left_out:
         print("\nnot counted, no result: " + "; ".join(f"{r['run']} ({r['outcome']}: {r.get('error', '')[:100]})" for r in left_out))

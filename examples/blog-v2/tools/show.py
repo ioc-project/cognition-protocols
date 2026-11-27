@@ -5,12 +5,12 @@
 #
 """Show what happened in a run: who said what, in order.
 
-    uv run python show.py runs/<run folder>                 the exchange, one line per message
-    uv run python show.py runs/<run folder> --text          ... with the rationale and the reasoning of each message
-    uv run python show.py runs/<run folder> --xml           ... with the whole message, as it went over SLIM
-    uv run python show.py runs/<run folder> --formats       one example of each kind of message (the format), from this run
-    uv run python show.py runs/<run folder> --mermaid       a Mermaid sequence diagram of the exchange
-    uv run python show.py runs/<run folder> --verify        check the run against the spec (see verify.py)
+    uv run python -m tools.show runs/<run folder>                 the exchange, one line per message
+    uv run python -m tools.show runs/<run folder> --text          ... with the rationale and the reasoning of each message
+    uv run python -m tools.show runs/<run folder> --xml           ... with the whole message, as it went over SLIM
+    uv run python -m tools.show runs/<run folder> --formats       one example of each kind of message (the format), from this run
+    uv run python -m tools.show runs/<run folder> --mermaid       a Mermaid sequence diagram of the exchange
+    uv run python -m tools.show runs/<run folder> --verify        check the run against the spec (see verify.py)
 
 A CONCORD run (C, O3): step 1 (the free-text posts), then the CONCORD messages. They are the ones each agent kept in its state file
 (`agent-X-state.json`), the text it sent, word for word. Every message is a broadcast: SLIM delivers it to every other agent of the run.

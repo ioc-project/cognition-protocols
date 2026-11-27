@@ -18,8 +18,8 @@ from ioc_concord.agent import Agent
 from ioc_concord.errors import ConcordError
 from ioc_concord.store import FileStore
 
-from blog_v2.agent import DEFAULT_THRESHOLD, SHARE_WAIT
-from blog_v2.common import MAX_TOOL_ROUNDS, NO_DECISION, ORCH, chat, flush, new_usage, note, pick, say, sender_of, write_record
+from blog_v2.concord_agent import DEFAULT_THRESHOLD, SHARE_WAIT
+from blog_v2.common import MAX_TOOL_ROUNDS, NO_DECISION, ORCH, chat, flush, new_usage, note, pick, say, sender_of, tool_turn, write_record
 from blog_v2.prompts import (CLOSED, DELEGATE, DONE_PREFIX, HUB_ALREADY, HUB_BAD_CALL, HUB_MESSAGE,
                              HUB_NOT_PASSED_ON, HUB_PASSED_ON, HUB_POST_PREFIX, POST_LINE, SHARED_HEADING, SUMMARY_NO_OUTCOME, SUMMARY_NOBODY,
                              SUMMARY_RETRY, SUMMARY_USER, coordinator_start_ask, coordinator_start_tool, lex, localize, opening, orchestrator_prompt,
@@ -33,6 +33,8 @@ MAX_ROUTING_ROUNDS = 3
 
 class Orchestrator:
     me = ORCH
+    max_rounds = MAX_TOOL_ROUNDS                           # what `tool_turn` reads of an agent: the coordinator has no data tools
+    data_tools = {}
 
     def __init__(self, group, scenario, out_dir, llm, model, variant, temperature=None, config=None, log=print):
         self.group, self.scenario, self.out_dir, self.log = group, scenario, out_dir, log
@@ -54,12 +56,14 @@ class Orchestrator:
         who = sender_of(got[0])
         return who if who in AGENTS else None
 
-    async def _recv(self):
-        try:
-            return await self.group.recv(timeout=1.0)
-        except SessionClosed:
-            self.log("the session is closed")
-            raise
+    async def _incoming(self):
+        """What arrives, one `recv` at a time (None when nothing came in a second), until the session is closed."""
+        while True:
+            try:
+                yield await self.group.recv(timeout=1.0)
+            except SessionClosed:
+                self.log("the session is closed")
+                return
 
     def finish(self, **extra):
         write_record(self.out_dir, self.me, role="orchestrator", config=self.config, report=self.report, usage=self.usage, events=self.events,
@@ -97,13 +101,8 @@ class FreeOrchestrator(Orchestrator):
         start = last = time.time()
         await self.group.send(text)
         self._record(self.me, text, start)
-        posts, reason = 0, None
-        while reason is None:
-            try:
-                got = await self._recv()
-            except SessionClosed:
-                reason = "session closed"
-                break
+        posts, reason = 0, "session closed"
+        async for got in self._incoming():
             now = time.time()
             who = got and self._leader(got)
             if who:
@@ -113,25 +112,20 @@ class FreeOrchestrator(Orchestrator):
                     self.log(f"post {posts} from {who}")
                     await self._on_post(who, got[1])
                 last = time.time()                      # what the hook took (a model turn) is not silence
-            if len(self.dones) == len(AGENTS):
-                reason = "all done"
-            elif posts >= self.max_posts:
-                reason = "max posts"
-            elif now - start >= self.max_time:
-                reason = "max time"
-            elif now - last >= self.idle:
-                reason = "idle"
+            stop = ("all done" if len(self.dones) == len(AGENTS) else "max posts" if posts >= self.max_posts
+                    else "max time" if now - start >= self.max_time else "idle" if now - last >= self.idle else None)
+            if stop:
+                reason = stop
+                break
         if reason != "all done":                         # close, and ask whoever is not done for its final choice
             await self.group.send(CLOSED)
             deadline = time.time() + DONE_WAIT
-            while len(self.dones) < len(AGENTS) and time.time() < deadline:
-                try:
-                    got = await self._recv()
-                except SessionClosed:
-                    break
+            async for got in self._incoming():
                 who = got and self._leader(got)
                 if who:
                     self._take(who, got[1])
+                if len(self.dones) == len(AGENTS) or time.time() >= deadline:
+                    break
         self.close = {"reason": reason, "posts": posts, "seconds": round(time.time() - start, 1)}
         self.log(f"closing: {self.close}")
         await self._summarize()
@@ -246,16 +240,14 @@ class ConcordOrchestrator(Orchestrator):
         await self.group.send(text)
         self._record(self.me, text, start)
         posted = {}
-        while len(posted) < len(AGENTS) and time.time() - start < SHARE_WAIT:
-            try:
-                got = await self._recv()
-            except SessionClosed:
-                break
+        async for got in self._incoming():
             who = got and self._leader(got)
             if who and who not in posted and not got[1].lstrip().startswith("<"):
                 posted[who] = got[1]
                 self._record(who, got[1])
                 self.log(f"step 1: post from {who}")
+            if len(posted) == len(AGENTS) or time.time() - start >= SHARE_WAIT:
+                break
         self.log(f"step 1 over: {len(posted)} of {len(AGENTS)} posted in {time.time() - start:.0f}s")
         return posted
 
@@ -290,6 +282,11 @@ class ConcordOrchestrator(Orchestrator):
         await flush(step, self.group, self.events, self.log)
         return None
 
+    async def _run_tool(self, name, args):
+        error = await self._start(args) if name == "concord_start" else f"{name} is not a tool you have now."
+        self.last_refusal = error or self.last_refusal
+        return error or "sent", bool(error)
+
     async def run(self):
         self.threshold_fixed = self.threshold if self.config.get("threshold") is not None else None
         posted = await self._share()
@@ -299,27 +296,12 @@ class ConcordOrchestrator(Orchestrator):
         ask = coordinator_start_ask(self.scenario, heard,
                                     f" Use satisfaction_threshold {self.threshold_fixed}." if self.threshold_fixed is not None else "")
         say(self.messages, [{"type": "text", "text": f"{lex(self.scenario, SHARED_HEADING)}\n\n{body}\n\n{ask}" if body else ask}])
-        for _ in range(MAX_TOOL_ROUNDS):
-            resp = await chat(self.llm, self.model, self.system, [localize(self.scenario, coordinator_start_tool(self.scenario.options))], self.messages,
-                              self.usage, self.temperature, log=self.log)
-            results = []
-            for block in resp.content:
-                if block.type == "tool_use":
-                    self.log(f"tool {block.name} {json.dumps(block.input, ensure_ascii=False)[:600]}")
-                    error = await self._start(block.input) if block.name == "concord_start" else f"{block.name} is not a tool you have now."
-                    self.last_refusal = error or self.last_refusal
-                    results.append({"type": "tool_result", "tool_use_id": block.id, "content": error or "sent", "is_error": bool(error)})
-            say(self.messages, results or [{"type": "text", "text": "Answer with concord_start."}])
-            if self.started:
-                break
+        await tool_turn(self, [localize(self.scenario, coordinator_start_tool(self.scenario.options))], self._run_tool, "Answer with concord_start.",
+                        data=False, settled=lambda: self.started)
         if not self.started:
             raise RuntimeError(f"the coordinator could not start the run; last refusal: {self.last_refusal}")
         linger_until = None
-        while True:
-            try:
-                got = await self._recv()
-            except SessionClosed:
-                break
+        async for got in self._incoming():
             if got and got[1].lstrip().startswith("<"):
                 await flush(self.node.receive(got[1]), self.group, self.events, self.log)
             await flush(self.node.tick(), self.group, self.events, self.log)

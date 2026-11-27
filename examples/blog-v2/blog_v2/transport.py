@@ -100,7 +100,12 @@ class Group:
 
     async def _hello(self):
         self._last_hello = time.monotonic()
-        await self.session.publish_async((HELLO + " " + ",".join(sorted(self._seen))).encode(), None, None)
+        try:
+            await self.session.publish_async((HELLO + " " + ",".join(sorted(self._seen))).encode(), None, None)
+        except Exception as e:
+            if "closed" in str(e).lower():                  # the moderator closed the session while this agent was still reading
+                raise SessionClosed(str(e)) from e
+            raise
 
     def _on_hello(self, sender, text):
         who = next((n for n in self._names if n in str(sender)), None)

@@ -5,7 +5,7 @@
 #
 """Verify a finished run: did it follow the CONCORD spec, and did the harness do what it should?
 
-    uv run python verify.py runs/<run folder>
+    uv run python -m tools.verify runs/<run folder>
 
 A referee, not a judge of the models. It reads the messages each agent kept and checks them with its own code, written from the spec
 (it does not call the library's engine), so a bug in the library or in the harness shows as a failed check and not as a strange
@@ -31,7 +31,7 @@ from fractions import Fraction
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-import show
+from tools import show
 
 AGENTS = show.AGENTS
 SPEC_VERSION = "0.3.0"

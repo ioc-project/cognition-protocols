@@ -4,13 +4,26 @@
 #
 """What the agents of the example share: the model call, the conversation, the record of an agent. (What a model reads is in prompts.py.)"""
 import json
+import os
 import time
+
+from anthropic import AsyncAnthropic
 
 MAX_TOOL_ROUNDS = 4       # model calls a turn may take to get one accepted tool call (three times as many for a role with data tools)
 SLOW_CALL = 30        # seconds: a model call that takes longer is logged, and the longest one is kept in the record
 
 NO_DECISION = "no decision"
 ORCH = "orchestrator"                      # the node of the coordinator, in the scenarios that have one
+
+
+def client_from_env(fresh=True):
+    """The model client: LLM_BASE_URL and LLM_API_KEY when set (a LiteLLM proxy, say), else the SDK's own ANTHROPIC_* variables.
+    `fresh` asks every server on the way not to answer from a cache (the header LiteLLM documents for it).
+    A call that takes longer than LLM_TIMEOUT seconds (default 120) is cut and tried again, up to LLM_MAX_RETRIES times (default 4,
+    with the SDK's backoff), so that one stalled request does not end an agent; a normal call takes a few seconds."""
+    return AsyncAnthropic(base_url=os.environ.get("LLM_BASE_URL") or None, api_key=os.environ.get("LLM_API_KEY") or None,
+                          timeout=float(os.environ.get("LLM_TIMEOUT", 120)), max_retries=int(os.environ.get("LLM_MAX_RETRIES", 4)),
+                          default_headers={"Cache-Control": "no-cache"} if fresh else None)
 
 
 def sender_of(raw):

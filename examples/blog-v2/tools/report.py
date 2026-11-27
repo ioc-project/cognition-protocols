@@ -5,7 +5,7 @@
 #
 """The numbers of the evaluation of the blog, from one or more batches: cost, where the cost goes, and the waste of free speech.
 
-    uv run python report.py runs/batch-<time> [runs/batch-<time> ...] [--latex]
+    uv run python -m tools.report runs/batch-<time> [runs/batch-<time> ...] [--latex]
 
 Runs are grouped by use case (hidden-bench: the evacuation tasks; e-commerce; renewal) and by scenario (M, S, C: no coordinator; O1, O2, O3:
 with one), over the valid runs of every batch given. It reads the records, and calls no model. For each group:
@@ -13,7 +13,7 @@ with one), over the valid runs of every batch given. It reads the records, and c
   cost      tokens per run (mean, median, p95, max; input, cached input, cache writes and output all count, as in the first draft), time
             and model calls
   where     the share of the tokens that the coordinator spends (the forwarding of O1; the summary of O1 and O2) and the mix of the tokens
-  waste     free-speech groups only, and only when the posts have labels (`metrics.py --judge` writes <run>/post_labels.json): messages per
+  waste     free-speech groups only, and only when the posts have labels (`python -m tools.metrics --judge` writes <run>/post_labels.json): messages per
             run, where the last fact is shared, the share of echo, and how much of the run comes after the last message that adds anything,
             as messages and as an estimate of tokens (from the size of the conversation at each model call, scaled to the tokens the
             records say the agent used)
@@ -28,10 +28,9 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-import metrics
+from tools import metrics
 from blog_v2.scenario import AGENTS, set_roster
 
-HERE = Path(__file__).resolve().parent
 ADDS = ("FACT", "POSITION", "QUESTION")                # the labels of a message that adds something
 SAYS = {"post", "send_to", "stay_silent", "done", "final_answer", "reply", "delegate_to"}      # the tools that end a turn with something said
 USE_CASE = (("evacuation", "hidden-bench"), ("commerce", "e-commerce"), ("renewal", "renewal"))
@@ -221,7 +220,7 @@ def main():
                       f"~{100 * w['tokens_after_adds']:.0f}% of the tokens after it" if w["tokens_after_adds"] is not None else "")
                 print("   labels: " + ", ".join(f"{name} {100 * w['label_' + name]:.0f}%" for name in metrics.LABELS))
             elif k.split("/")[0] == case and k.split("/")[1] in ("M", "S", "O1", "O2"):
-                print(f"waste, {k.split('/')[1]}: no labels yet (run `metrics.py <batch> --judge`)")
+                print(f"waste, {k.split('/')[1]}: no labels yet (run `python -m tools.metrics <batch> --judge`)")
     if args.latex:
         print("\n% rows of the cost table: scenario & tokens mean, median, p95, max (k) & time mean, max (s)")
         for k, e in out.items():

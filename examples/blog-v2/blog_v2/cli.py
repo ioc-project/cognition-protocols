@@ -16,12 +16,11 @@ import uuid
 from urllib.parse import urlparse
 from pathlib import Path
 
-from blog_v2.agent import ConcordAgent
-from blog_v2.agent import client_from_env
-from blog_v2.free import FreeAgent
+from blog_v2.concord_agent import ConcordAgent
+from blog_v2.baseline_agent import DEBOUNCE, BaselineAgent
 from blog_v2.fake_llm import FakeLLM
 from blog_v2.prompts import SESSION_NOTE, orchestrator_prompt, system_prompt
-from blog_v2.common import ORCH
+from blog_v2.common import ORCH, client_from_env
 from blog_v2.mesh import Mesh
 from blog_v2.orchestrator import ConcordOrchestrator, FreeOrchestrator, StarFreeOrchestrator
 from blog_v2.scenario import AGENTS, DEFAULT_SCENARIO, FACT_ORDER_SEED, Scenario, set_roster
@@ -52,7 +51,7 @@ def _version(name):
 def run_config(args, scenario, system, session):
     """What this agent ran with, for the record of the run (never the key: only the host of the endpoint)."""
     return {"agent": args.name, "mode": args.mode, "transport": args.transport, "model": args.model, "fake_llm": args.fake_llm, "temperature": args.temperature,
-            "initiator": args.initiator, "orchestrated": args.orchestrated, "idle": args.idle, "max_time": args.max_time, "max_posts": args.max_posts,
+            "initiator": args.initiator, "orchestrated": args.orchestrated, "idle": args.idle, "debounce": args.debounce, "max_time": args.max_time, "max_posts": args.max_posts,
             "threshold": args.threshold, "fresh": args.fresh, "session": session, "timeout": args.timeout,
             "scenario": scenario.id, "scenario_file": args.scenario, "agents": list(scenario.agents), "fact_order_seed": FACT_ORDER_SEED,
             "endpoint_host": urlparse(os.environ.get("LLM_BASE_URL", "")).netloc or None,
@@ -79,26 +78,9 @@ def transport_of(args):
     return Mesh(me, dict(zip(AGENTS, ports)))
 
 
-async def run_agent(args):
-    # run.sh stops the others when one crashes, and batch.py stops a run that takes too long: both with SIGTERM, which must still
-    # write the record of the agent (the `finally` below), and not end it without a trace
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, asyncio.current_task().cancel)
-    scenario = Scenario(args.scenario)
-    set_roster(scenario.agents)                    # the agents of this scenario: the leaders, or the roles of a mas-lab app
-    me = args.name
-    if me not in scenario.agents + (ORCH,):
-        sys.exit(f"{me} is not an agent of {scenario.id}: {', '.join(scenario.agents + (ORCH,))}")
-    if scenario.kind == "mas" and not args.orchestrated:
-        sys.exit("the scenarios of the mas-lab library run with a coordinator (--orchestrated) for now")
-    out_dir = Path(args.out)
-    t0 = time.time()
-
-    def log(msg):
-        print(f"[{time.time() - t0:6.1f}s {me}] {msg}", flush=True)
-
-    group = transport_of(args)
-    llm = FakeLLM() if args.fake_llm else client_from_env(args.fresh)
-    variant = variant_of(args)
+def build_agent(args, scenario, group, llm, log):
+    """The agent this process runs: a participant (free speech, or CONCORD) or the coordinator, with the prompt it is given and its record."""
+    me, out_dir, variant = args.name, Path(args.out), variant_of(args)
     if me == ORCH:
         system = orchestrator_prompt(scenario, variant)
     else:
@@ -110,32 +92,31 @@ async def run_agent(args):
         run_nonce = uuid.uuid4().hex[:8]
         system += SESSION_NOTE.format(nonce=run_nonce)
         log(f"fresh: session {run_nonce}")
-    config = run_config(args, scenario, system, run_nonce)
-    common = dict(temperature=args.temperature, config=config, log=log)
+    common = dict(temperature=args.temperature, config=run_config(args, scenario, system, run_nonce), log=log)
+    free = dict(idle=args.idle, max_time=args.max_time, max_posts=args.max_posts)
     if me == ORCH:
         if variant == "free_star":
-            agent = StarFreeOrchestrator(group, scenario, out_dir, llm, args.model, idle=args.idle, max_time=args.max_time,
-                                         max_posts=args.max_posts, **common)
-        elif variant == "free_slim":
-            agent = FreeOrchestrator(group, scenario, out_dir, llm, args.model, variant="free_slim", idle=args.idle, max_time=args.max_time,
-                                     max_posts=args.max_posts, **common)
-        else:
-            agent = ConcordOrchestrator(group, scenario, out_dir, llm, args.model, threshold=args.threshold, timeout=args.timeout, **common)
-    elif args.mode == "free":
-        agent = FreeAgent(me, group, system, scenario, args.model, out_dir, fresh=args.fresh, idle=args.idle, max_time=args.max_time,
-                          max_posts=args.max_posts, llm=llm, coordinated=args.orchestrated,
-                          directed=args.transport == "mesh", **common)
-    else:
-        agent = ConcordAgent(me, group, system, scenario.options, args.model, out_dir, scenario,
-                             initiator=me == args.initiator and not args.orchestrated, threshold=args.threshold, timeout=args.timeout,
-                             fresh=args.fresh, llm=llm, coordinated=args.orchestrated, **common)
+            return StarFreeOrchestrator(group, scenario, out_dir, llm, args.model, **free, **common)
+        if variant == "free_slim":
+            return FreeOrchestrator(group, scenario, out_dir, llm, args.model, variant="free_slim", **free, **common)
+        return ConcordOrchestrator(group, scenario, out_dir, llm, args.model, threshold=args.threshold, timeout=args.timeout, **common)
+    if args.mode == "free":
+        return BaselineAgent(me, group, system, scenario, args.model, out_dir, fresh=args.fresh, **free, debounce=args.debounce, llm=llm,
+                         coordinated=args.orchestrated, directed=args.transport == "mesh", **common)
+    return ConcordAgent(me, group, system, scenario, args.model, out_dir, initiator=me == args.initiator and not args.orchestrated,
+                        threshold=args.threshold, timeout=args.timeout, fresh=args.fresh, llm=llm, coordinated=args.orchestrated, **common)
+
+
+async def connect(args, group, log):
+    """Connect to the others. Over SLIM the moderator (a transport role, whatever the protocol does) creates the session and invites them."""
+    me = args.name
     await group.connect()
     log("connected")
     if args.transport == "star":
         if me == ORCH:
             await group.create()
             log("the centre of the star: every leader is connected")
-    elif args.transport == "slim":       # the moderator of a SLIM session creates it: a transport role, whatever the protocol does
+    elif args.transport == "slim":
         moderator = ORCH if args.orchestrated else AGENTS[0]
         everybody = AGENTS + (ORCH,) if args.orchestrated else AGENTS
         if me == moderator:
@@ -146,19 +127,45 @@ async def run_agent(args):
             log("joined the session")
         await group.ready(everybody)
         log("everybody is in the session")
+
+
+def outcome_line(args, agent, scenario, report):
+    """What the agent says at the end: the outcome of the run, the right answer and the tokens used."""
+    if args.name == ORCH:
+        return (f"outcome {report and {k: v for k, v in report.items() if k in ('outcome', 'option', 'status', 'winner')}}, "
+                f"correct answer {scenario.correct!r}, tokens {agent.usage}")
+    if args.mode == "concord":
+        winner = (report or {}).get("winner")
+        return (f"outcome {report and report['outcome']}, status {report and report['status']}, winner {winner and winner['candidate']!r}, "
+                f"correct answer {scenario.correct!r}, tokens {agent.usage}")
+    return f"{report}, correct answer {scenario.correct!r}, tokens {agent.usage}"
+
+
+async def run_agent(args):
+    # run.sh stops the others when one crashes, and batch.py stops a run that takes too long: both with SIGTERM, which must still
+    # write the record of the agent (the `finally` below), and not end it without a trace
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, asyncio.current_task().cancel)
+    scenario = Scenario(args.scenario)
+    set_roster(scenario.agents)                    # the agents of this scenario: the leaders, or the roles of a mas-lab app
+    me = args.name
+    if me not in scenario.agents + (ORCH,):
+        sys.exit(f"{me} is not an agent of {scenario.id}: {', '.join(scenario.agents + (ORCH,))}")
+    if scenario.kind == "mas" and not args.orchestrated:
+        sys.exit("the scenarios of the mas-lab library run with a coordinator (--orchestrated) for now")
+    t0 = time.time()
+
+    def log(msg):
+        print(f"[{time.time() - t0:6.1f}s {me}] {msg}", flush=True)
+
+    group = transport_of(args)
+    agent = build_agent(args, scenario, group, FakeLLM() if args.fake_llm else client_from_env(args.fresh), log)
+    await connect(args, group, log)
     try:
         await agent.run()
     finally:
         report = agent.finish()
         await group.close()
-    if me == ORCH:
-        log(f"outcome {report and {k: v for k, v in report.items() if k in ('outcome', 'option', 'status', 'winner')}}, correct answer {scenario.correct!r}, tokens {agent.usage}")
-    elif args.mode == "concord":
-        winner = (report or {}).get("winner")
-        log(f"outcome {report and report['outcome']}, status {report and report['status']}, winner {winner and winner['candidate']!r}, "
-            f"correct answer {scenario.correct!r}, tokens {agent.usage}")
-    else:
-        log(f"{report}, correct answer {scenario.correct!r}, tokens {agent.usage}")
+    log(outcome_line(args, agent, scenario, report))
     return 0              # a non-zero status means that the agent crashed, which run.sh watches for
 
 
@@ -182,6 +189,9 @@ def main():
     a.add_argument("--mode", choices=("concord", "free"), default="concord",
                    help="concord: the CONCORD protocol (the initiator starts the run); free: free speech, every post goes to all the others")
     a.add_argument("--idle", type=float, default=60, help="free: an agent stops after this many seconds without a post (its own included)")
+    a.add_argument("--debounce", type=float, default=DEBOUNCE,
+                   help="free: seconds an agent waits after a message for the ones that come with it, before it reads (0: at once; what arrives "
+                        "while the model works is read together afterwards)")
     a.add_argument("--max-time", type=float, default=600, help="free: ... or after this many seconds in all")
     a.add_argument("--max-posts", type=int, default=100, help="free: ... or after this many posts")
     a.add_argument("--transport", choices=("slim", "mesh", "star"), default="slim",

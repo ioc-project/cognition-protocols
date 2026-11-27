@@ -5,7 +5,7 @@
 #
 """Cost of a batch: time, tokens, messages, repair rounds (CONCORD) and useless posts (free speech).
 
-    uv run python metrics.py runs/batch-<time> [--judge]
+    uv run python -m tools.metrics runs/batch-<time> [--judge]
 
 It reads the records of the runs, never calls a model unless `--judge` is given. Prints a table per scenario (mean and
 standard deviation over the runs), and writes metrics.json (one row per run) and metrics.csv next to summary.json.
@@ -22,9 +22,8 @@ import statistics
 import sys
 from pathlib import Path
 
-import show
+from tools import show
 
-HERE = Path(__file__).resolve().parent
 from blog_v2.scenario import AGENTS, set_roster       # the roster of the run being read (set per row)
 CORRECT = "West City"                    # for the batches before summary.json had the correct answer of each run
 
@@ -200,22 +199,22 @@ def cell(values, digits=0):
     return "-" if m is None else f"{m:.{digits}f}±{s:.{digits}f}"
 
 
-def main():
-    p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    p.add_argument("batch", type=Path)
-    p.add_argument("--judge", action="store_true", help="label the posts of the free-speech runs with the model (one call per run)")
-    args = p.parse_args()
-    client = model = None
-    if args.judge:
-        from anthropic import Anthropic                              # a plain client: this script has no event loop
-        client = Anthropic(base_url=os.environ.get("LLM_BASE_URL") or None, api_key=os.environ.get("LLM_API_KEY") or None,
-                           timeout=float(os.environ.get("LLM_TIMEOUT", 120)), default_headers={"Cache-Control": "no-cache"})
-        model = os.environ.get("LLM_MODEL")
-        if not model:
-            sys.exit("--judge needs LLM_MODEL (and LLM_BASE_URL / LLM_API_KEY)")
+def judge_client():
+    """The model that labels the posts (--judge): a plain client, as this script has no event loop, and its name."""
+    from anthropic import Anthropic
+    model = os.environ.get("LLM_MODEL")
+    if not model:
+        sys.exit("--judge needs LLM_MODEL (and LLM_BASE_URL / LLM_API_KEY)")
+    client = Anthropic(base_url=os.environ.get("LLM_BASE_URL") or None, api_key=os.environ.get("LLM_API_KEY") or None,
+                       timeout=float(os.environ.get("LLM_TIMEOUT", 120)), default_headers={"Cache-Control": "no-cache"})
+    return client, model
+
+
+def measure(batch, client, model):
+    """One row of numbers for each valid run of the batch (summary.json)."""
     rows = []
-    for r in json.loads((args.batch / "summary.json").read_text()):
-        run = args.batch / r["run"]
+    for r in json.loads((batch / "summary.json").read_text()):
+        run = batch / r["run"]
         if not r.get("valid") or scenario_of(r) == "ask":             # "ask": the retired scenario of a batch of scheme 3
             continue
         set_roster(r.get("agents") or AGENTS)                         # the agents of this run (a scenario can have three, four or more)
@@ -230,33 +229,40 @@ def main():
         row["orchestrator_tokens"] = by["orchestrator"]["in"] + by["orchestrator"]["out"]
         row["tokens_per_message"] = round(row["tokens"] / (row.get("posts") or row.get("messages") or 1))
         rows.append(row)
-    (args.batch / "metrics.json").write_text(json.dumps(rows, indent=2))
+    return rows
+
+
+def write_rows(batch, rows):
+    (batch / "metrics.json").write_text(json.dumps(rows, indent=2))
     keys = ["run", "scenario", "seconds", "protocol_seconds", "tokens", "tokens_in", "tokens_cache_read", "tokens_cache_write", "tokens_out", "calls", "rounds", "repairs", "scores",
             "messages", "posts", "silent", "useless", "idle_tail", "orchestrator_tokens", "tokens_per_message", "right", "slowest_call",
             "first_score", "init_done", "everyone_spoke", "format_share", "share_posts", "share_seconds", "share_chars"]
-    with open(args.batch / "metrics.csv", "w", newline="") as f:
+    with open(batch / "metrics.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(keys)
         w.writerows([[r.get(k) for k in keys] for r in rows])
 
-    names = {"M": "M free mesh", "S": "S free slim", "C": "C concord slim", "O1": "O1 orch free star",
-             "O2": "O2 orch free slim", "O3": "O3 orch concord"}
-    names = {s: n for s, n in names.items() if any(r["scenario"] == s for r in rows)}          # only the scenarios of this batch
+
+def of(rows, s):
+    return [r for r in rows if r["scenario"] == s]
+
+
+def print_cost(rows, names):
     print("cost per run, mean±sd over the valid runs\n")
     print(f"{'':<20}{'runs':<6}{'seconds':<11}{'in protocol':<13}{'tokens':<15}{'in':<14}{'out':<12}{'calls':<10}{'tokens/msg'}")
     for s, name in names.items():
-        rs = [r for r in rows if r["scenario"] == s]
+        rs = of(rows, s)
         print(f"{name:<20}{len(rs):<6}{cell([r['seconds'] for r in rs]):<11}{cell([r['protocol_seconds'] for r in rs]):<13}"
               f"{cell([r['tokens'] for r in rs]):<15}{cell([r['tokens_in'] for r in rs]):<14}{cell([r['tokens_out'] for r in rs]):<12}"
               f"{cell([r['calls'] for r in rs]):<10}{cell([r['tokens_per_message'] for r in rs])}")
     print("\ninput tokens: new, read from the cache, written to the cache (mean per run; 0 for a batch run before the cache was counted)")
     for s, name in names.items():
-        rs = [r for r in rows if r["scenario"] == s]
+        rs = of(rows, s)
         print(f"  {name:<20}new {cell([r['tokens_in'] - r['tokens_cache_read'] - r['tokens_cache_write'] for r in rs]):<14}"
               f"cache read {cell([r['tokens_cache_read'] for r in rs]):<14}cache write {cell([r['tokens_cache_write'] for r in rs])}")
     print("\ntokens by agent (mean per run)")
     for s, name in names.items():
-        rs = [r for r in rows if r["scenario"] == s]
+        rs = of(rows, s)
         for a in rs[0]["tokens_by_role"]:
             used = [r['tokens_by_role'][a]['in'] + r['tokens_by_role'][a]['out'] for r in rs]
             if any(used):
@@ -264,14 +270,17 @@ def main():
     print("\ncost of a right answer (all the tokens and seconds of the scenario / the runs that chose the right option)")
     print(f"  {'':<20}{'right':<8}{'tokens per right answer':<26}{'seconds per right answer'}")
     for s, name in names.items():
-        rs = [r for r in rows if r["scenario"] == s]
+        rs = of(rows, s)
         ok = sum(r["right"] for r in rs)
         per = lambda key: f"{sum(r[key] for r in rs) / ok:.0f}" if ok else "never right"
         print(f"  {name:<20}{ok}/{len(rs):<6}{per('tokens'):<26}{per('seconds')}")
+
+
+def print_concord(rows, names):
     print("\nCONCORD: rounds and messages")
     print(f"  {'':<20}{'repair rounds':<15}{'repairs sent':<14}{'scores sent':<13}{'messages':<11}{'sec/round'}")
     for s in (s for s in CONCORD if s in names):
-        rs = [r for r in rows if r["scenario"] == s]
+        rs = of(rows, s)
         zero = sum(r["rounds"] == 0 for r in rs)
         print(f"  {names[s]:<20}{cell([r['rounds'] for r in rs], 1):<15}{cell([r['repairs'] for r in rs], 1):<14}"
               f"{cell([r['scores'] for r in rs], 1):<13}{cell([r['messages'] for r in rs], 1):<11}{cell([r['seconds_per_round'] for r in rs], 1):<11}"
@@ -279,16 +288,19 @@ def main():
     print("\nCONCORD timing and format (seconds from the start of the run)")
     print(f"  {'':<20}{'all init replies':<19}{'first scores':<15}{'format share of the messages (the rest is the reasoning text)'}")
     for s in (s for s in CONCORD if s in names):
-        rs = [r for r in rows if r["scenario"] == s]
+        rs = of(rows, s)
         print(f"  {names[s]:<20}{cell([r['init_done'] for r in rs], 1):<19}{cell([r['first_score'] for r in rs], 1):<15}{cell([r['format_share'] for r in rs], 2)}")
     for s in (s for s in CONCORD if s in names):
-        rs = [r for r in rows if r["scenario"] == s]
+        rs = of(rows, s)
         print(f"\nstep 1 ({names[s]}): the free-text posts before the run (not in the CONCORD messages, in the seconds and tokens above)")
         print(f"  posts {cell([r['share_posts'] for r in rs], 1)}   seconds until the last post {cell([r['share_seconds'] for r in rs], 1)}   "
               f"characters {cell([r['share_chars'] for r in rs])}")
-    how = "model labels (ECHO)" if client else "word-overlap test: under a quarter of new words"
+
+
+def print_free(rows, names, judged_by_model):
+    how = "model labels (ECHO)" if judged_by_model else "word-overlap test: under a quarter of new words"
     for s in (s for s in FREE if s in names):
-        rs = [r for r in rows if r["scenario"] == s]
+        rs = of(rows, s)
         print(f"\nfree speech, {names[s]} ({how})")
         print(f"  posts {cell([r['posts'] for r in rs], 1)}   silent turns {cell([r['silent'] for r in rs], 1)}   useless {cell([r['useless'] for r in rs], 1)} "
               f"({100 * sum(r['useless'] for r in rs) / max(sum(r['posts'] for r in rs), 1):.0f}% of the posts)")
@@ -296,9 +308,25 @@ def main():
         print(f"  seconds with posts {cell([r['protocol_seconds'] for r in rs])}, then waiting for the idle close {cell([r['idle_tail'] for r in rs])}")
         if any(r.get("hub_deliveries") for r in rs):
             print(f"  the coordinator made {cell([r.get('hub_deliveries') for r in rs], 1)} deliveries per run")
-        if client:
+        if judged_by_model:
             total = {l: sum(r["labels"][l] for r in rs) for l in LABELS}
             print("  labels: " + ", ".join(f"{l} {n}" for l, n in total.items()))
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    p.add_argument("batch", type=Path)
+    p.add_argument("--judge", action="store_true", help="label the posts of the free-speech runs with the model (one call per run)")
+    args = p.parse_args()
+    client, model = judge_client() if args.judge else (None, None)
+    rows = measure(args.batch, client, model)
+    write_rows(args.batch, rows)
+    names = {"M": "M free mesh", "S": "S free slim", "C": "C concord slim", "O1": "O1 orch free star",
+             "O2": "O2 orch free slim", "O3": "O3 orch concord"}
+    names = {s: n for s, n in names.items() if any(r["scenario"] == s for r in rows)}          # only the scenarios of this batch
+    print_cost(rows, names)
+    print_concord(rows, names)
+    print_free(rows, names, bool(client))
     print(f"\nwritten: {args.batch / 'metrics.json'}, {args.batch / 'metrics.csv'}")
 
 

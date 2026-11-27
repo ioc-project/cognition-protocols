@@ -23,7 +23,7 @@ their facts are the same as above, so the two families are comparable.
 | **O2** | free speech | SLIM group session | opens and waits (nothing to pass on); summarizes the outcome |
 | **O3** | CONCORD, after step 1 | SLIM group session | the initiator, not a participant: its model writes the init (`concord_start`); the result is the run's |
 
-(Batches made before this renumbering have an ask-and-decide scenario as O1 and the three above as O2 to O4; `metrics.py` maps them and leaves
+(Batches made before this renumbering have an ask-and-decide scenario as O1 and the three above as O2 to O4; `tools/metrics.py` maps them and leaves
 the ask rows out.)
 
 - **O1 and O2:** an agent that is done calls `done` (its option and why): the message goes to the coordinator only (the harness hides it from
@@ -44,6 +44,9 @@ the ask rows out.)
   once it has the 3 other posts (or after 60 s); in M and S the discussion goes on.
 - **No one closes a free-speech run**: each agent stops by itself after `--idle` s (60) without a post, `--max-time` s (600) or
   `--max-posts` posts (100), then gives its private final answer. A free run is AGREED when the four finals are the same option.
+- **When an agent reads** (free speech): after a message it waits `--debounce` s (default 2.5) for the ones that come with it, then reads them together;
+  `--debounce 0` reads at once. What arrives while the model is working waits, and is read together when it is back.
+- **One agent class**: `BaselineAgent` (baseline_agent.py) is the baseline; `ConcordAgent` (concord_agent.py) subclasses it and adds the CONCORD node (step 1 is shared).
 - **SLIM readiness handshake** (`Group.ready`): agents that all post right after joining lose posts otherwise. `agent-a` creates the SLIM
   session (a transport role only).
 - Flags, defaults and the `batch.py` report are those of `../concord-comparison` (`--model`, `--temperature 0.7`, `--fresh`, `--threshold`,
@@ -56,8 +59,8 @@ the ask rows out.)
     ./run.sh --mode free --transport slim         # S
     ./run.sh --mode concord --transport slim      # C
     uv run python batch.py --scenarios M,S,C --tasks all --thresholds 0.7 --repeats 10 --parallel 3
-    uv run python show.py runs/<run folder>       # the posts / messages of a run (--verify for the CONCORD referee)
-    uv run python metrics.py runs/batch-<time>    # the cost of a batch
+    uv run python -m tools.show runs/<run folder>       # the posts / messages of a run (--verify for the CONCORD referee)
+    uv run python -m tools.metrics runs/batch-<time>    # the cost of a batch
 
 ## The use cases of the mas-lab library (`scenarios/e-commerce/`, `scenarios/renewal/`)
 
