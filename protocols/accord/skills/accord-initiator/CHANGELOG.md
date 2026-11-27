@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/ioc-project/cognition-protocols/compare/accord-initiator-v0.1.2...accord-initiator-v0.2.0) (2026-11-27)
+
+
+### Features
+
+* **accord:** add e2e tests ([#127](https://github.com/ioc-project/cognition-protocols/issues/127)) ([83a1cee](https://github.com/ioc-project/cognition-protocols/commit/83a1cee7e1fd3e2c72da1f01b25960f502621164))
+
 ## [0.1.2](https://github.com/ioc-project/cognition-protocols/compare/accord-initiator-v0.1.1...accord-initiator-v0.1.2) (2026-11-12)
 
 
