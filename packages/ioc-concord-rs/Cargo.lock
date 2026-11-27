@@ -341,6 +341,7 @@ name = "ioc-concord"
 version = "0.1.0"
 dependencies = [
  "indexmap",
+ "libc",
  "regex",
  "roxmltree",
  "serde",

@@ -431,7 +431,7 @@ first one reports the outcome and wins ties, so list yourself first.",
     ),
     (
         "satisfaction_threshold",
-        "The standard the outcome genuinely has to meet, a number above 0 and at most 1, not a level you are \
+        "The standard the outcome has to meet, a number above 0 and at most 1, not a level you are \
 sure is reachable (0.6 is a starting point). If it sits below what the agents already reach on \
 their own proposals, the run ends with no negotiation at all. It never changes during the run.",
     ),
@@ -501,10 +501,39 @@ pub struct RawAnchors {
     pub raw_ideal: f64,
 }
 
+/// `repr(x)` of a float: the shortest text that reads back as `x`, with an exponent below 1e-4 and from 1e16.
+pub(crate) fn float_repr(x: f64) -> String {
+    if !x.is_finite() {
+        return if x.is_nan() {
+            "nan"
+        } else if x > 0.0 {
+            "inf"
+        } else {
+            "-inf"
+        }
+        .to_string();
+    }
+    let sci = format!("{x:e}");
+    let (mantissa, exp) = sci.split_once('e').expect("an exponent");
+    let exp: i32 = exp.parse().expect("a number");
+    if (-4..16).contains(&exp) {
+        let fixed = format!("{x}");
+        if fixed.contains('.') {
+            fixed
+        } else {
+            format!("{fixed}.0")
+        }
+    } else {
+        format!("{mantissa}e{}{:02}", if exp < 0 { '-' } else { '+' }, exp.abs())
+    }
+}
+
+/// A value of an answer as Python writes it in a sentence: a float as `repr` writes it (`1e-05`, `100.0`).
 fn show_value(v: Option<&Value>) -> String {
     match v {
         None | Some(Value::Null) => "None".to_string(),
         Some(Value::String(s)) => s.clone(),
+        Some(Value::Number(n)) if n.is_f64() => float_repr(n.as_f64().unwrap_or(f64::NAN)),
         Some(other) => other.to_string(),
     }
 }
