@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ioc-concord"
-version = "0.1.0"
+version = "0.2.0"
 description = "CONCORD protocol library."
 readme = "README.md"
 requires-python = ">=3.11"

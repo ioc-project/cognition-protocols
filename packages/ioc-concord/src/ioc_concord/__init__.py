@@ -28,4 +28,4 @@ Modules:
 A module that is bundled into a script follows the rules in `tools/bundle.py`: stdlib imports at the top, intra-package
 imports of the form `from ioc_concord.<module> import <names>`, and top-level names that are unique across modules.
 """
-__version__ = "0.1.0"   # keep equal to pyproject.toml (tests/test_package.py checks)
+__version__ = "0.2.0"   # keep equal to pyproject.toml (tests/test_package.py checks)
